@@ -28,6 +28,7 @@ Key implementation file:
   - Caselaw via provider chain (`CASELAW_SEARCH`)
 - Single-party auto-search mode includes an `Exact` toggle in the drawer header.
   - When enabled, the selected candidate is wrapped in quotes and sent to all three providers.
+- Multi-party candidate lists auto-run on the first candidate by default.
 - Background worker providers in `extension/background.js`:
   - Google News RSS fetch + parse in content script.
   - ABR JSON/JSONP + ABN current/history scraping for expanded entity timelines.

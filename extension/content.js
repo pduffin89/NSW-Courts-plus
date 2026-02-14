@@ -882,7 +882,9 @@
 
     document.body.appendChild(drawer);
 
-    if (!civil && candidates.length === 1) {
+    if (candidates.length > 1) {
+      runResearch(drawer, candidates[0]);
+    } else if (!civil && candidates.length === 1) {
       runResearch(drawer, candidates[0]);
     } else {
       drawer.querySelector(".nsw-news-status").textContent = "Select a name to run News + ABN + Caselaw research.";
