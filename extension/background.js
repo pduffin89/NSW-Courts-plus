@@ -338,10 +338,13 @@ async function handleNewsSearch(message) {
 }
 
 async function handleAbnSearch(message) {
-  const query = cleanSpaces(message && message.query ? message.query : "");
-  if (!query) {
+  const rawQuery = cleanSpaces(message && message.query ? message.query : "");
+  if (!rawQuery) {
     throw new Error("Missing ABN search query.");
   }
+  const exactRequested = Boolean(message?.exact) || /^".*"$/.test(rawQuery);
+  const exactPhrase = cleanSpaces(rawQuery.replace(/^"/, "").replace(/"$/, ""));
+  const query = exactPhrase || rawQuery;
 
   const normalizedAbn = digitsOnly(query);
   const isAbnSearch = normalizedAbn.length === 11;
@@ -403,10 +406,19 @@ async function handleAbnSearch(message) {
     })
   );
 
+  const filtered = (!isAbnSearch && exactRequested && exactPhrase)
+    ? enriched.filter((item) => {
+        const hay = cleanSpaces(item.entity_name || item.matched_name || "").toLowerCase();
+        return hay.includes(exactPhrase.toLowerCase());
+      })
+    : enriched;
+
   return {
     query,
     search_type: "name",
-    results: enriched
+    results: filtered,
+    exact_applied: Boolean(!isAbnSearch && exactRequested && exactPhrase),
+    exact_phrase: exactPhrase
   };
 }
 

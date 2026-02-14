@@ -743,7 +743,7 @@
     try {
       const [newsResult, abnResult, caselawResult] = await Promise.allSettled([
         sendMessage({ type: "NEWS_SEARCH", query: searchQuery }),
-        sendMessage({ type: "ABN_SEARCH", query: searchQuery, maxResults: 12 }),
+        sendMessage({ type: "ABN_SEARCH", query, maxResults: 12, exact }),
         sendMessage({ type: "CASELAW_SEARCH", query: searchQuery })
       ]);
 
