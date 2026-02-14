@@ -1448,6 +1448,10 @@
 
     const rail = document.createElement("div");
     rail.className = "nsw-row-action-rail";
+    const railBg = resolveRowRailBackground(row);
+    if (railBg) {
+      rail.style.setProperty("--nsw-row-rail-bg", railBg);
+    }
     rail.appendChild(generateButton);
     rail.appendChild(newsButton);
 
@@ -1464,6 +1468,33 @@
       }
     }
     row.appendChild(rail);
+  }
+
+  function resolveRowRailBackground(row) {
+    const isTransparent = (value) => {
+      const normalized = cleanText(String(value || "")).toLowerCase();
+      return (
+        !normalized ||
+        normalized === "transparent" ||
+        normalized === "rgba(0, 0, 0, 0)" ||
+        normalized === "rgb(0, 0, 0, 0)"
+      );
+    };
+
+    const rowBg = window.getComputedStyle(row).backgroundColor;
+    if (!isTransparent(rowBg)) {
+      return rowBg;
+    }
+
+    const firstCell = row.querySelector("td, th, [role='cell']");
+    if (firstCell) {
+      const cellBg = window.getComputedStyle(firstCell).backgroundColor;
+      if (!isTransparent(cellBg)) {
+        return cellBg;
+      }
+    }
+
+    return "";
   }
 
   function injectButtons() {

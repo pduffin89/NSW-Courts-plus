@@ -81,4 +81,5 @@ Produces:
 - Caselaw lookup tries AustLII search URLs (including `excerpt=1`) and falls back to NSW Caselaw when AustLII blocks automated fetches.
 - Caselaw results are compact by default and show excerpt/catchwords when expanded.
 - Federal Court lookup uses the Federal Court Digital Law Library search endpoint (`search.judgments.fedcourt.gov.au`) with full-text query (`query_sand`) and `start_rank` pagination.
+- Court-list action rail inherits row stripe background so alternating row colours continue beneath `Request Docs` and `Research` buttons.
 - Extension version is bumped on every shipped UI/code change (mandatory project discipline).
