@@ -1,0 +1,4 @@
+interface:
+  display_name: "NSW Attach Reliability"
+  short_description: "Fix and verify NSW Gmail PDF attachment flow"
+  default_prompt: "Stabilize NSW Court Autofill Gmail attachment delivery and verify with repeated test passes before declaring success."
