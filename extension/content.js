@@ -226,6 +226,9 @@
     drawer.querySelectorAll(".nsw-news-candidate").forEach((button) => {
       button.disabled = Boolean(isBusy);
     });
+    drawer.querySelectorAll(".nsw-research-exact-toggle").forEach((button) => {
+      button.disabled = Boolean(isBusy);
+    });
     const close = drawer.querySelector(".nsw-news-drawer-close");
     if (close) close.disabled = Boolean(isBusy);
     drawer.querySelectorAll(".nsw-research-tab").forEach((tab) => {
@@ -257,6 +260,26 @@
     if (newsTab) newsTab.textContent = `Google News (${newsCount})`;
     if (abnTab) abnTab.textContent = `ABN (${abnCount})`;
     if (caselawTab) caselawTab.textContent = `Caselaw (${caselawCount})`;
+  }
+
+  function isExactSearchEnabled(drawer) {
+    return drawer.dataset.exactSearch === "1";
+  }
+
+  function setExactSearchEnabled(drawer, enabled) {
+    drawer.dataset.exactSearch = enabled ? "1" : "0";
+    drawer.querySelectorAll(".nsw-research-exact-toggle").forEach((button) => {
+      button.classList.toggle("active", enabled);
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    });
+  }
+
+  function toSearchQuery(rawQuery, exact) {
+    const query = cleanText(rawQuery || "");
+    if (!query) return "";
+    if (!exact) return query;
+    if (/^".*"$/.test(query)) return query;
+    return `"${query}"`;
   }
 
   function digitsOnly(value) {
@@ -616,9 +639,13 @@
   async function runResearch(drawer, query) {
     const status = drawer.querySelector(".nsw-news-status");
     if (!query) return;
+    const exact = isExactSearchEnabled(drawer);
+    const searchQuery = toSearchQuery(query, exact);
+    if (!searchQuery) return;
     markActiveCandidate(drawer, query);
+    drawer.dataset.activeCandidate = query;
     setResearchDrawerBusy(drawer, true);
-    status.textContent = `Researching "${query}"...`;
+    status.textContent = `Researching ${searchQuery}...`;
 
     let newsCount = 0;
     let abnCount = 0;
@@ -629,9 +656,9 @@
 
     try {
       const [newsResult, abnResult, caselawResult] = await Promise.allSettled([
-        sendMessage({ type: "NEWS_SEARCH", query }),
-        sendMessage({ type: "ABN_SEARCH", query, maxResults: 12 }),
-        sendMessage({ type: "CASELAW_SEARCH", query })
+        sendMessage({ type: "NEWS_SEARCH", query: searchQuery }),
+        sendMessage({ type: "ABN_SEARCH", query: searchQuery, maxResults: 12 }),
+        sendMessage({ type: "CASELAW_SEARCH", query: searchQuery })
       ]);
 
       if (newsResult.status === "fulfilled") {
@@ -732,7 +759,31 @@
     label.textContent = civil
       ? "Choose a party to search:"
       : (candidates.length > 1 ? "Choose a party to search:" : "Auto-search target:");
-    candidatesRoot.appendChild(label);
+    if (!civil && candidates.length === 1) {
+      const head = document.createElement("div");
+      head.className = "nsw-news-candidates-head";
+      head.appendChild(label);
+
+      const exactToggle = document.createElement("button");
+      exactToggle.type = "button";
+      exactToggle.className = "nsw-research-exact-toggle";
+      exactToggle.textContent = "Exact";
+      exactToggle.setAttribute("aria-pressed", "false");
+      exactToggle.addEventListener("click", () => {
+        const next = !isExactSearchEnabled(drawer);
+        setExactSearchEnabled(drawer, next);
+        const activeCandidate = cleanText(drawer.dataset.activeCandidate || "");
+        if (activeCandidate) {
+          runResearch(drawer, activeCandidate).catch(() => {});
+        }
+      });
+
+      head.appendChild(exactToggle);
+      candidatesRoot.appendChild(head);
+      setExactSearchEnabled(drawer, false);
+    } else {
+      candidatesRoot.appendChild(label);
+    }
 
     const buttonsWrap = document.createElement("div");
     buttonsWrap.className = "nsw-news-candidates-list";

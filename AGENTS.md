@@ -26,6 +26,8 @@ Key implementation file:
   - Google News (`NEWS_SEARCH`)
   - ABN (`ABN_SEARCH` + expandable `ABN_HISTORY_DETAILS`)
   - Caselaw via provider chain (`CASELAW_SEARCH`)
+- Single-party auto-search mode includes an `Exact` toggle in the drawer header.
+  - When enabled, the selected candidate is wrapped in quotes and sent to all three providers.
 - Background worker providers in `extension/background.js`:
   - Google News RSS fetch + parse in content script.
   - ABR JSON/JSONP + ABN current/history scraping for expanded entity timelines.
@@ -77,6 +79,7 @@ Key implementation file:
    - Google News tab returns items or clear empty-state message.
    - ABN tab returns matches/details and expandable historical records.
    - Caselaw tab returns expandable result tiles and excerpt text in expanded state.
+   - Auto-search target view shows `Exact` toggle and reruns searches with quoted query when toggled.
 5. Rebuild installer:
    - `python3 scripts/build_installer.py`
 6. Confirm installed extension manifest version matches source and reload extension.

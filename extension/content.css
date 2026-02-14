@@ -207,6 +207,17 @@
   color: #334155;
 }
 
+.nsw-news-candidates-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nsw-news-candidates-head .nsw-news-candidates-label {
+  margin-bottom: 0;
+}
+
 .nsw-news-candidates-list {
   display: flex;
   flex-wrap: wrap;
@@ -228,6 +239,22 @@
 }
 
 .nsw-news-candidate.active {
+  background: #124c86;
+  border-color: #124c86;
+  color: #ffffff;
+}
+
+.nsw-research-exact-toggle {
+  border: 1px solid #c5d2df;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nsw-research-exact-toggle.active {
   background: #124c86;
   border-color: #124c86;
   color: #ffffff;
