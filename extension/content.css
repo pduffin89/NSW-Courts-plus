@@ -30,7 +30,7 @@
 
 .nsw-row-action-rail {
   position: absolute;
-  left: calc(100% + 18px);
+  left: 100%;
   top: 0;
   bottom: 0;
   display: flex;
