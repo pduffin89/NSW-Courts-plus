@@ -31,12 +31,16 @@ Key implementation file:
   - ABR JSON/JSONP + ABN current/history scraping for expanded entity timelines.
   - Caselaw fetch chain:
     - AustLII search first.
+    - AustLII request variants include `excerpt=1` search URL for snippet-friendly results.
     - NSW Caselaw `/search` fallback when AustLII is unavailable (e.g. HTTP 410).
     - Content script extracts case links from either provider markup.
 - Research tabs shown in drawer:
   - `Google News`
   - `ABN`
   - `Caselaw`
+  - Caselaw panel quick links:
+    - `Open AustLII (Show Excerpt)`
+    - `Open NSW Caselaw`
 - Required extension host permissions for research:
   - `https://news.google.com/*`
   - `https://abr.business.gov.au/*`

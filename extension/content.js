@@ -503,9 +503,38 @@
     const resultsRoot = drawer.querySelector(".nsw-research-caselaw-panel");
     resultsRoot.innerHTML = "";
 
+    const linksBar = document.createElement("div");
+    linksBar.className = "nsw-caselaw-links";
+    const excerptUrl = cleanText(payload.austlii_excerpt_url || "");
+    if (excerptUrl) {
+      const excerptLink = document.createElement("a");
+      excerptLink.className = "nsw-caselaw-link";
+      excerptLink.href = excerptUrl;
+      excerptLink.target = "_blank";
+      excerptLink.rel = "noopener noreferrer";
+      excerptLink.textContent = "Open AustLII (Show Excerpt)";
+      linksBar.appendChild(excerptLink);
+    }
+    const nswUrl = cleanText(payload.nsw_caselaw_url || "");
+    if (nswUrl) {
+      const nswLink = document.createElement("a");
+      nswLink.className = "nsw-caselaw-link";
+      nswLink.href = nswUrl;
+      nswLink.target = "_blank";
+      nswLink.rel = "noopener noreferrer";
+      nswLink.textContent = "Open NSW Caselaw";
+      linksBar.appendChild(nswLink);
+    }
+    if (linksBar.childElementCount > 0) {
+      resultsRoot.appendChild(linksBar);
+    }
+
     const items = parseCaselawSearchHtml(payload.html || "");
     if (!items.length) {
-      resultsRoot.innerHTML = `<p class="nsw-news-empty">No caselaw results found.</p>`;
+      const empty = document.createElement("p");
+      empty.className = "nsw-news-empty";
+      empty.textContent = "No caselaw results found.";
+      resultsRoot.appendChild(empty);
       return 0;
     }
 

@@ -48,7 +48,12 @@ function buildGoogleNewsRssUrl(query) {
 
 function buildAustliiSearchUrl(query) {
   const q = encodeURIComponent(cleanSpaces(query));
-  return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?query=${q}&method=auto&meta=%2Fau`;
+  return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?method=auto;query=${q};excerpt=1`;
+}
+
+function buildAustliiSearchUrlAlt(query) {
+  const q = encodeURIComponent(cleanSpaces(query));
+  return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?method=auto&query=${q}`;
 }
 
 function buildNswCaselawSearchUrl(query) {
@@ -408,15 +413,26 @@ async function handleCaselawSearch(message) {
     throw new Error("Missing caselaw search query.");
   }
 
-  let webUrl = buildAustliiSearchUrl(query);
-  let response = await fetch(webUrl, {
-    method: "GET",
-    cache: "no-store"
-  });
-  const austliiStatus = response.status;
+  const austliiCandidates = [buildAustliiSearchUrl(query), buildAustliiSearchUrlAlt(query)];
+  let webUrl = austliiCandidates[0];
+  let response = null;
+  let austliiStatus = 0;
+
+  for (let i = 0; i < austliiCandidates.length; i += 1) {
+    webUrl = austliiCandidates[i];
+    response = await fetch(webUrl, {
+      method: "GET",
+      cache: "no-store"
+    });
+    if (response.ok) {
+      austliiStatus = response.status;
+      break;
+    }
+    austliiStatus = response.status;
+  }
 
   let source = "AustLII";
-  if (!response.ok) {
+  if (!response || !response.ok) {
     webUrl = buildNswCaselawSearchUrl(query);
     response = await fetch(webUrl, {
       method: "GET",
@@ -433,7 +449,9 @@ async function handleCaselawSearch(message) {
     query,
     html,
     web_url: webUrl,
-    source
+    source,
+    austlii_excerpt_url: buildAustliiSearchUrl(query),
+    nsw_caselaw_url: buildNswCaselawSearchUrl(query)
   };
 }
 
