@@ -25,11 +25,14 @@ Key implementation file:
 - `Research` drawer now runs three parallel lookups from `extension/content.js`:
   - Google News (`NEWS_SEARCH`)
   - ABN (`ABN_SEARCH` + expandable `ABN_HISTORY_DETAILS`)
-  - Caselaw via AustLII (`CASELAW_SEARCH`)
+  - Caselaw via provider chain (`CASELAW_SEARCH`)
 - Background worker providers in `extension/background.js`:
   - Google News RSS fetch + parse in content script.
   - ABR JSON/JSONP + ABN current/history scraping for expanded entity timelines.
-  - AustLII search HTML fetch; content script extracts case links from result markup.
+  - Caselaw fetch chain:
+    - AustLII search first.
+    - NSW Caselaw `/search` fallback when AustLII is unavailable (e.g. HTTP 410).
+    - Content script extracts case links from either provider markup.
 - Research tabs shown in drawer:
   - `Google News`
   - `ABN`
@@ -38,6 +41,7 @@ Key implementation file:
   - `https://news.google.com/*`
   - `https://abr.business.gov.au/*`
   - `https://www.austlii.edu.au/*`
+  - `https://www.caselaw.nsw.gov.au/*`
 
 ## Why This Works Better
 

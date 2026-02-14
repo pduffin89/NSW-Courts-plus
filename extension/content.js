@@ -126,12 +126,14 @@
     }));
   }
 
-  function parseAustliiSearchHtml(html) {
+  function parseCaselawSearchHtml(html) {
     const text = String(html || "");
     if (!text) return [];
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, "text/html");
-    const anchors = Array.from(doc.querySelectorAll('a[href*="/cgi-bin/viewdoc/"]'));
+    const anchors = Array.from(
+      doc.querySelectorAll('a[href*="/cgi-bin/viewdoc/"], a[href^="/decision/"], a[href*="caselaw.nsw.gov.au/decision/"]')
+    );
     const seen = new Set();
     const items = [];
 
@@ -141,7 +143,14 @@
       if (!title) return;
       const href = cleanText(anchor.getAttribute("href") || "");
       if (!href) return;
-      const link = href.startsWith("http") ? href : `https://www.austlii.edu.au${href}`;
+      let link = href;
+      if (!href.startsWith("http")) {
+        if (href.startsWith("/decision/")) {
+          link = `https://www.caselaw.nsw.gov.au${href}`;
+        } else {
+          link = `https://www.austlii.edu.au${href}`;
+        }
+      }
       if (seen.has(link)) return;
       seen.add(link);
 
@@ -494,9 +503,9 @@
     const resultsRoot = drawer.querySelector(".nsw-research-caselaw-panel");
     resultsRoot.innerHTML = "";
 
-    const items = parseAustliiSearchHtml(payload.html || "");
+    const items = parseCaselawSearchHtml(payload.html || "");
     if (!items.length) {
-      resultsRoot.innerHTML = `<p class="nsw-news-empty">No AustLII caselaw results found.</p>`;
+      resultsRoot.innerHTML = `<p class="nsw-news-empty">No caselaw results found.</p>`;
       return 0;
     }
 
@@ -513,7 +522,7 @@
 
       const meta = document.createElement("div");
       meta.className = "nsw-news-item-meta";
-      meta.textContent = item.meta || "AustLII";
+      meta.textContent = item.meta || cleanText(payload.source || "Caselaw");
 
       card.appendChild(title);
       card.appendChild(meta);

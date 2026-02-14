@@ -51,6 +51,11 @@ function buildAustliiSearchUrl(query) {
   return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?query=${q}&method=auto&meta=%2Fau`;
 }
 
+function buildNswCaselawSearchUrl(query) {
+  const q = encodeURIComponent(cleanSpaces(query));
+  return `https://www.caselaw.nsw.gov.au/search?query=${q}`;
+}
+
 function digitsOnly(value) {
   return String(value || "").replace(/\D+/g, "");
 }
@@ -403,19 +408,32 @@ async function handleCaselawSearch(message) {
     throw new Error("Missing caselaw search query.");
   }
 
-  const webUrl = buildAustliiSearchUrl(query);
-  const response = await fetch(webUrl, {
+  let webUrl = buildAustliiSearchUrl(query);
+  let response = await fetch(webUrl, {
     method: "GET",
     cache: "no-store"
   });
+  const austliiStatus = response.status;
+
+  let source = "AustLII";
   if (!response.ok) {
-    throw new Error(`AustLII request failed (${response.status}).`);
+    webUrl = buildNswCaselawSearchUrl(query);
+    response = await fetch(webUrl, {
+      method: "GET",
+      cache: "no-store"
+    });
+    source = "NSW Caselaw";
+    if (!response.ok) {
+      throw new Error(`Caselaw requests failed (AustLII ${austliiStatus}; NSW Caselaw ${response.status}).`);
+    }
   }
+
   const html = await response.text();
   return {
     query,
     html,
-    web_url: webUrl
+    web_url: webUrl,
+    source
   };
 }
 
