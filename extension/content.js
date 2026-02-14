@@ -126,11 +126,60 @@
     }));
   }
 
-  function parseCaselawSearchHtml(html) {
-    const text = String(html || "");
-    if (!text) return [];
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, "text/html");
+  function resolveCaselawLink(href) {
+    const raw = cleanText(href || "");
+    if (!raw) return "";
+    if (raw.startsWith("http")) return raw;
+    if (raw.startsWith("/decision/")) return `https://www.caselaw.nsw.gov.au${raw}`;
+    return `https://www.austlii.edu.au${raw}`;
+  }
+
+  function parseNswCaselawSearchHtml(doc) {
+    const blocks = Array.from(doc.querySelectorAll(".row.result"));
+    if (!blocks.length) return [];
+    const items = [];
+    const seen = new Set();
+
+    blocks.forEach((block) => {
+      if (items.length >= 30) return;
+      const anchor = block.querySelector('h4 a, a[href^="/decision/"]');
+      if (!anchor) return;
+      const title = cleanText(anchor.textContent || "");
+      const link = resolveCaselawLink(anchor.getAttribute("href") || "");
+      if (!title || !link || seen.has(link)) return;
+      seen.add(link);
+
+      const snippetNode =
+        block.querySelector("p:nth-of-type(2)") ||
+        block.querySelector("p:last-of-type") ||
+        block.querySelector("p");
+      let excerpt = cleanText(snippetNode ? snippetNode.textContent || "" : "");
+      excerpt = cleanText(excerpt.replace(/^Catchwords:\s*/i, ""));
+
+      const decisionDateLabel = Array.from(block.querySelectorAll("strong"))
+        .find((node) => /decision date/i.test(cleanText(node.textContent || "")));
+      const decisionDate = cleanText(
+        decisionDateLabel?.parentElement?.nextElementSibling?.textContent ||
+          ""
+      );
+
+      const judgeLabel = Array.from(block.querySelectorAll("strong"))
+        .find((node) => /judgment of/i.test(cleanText(node.textContent || "")));
+      const judge = cleanText(judgeLabel?.parentElement?.nextElementSibling?.textContent || "");
+      const meta = [judge, decisionDate].filter(Boolean).join(" | ");
+
+      items.push({
+        title,
+        link,
+        excerpt,
+        meta
+      });
+    });
+
+    return items;
+  }
+
+  function parseGenericCaselawSearchHtml(doc) {
     const anchors = Array.from(
       doc.querySelectorAll('a[href*="/cgi-bin/viewdoc/"], a[href^="/decision/"], a[href*="caselaw.nsw.gov.au/decision/"]')
     );
@@ -140,30 +189,37 @@
     anchors.forEach((anchor) => {
       if (items.length >= 30) return;
       const title = cleanText(anchor.textContent || "");
-      if (!title) return;
-      const href = cleanText(anchor.getAttribute("href") || "");
-      if (!href) return;
-      let link = href;
-      if (!href.startsWith("http")) {
-        if (href.startsWith("/decision/")) {
-          link = `https://www.caselaw.nsw.gov.au${href}`;
-        } else {
-          link = `https://www.austlii.edu.au${href}`;
-        }
-      }
-      if (seen.has(link)) return;
+      const link = resolveCaselawLink(anchor.getAttribute("href") || "");
+      if (!title || !link || seen.has(link)) return;
       seen.add(link);
 
-      const parentText = cleanText(anchor.parentElement ? anchor.parentElement.textContent || "" : "");
-      const meta = cleanText(parentText.replace(title, ""));
+      const container =
+        anchor.closest(".row.result") ||
+        anchor.closest("li") ||
+        anchor.closest("tr") ||
+        anchor.parentElement;
+      const containerText = cleanText(container ? container.textContent || "" : "");
+      const excerpt = cleanText(containerText.replace(title, ""));
+
       items.push({
         title,
         link,
-        meta
+        excerpt,
+        meta: ""
       });
     });
 
     return items;
+  }
+
+  function parseCaselawSearchHtml(html) {
+    const text = String(html || "");
+    if (!text) return [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    const nswItems = parseNswCaselawSearchHtml(doc);
+    if (nswItems.length) return nswItems;
+    return parseGenericCaselawSearchHtml(doc);
   }
 
   function setResearchDrawerBusy(drawer, isBusy) {
@@ -503,32 +559,6 @@
     const resultsRoot = drawer.querySelector(".nsw-research-caselaw-panel");
     resultsRoot.innerHTML = "";
 
-    const linksBar = document.createElement("div");
-    linksBar.className = "nsw-caselaw-links";
-    const excerptUrl = cleanText(payload.austlii_excerpt_url || "");
-    if (excerptUrl) {
-      const excerptLink = document.createElement("a");
-      excerptLink.className = "nsw-caselaw-link";
-      excerptLink.href = excerptUrl;
-      excerptLink.target = "_blank";
-      excerptLink.rel = "noopener noreferrer";
-      excerptLink.textContent = "Open AustLII (Show Excerpt)";
-      linksBar.appendChild(excerptLink);
-    }
-    const nswUrl = cleanText(payload.nsw_caselaw_url || "");
-    if (nswUrl) {
-      const nswLink = document.createElement("a");
-      nswLink.className = "nsw-caselaw-link";
-      nswLink.href = nswUrl;
-      nswLink.target = "_blank";
-      nswLink.rel = "noopener noreferrer";
-      nswLink.textContent = "Open NSW Caselaw";
-      linksBar.appendChild(nswLink);
-    }
-    if (linksBar.childElementCount > 0) {
-      resultsRoot.appendChild(linksBar);
-    }
-
     const items = parseCaselawSearchHtml(payload.html || "");
     if (!items.length) {
       const empty = document.createElement("p");
@@ -539,22 +569,44 @@
     }
 
     items.forEach((item) => {
-      const card = document.createElement("article");
-      card.className = "nsw-news-item";
+      const card = document.createElement("details");
+      card.className = "nsw-caselaw-item";
+
+      const summary = document.createElement("summary");
+      summary.className = "nsw-caselaw-summary";
+
+      const header = document.createElement("div");
+      header.className = "nsw-caselaw-header";
+      const chevron = document.createElement("span");
+      chevron.className = "nsw-caselaw-chevron";
+      chevron.textContent = "▸";
 
       const title = document.createElement("a");
-      title.className = "nsw-news-item-title";
+      title.className = "nsw-caselaw-title";
       title.href = item.link || payload.web_url || "#";
       title.target = "_blank";
       title.rel = "noopener noreferrer";
       title.textContent = item.title || "(Untitled)";
+      title.addEventListener("click", (event) => event.stopPropagation());
+
+      header.appendChild(chevron);
+      header.appendChild(title);
+      summary.appendChild(header);
 
       const meta = document.createElement("div");
-      meta.className = "nsw-news-item-meta";
+      meta.className = "nsw-caselaw-meta";
       meta.textContent = item.meta || cleanText(payload.source || "Caselaw");
+      summary.appendChild(meta);
+      card.appendChild(summary);
 
-      card.appendChild(title);
-      card.appendChild(meta);
+      const body = document.createElement("div");
+      body.className = "nsw-caselaw-body";
+      const excerpt = document.createElement("p");
+      excerpt.className = "nsw-caselaw-excerpt";
+      excerpt.textContent = item.excerpt || "No excerpt available for this result.";
+      body.appendChild(excerpt);
+      card.appendChild(body);
+
       resultsRoot.appendChild(card);
     });
 

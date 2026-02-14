@@ -38,9 +38,8 @@ Key implementation file:
   - `Google News`
   - `ABN`
   - `Caselaw`
-  - Caselaw panel quick links:
-    - `Open AustLII (Show Excerpt)`
-    - `Open NSW Caselaw`
+  - Caselaw results render as compact expandable tiles.
+  - Excerpt/catchwords are visible in expanded state.
 - Required extension host permissions for research:
   - `https://news.google.com/*`
   - `https://abr.business.gov.au/*`
@@ -77,7 +76,7 @@ Key implementation file:
 4. Validate research drawer integrations:
    - Google News tab returns items or clear empty-state message.
    - ABN tab returns matches/details and expandable historical records.
-   - Caselaw tab returns AustLII links or clear empty-state message.
+   - Caselaw tab returns expandable result tiles and excerpt text in expanded state.
 5. Rebuild installer:
    - `python3 scripts/build_installer.py`
 6. Confirm installed extension manifest version matches source and reload extension.
