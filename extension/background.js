@@ -46,6 +46,11 @@ function buildGoogleNewsRssUrl(query) {
   return `https://news.google.com/rss/search?q=${q}&hl=en-AU&gl=AU&ceid=AU:en`;
 }
 
+function buildAustliiSearchUrl(query) {
+  const q = encodeURIComponent(cleanSpaces(query));
+  return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?query=${q}&method=auto&meta=%2Fau`;
+}
+
 function digitsOnly(value) {
   return String(value || "").replace(/\D+/g, "");
 }
@@ -389,6 +394,28 @@ async function handleAbnSearch(message) {
     query,
     search_type: "name",
     results: enriched
+  };
+}
+
+async function handleCaselawSearch(message) {
+  const query = cleanSpaces(message && message.query ? message.query : "");
+  if (!query) {
+    throw new Error("Missing caselaw search query.");
+  }
+
+  const webUrl = buildAustliiSearchUrl(query);
+  const response = await fetch(webUrl, {
+    method: "GET",
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error(`AustLII request failed (${response.status}).`);
+  }
+  const html = await response.text();
+  return {
+    query,
+    html,
+    web_url: webUrl
   };
 }
 
@@ -876,6 +903,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     if (message?.type === "ABN_SEARCH") {
       const data = await handleAbnSearch(message);
+      sendResponse({ ok: true, data });
+      return;
+    }
+
+    if (message?.type === "CASELAW_SEARCH") {
+      const data = await handleCaselawSearch(message);
       sendResponse({ ok: true, data });
       return;
     }

@@ -126,6 +126,37 @@
     }));
   }
 
+  function parseAustliiSearchHtml(html) {
+    const text = String(html || "");
+    if (!text) return [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    const anchors = Array.from(doc.querySelectorAll('a[href*="/cgi-bin/viewdoc/"]'));
+    const seen = new Set();
+    const items = [];
+
+    anchors.forEach((anchor) => {
+      if (items.length >= 30) return;
+      const title = cleanText(anchor.textContent || "");
+      if (!title) return;
+      const href = cleanText(anchor.getAttribute("href") || "");
+      if (!href) return;
+      const link = href.startsWith("http") ? href : `https://www.austlii.edu.au${href}`;
+      if (seen.has(link)) return;
+      seen.add(link);
+
+      const parentText = cleanText(anchor.parentElement ? anchor.parentElement.textContent || "" : "");
+      const meta = cleanText(parentText.replace(title, ""));
+      items.push({
+        title,
+        link,
+        meta
+      });
+    });
+
+    return items;
+  }
+
   function setResearchDrawerBusy(drawer, isBusy) {
     drawer.querySelectorAll(".nsw-news-candidate").forEach((button) => {
       button.disabled = Boolean(isBusy);
@@ -154,11 +185,13 @@
     });
   }
 
-  function updateResearchTabLabels(drawer, newsCount, abnCount) {
+  function updateResearchTabLabels(drawer, newsCount, abnCount, caselawCount) {
     const newsTab = drawer.querySelector('.nsw-research-tab[data-tab="news"]');
     const abnTab = drawer.querySelector('.nsw-research-tab[data-tab="abn"]');
+    const caselawTab = drawer.querySelector('.nsw-research-tab[data-tab="caselaw"]');
     if (newsTab) newsTab.textContent = `Google News (${newsCount})`;
     if (abnTab) abnTab.textContent = `ABN (${abnCount})`;
+    if (caselawTab) caselawTab.textContent = `Caselaw (${caselawCount})`;
   }
 
   function digitsOnly(value) {
@@ -457,6 +490,39 @@
     return rows.length;
   }
 
+  function renderCaselawResults(drawer, payload) {
+    const resultsRoot = drawer.querySelector(".nsw-research-caselaw-panel");
+    resultsRoot.innerHTML = "";
+
+    const items = parseAustliiSearchHtml(payload.html || "");
+    if (!items.length) {
+      resultsRoot.innerHTML = `<p class="nsw-news-empty">No AustLII caselaw results found.</p>`;
+      return 0;
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "nsw-news-item";
+
+      const title = document.createElement("a");
+      title.className = "nsw-news-item-title";
+      title.href = item.link || payload.web_url || "#";
+      title.target = "_blank";
+      title.rel = "noopener noreferrer";
+      title.textContent = item.title || "(Untitled)";
+
+      const meta = document.createElement("div");
+      meta.className = "nsw-news-item-meta";
+      meta.textContent = item.meta || "AustLII";
+
+      card.appendChild(title);
+      card.appendChild(meta);
+      resultsRoot.appendChild(card);
+    });
+
+    return items.length;
+  }
+
   async function runResearch(drawer, query) {
     const status = drawer.querySelector(".nsw-news-status");
     if (!query) return;
@@ -466,13 +532,16 @@
 
     let newsCount = 0;
     let abnCount = 0;
+    let caselawCount = 0;
     let newsError = "";
     let abnError = "";
+    let caselawError = "";
 
     try {
-      const [newsResult, abnResult] = await Promise.allSettled([
+      const [newsResult, abnResult, caselawResult] = await Promise.allSettled([
         sendMessage({ type: "NEWS_SEARCH", query }),
-        sendMessage({ type: "ABN_SEARCH", query, maxResults: 12 })
+        sendMessage({ type: "ABN_SEARCH", query, maxResults: 12 }),
+        sendMessage({ type: "CASELAW_SEARCH", query })
       ]);
 
       if (newsResult.status === "fulfilled") {
@@ -489,21 +558,32 @@
         drawer.querySelector(".nsw-research-abn-panel").innerHTML = `<p class="nsw-news-empty">ABN lookup failed: ${abnError}</p>`;
       }
 
-      updateResearchTabLabels(drawer, newsCount, abnCount);
+      if (caselawResult.status === "fulfilled") {
+        caselawCount = renderCaselawResults(drawer, caselawResult.value || {});
+      } else {
+        caselawError = String(caselawResult.reason && caselawResult.reason.message ? caselawResult.reason.message : caselawResult.reason);
+        drawer.querySelector(".nsw-research-caselaw-panel").innerHTML = `<p class="nsw-news-empty">Caselaw lookup failed: ${caselawError}</p>`;
+      }
+
+      updateResearchTabLabels(drawer, newsCount, abnCount, caselawCount);
       if (newsCount === 0 && abnCount > 0) {
         setResearchTab(drawer, "abn");
+      } else if (newsCount === 0 && caselawCount > 0) {
+        setResearchTab(drawer, "caselaw");
       } else {
         setResearchTab(drawer, "news");
       }
 
-      if (!newsError && !abnError) {
-        status.textContent = `${newsCount} news result${newsCount === 1 ? "" : "s"} | ${abnCount} ABN match${abnCount === 1 ? "" : "es"}.`;
-      } else if (newsError && abnError) {
-        status.textContent = "Google News and ABN lookup both failed.";
-      } else if (newsError) {
-        status.textContent = `ABN lookup complete (${abnCount} matches). Google News failed.`;
+      if (!newsError && !abnError && !caselawError) {
+        status.textContent = `${newsCount} news result${newsCount === 1 ? "" : "s"} | ${abnCount} ABN match${abnCount === 1 ? "" : "es"} | ${caselawCount} caselaw result${caselawCount === 1 ? "" : "s"}.`;
+      } else if (newsError && abnError && caselawError) {
+        status.textContent = "Google News, ABN lookup, and Caselaw lookup all failed.";
       } else {
-        status.textContent = `Google News complete (${newsCount} results). ABN lookup failed.`;
+        const summary = [];
+        summary.push(newsError ? "News failed" : `News ${newsCount}`);
+        summary.push(abnError ? "ABN failed" : `ABN ${abnCount}`);
+        summary.push(caselawError ? "Caselaw failed" : `Caselaw ${caselawCount}`);
+        status.textContent = summary.join(" | ");
       }
     } finally {
       setResearchDrawerBusy(drawer, false);
@@ -530,10 +610,12 @@
       <div class="nsw-research-tabs" role="tablist" aria-label="Research result tabs">
         <button type="button" class="nsw-research-tab active" data-tab="news" role="tab" aria-selected="true">Google News (0)</button>
         <button type="button" class="nsw-research-tab" data-tab="abn" role="tab" aria-selected="false">ABN (0)</button>
+        <button type="button" class="nsw-research-tab" data-tab="caselaw" role="tab" aria-selected="false">Caselaw (0)</button>
       </div>
       <div class="nsw-news-results">
         <section class="nsw-research-panel nsw-research-news-panel" data-panel="news"></section>
         <section class="nsw-research-panel nsw-research-abn-panel" data-panel="abn" hidden></section>
+        <section class="nsw-research-panel nsw-research-caselaw-panel" data-panel="caselaw" hidden></section>
       </div>
     `;
 
@@ -580,7 +662,7 @@
     if (!civil && candidates.length === 1) {
       runResearch(drawer, candidates[0]);
     } else {
-      drawer.querySelector(".nsw-news-status").textContent = "Select a name to run News + ABN research.";
+      drawer.querySelector(".nsw-news-status").textContent = "Select a name to run News + ABN + Caselaw research.";
     }
   }
 

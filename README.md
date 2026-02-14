@@ -10,6 +10,7 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 - Adds a `Research` side panel with:
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.
+  - Caselaw tab for AustLII case search results on the same party name.
 - Stores generated files in easy-to-find local folders.
 
 ## Key Workflows
@@ -18,7 +19,7 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 2. Click `Generate Application` for a matter.
 3. Select requested docs and generate forms.
 4. Gmail compose opens with attachments.
-5. Click `Research` to run News + ABN checks on the same party name.
+5. Click `Research` to run News + ABN + Caselaw checks on the same party name.
 
 ## Architecture
 
@@ -72,4 +73,5 @@ Produces:
 
 - Local service target is `http://127.0.0.1:8765`.
 - ABN lookup integration uses ABR web service + ABR details/history pages for expanded view data.
+- Caselaw lookup uses AustLII search and shows linked result cards in the `Caselaw` tab.
 - Extension version is bumped on every shipped UI/code change (mandatory project discipline).

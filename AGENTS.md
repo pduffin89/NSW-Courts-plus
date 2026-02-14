@@ -20,6 +20,25 @@
 Key implementation file:
 - `extension/background.js`
 
+## Research Integrations (Current)
+
+- `Research` drawer now runs three parallel lookups from `extension/content.js`:
+  - Google News (`NEWS_SEARCH`)
+  - ABN (`ABN_SEARCH` + expandable `ABN_HISTORY_DETAILS`)
+  - Caselaw via AustLII (`CASELAW_SEARCH`)
+- Background worker providers in `extension/background.js`:
+  - Google News RSS fetch + parse in content script.
+  - ABR JSON/JSONP + ABN current/history scraping for expanded entity timelines.
+  - AustLII search HTML fetch; content script extracts case links from result markup.
+- Research tabs shown in drawer:
+  - `Google News`
+  - `ABN`
+  - `Caselaw`
+- Required extension host permissions for research:
+  - `https://news.google.com/*`
+  - `https://abr.business.gov.au/*`
+  - `https://www.austlii.edu.au/*`
+
 ## Why This Works Better
 
 - No dependency on Gmail content-script receiver handshakes.
@@ -47,9 +66,13 @@ Key implementation file:
    - input-file path
    - drag/drop fallback path
    - at least one non-dialog compose layout
-4. Rebuild installer:
+4. Validate research drawer integrations:
+   - Google News tab returns items or clear empty-state message.
+   - ABN tab returns matches/details and expandable historical records.
+   - Caselaw tab returns AustLII links or clear empty-state message.
+5. Rebuild installer:
    - `python3 scripts/build_installer.py`
-5. Confirm installed extension manifest version matches source and reload extension.
+6. Confirm installed extension manifest version matches source and reload extension.
 
 ## Version Discipline (Mandatory)
 
@@ -57,6 +80,13 @@ Key implementation file:
 - Every release sync MUST copy updated extension files to installed path:
   - `/Users/perry/Applications/NSW Court Autofill/extension`
 - Never claim fix shipped until Chrome shows the new version in `chrome://extensions`.
+
+## Repo Sync Discipline (Mandatory)
+
+- After every completed task, commit changes in `/Users/perry/LocalProjects/applicator`.
+- Keep `README.md` current when behavior, setup, or workflow changes.
+- Push to the GitHub `main` branch the same session once verified.
+- Do not mark work complete until local commit and remote push both succeed.
 
 ## Operational Debug Guide
 
