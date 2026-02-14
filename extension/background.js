@@ -56,9 +56,12 @@ function buildAustliiSearchUrlAlt(query) {
   return `https://www.austlii.edu.au/cgi-bin/sinosrch.cgi?method=auto&query=${q}`;
 }
 
-function buildNswCaselawSearchUrl(query) {
+function buildNswCaselawSearchUrl(query, page = 1) {
   const q = encodeURIComponent(cleanSpaces(query));
-  return `https://www.caselaw.nsw.gov.au/search?query=${q}`;
+  const p = Math.max(1, Number(page || 1));
+  return p > 1
+    ? `https://www.caselaw.nsw.gov.au/search?query=${q}&page=${p}`
+    : `https://www.caselaw.nsw.gov.au/search?query=${q}`;
 }
 
 function digitsOnly(value) {
@@ -412,28 +415,32 @@ async function handleCaselawSearch(message) {
   if (!query) {
     throw new Error("Missing caselaw search query.");
   }
+  const page = Math.max(1, Number(message?.page || 1));
 
   const austliiCandidates = [buildAustliiSearchUrl(query), buildAustliiSearchUrlAlt(query)];
   let webUrl = austliiCandidates[0];
   let response = null;
   let austliiStatus = 0;
 
-  for (let i = 0; i < austliiCandidates.length; i += 1) {
-    webUrl = austliiCandidates[i];
-    response = await fetch(webUrl, {
-      method: "GET",
-      cache: "no-store"
-    });
-    if (response.ok) {
+  // NSW Caselaw has reliable page param support; use it directly for page > 1.
+  if (page === 1) {
+    for (let i = 0; i < austliiCandidates.length; i += 1) {
+      webUrl = austliiCandidates[i];
+      response = await fetch(webUrl, {
+        method: "GET",
+        cache: "no-store"
+      });
+      if (response.ok) {
+        austliiStatus = response.status;
+        break;
+      }
       austliiStatus = response.status;
-      break;
     }
-    austliiStatus = response.status;
   }
 
   let source = "AustLII";
   if (!response || !response.ok) {
-    webUrl = buildNswCaselawSearchUrl(query);
+    webUrl = buildNswCaselawSearchUrl(query, page);
     response = await fetch(webUrl, {
       method: "GET",
       cache: "no-store"
@@ -447,11 +454,12 @@ async function handleCaselawSearch(message) {
   const html = await response.text();
   return {
     query,
+    page,
     html,
     web_url: webUrl,
     source,
     austlii_excerpt_url: buildAustliiSearchUrl(query),
-    nsw_caselaw_url: buildNswCaselawSearchUrl(query)
+    nsw_caselaw_url: buildNswCaselawSearchUrl(query, page)
   };
 }
 

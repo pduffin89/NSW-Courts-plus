@@ -42,6 +42,7 @@ Key implementation file:
   - `Caselaw`
   - Caselaw results render as compact expandable tiles.
   - Excerpt/catchwords are visible in expanded state.
+  - Caselaw supports in-panel pagination via `Load more`.
 - Required extension host permissions for research:
   - `https://news.google.com/*`
   - `https://abr.business.gov.au/*`
@@ -80,6 +81,7 @@ Key implementation file:
    - ABN tab returns matches/details and expandable historical records.
    - Caselaw tab returns expandable result tiles and excerpt text in expanded state.
    - Auto-search target view shows `Exact` toggle and reruns searches with quoted query when toggled.
+   - Caselaw `Load more` appends next page results and updates tab count.
 5. Rebuild installer:
    - `python3 scripts/build_installer.py`
 6. Confirm installed extension manifest version matches source and reload extension.

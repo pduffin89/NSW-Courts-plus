@@ -376,6 +376,27 @@
   color: #334155;
 }
 
+.nsw-caselaw-load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 10px;
+}
+
+.nsw-caselaw-load-more {
+  border: 1px solid #c5d2df;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.nsw-caselaw-load-more:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
 .nsw-abn-item {
   border: 1px solid #e1e7ef;
   border-radius: 8px;

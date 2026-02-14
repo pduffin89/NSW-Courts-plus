@@ -222,6 +222,23 @@
     return parseGenericCaselawSearchHtml(doc);
   }
 
+  function parseCaselawPagination(html) {
+    const text = String(html || "");
+    const match = text.match(/Displaying\s+(\d+)\s*-\s*(\d+)\s+of\s+([\d,]+)/i);
+    if (!match) {
+      return { from: 0, to: 0, total: 0, hasMore: false };
+    }
+    const from = Number(match[1] || 0);
+    const to = Number(match[2] || 0);
+    const total = Number(String(match[3] || "0").replace(/,/g, ""));
+    return {
+      from,
+      to,
+      total,
+      hasMore: Number.isFinite(to) && Number.isFinite(total) ? to < total : false
+    };
+  }
+
   function setResearchDrawerBusy(drawer, isBusy) {
     drawer.querySelectorAll(".nsw-news-candidate").forEach((button) => {
       button.disabled = Boolean(isBusy);
@@ -280,6 +297,21 @@
     if (!exact) return query;
     if (/^".*"$/.test(query)) return query;
     return `"${query}"`;
+  }
+
+  function getResearchCounts(drawer) {
+    return {
+      news: Number(drawer.dataset.newsCount || 0),
+      abn: Number(drawer.dataset.abnCount || 0),
+      caselaw: Number(drawer.dataset.caselawCount || 0)
+    };
+  }
+
+  function setResearchCounts(drawer, newsCount, abnCount, caselawCount) {
+    drawer.dataset.newsCount = String(Number(newsCount || 0));
+    drawer.dataset.abnCount = String(Number(abnCount || 0));
+    drawer.dataset.caselawCount = String(Number(caselawCount || 0));
+    updateResearchTabLabels(drawer, Number(newsCount || 0), Number(abnCount || 0), Number(caselawCount || 0));
   }
 
   function digitsOnly(value) {
@@ -578,9 +610,15 @@
     return rows.length;
   }
 
-  function renderCaselawResults(drawer, payload) {
+  function renderCaselawResults(drawer, payload, options = {}) {
     const resultsRoot = drawer.querySelector(".nsw-research-caselaw-panel");
-    resultsRoot.innerHTML = "";
+    const append = Boolean(options.append);
+    if (!append) {
+      resultsRoot.innerHTML = "";
+    } else {
+      const existingPager = resultsRoot.querySelector(".nsw-caselaw-load-more-wrap");
+      if (existingPager) existingPager.remove();
+    }
 
     const items = parseCaselawSearchHtml(payload.html || "");
     if (!items.length) {
@@ -588,6 +626,7 @@
       empty.className = "nsw-news-empty";
       empty.textContent = "No caselaw results found.";
       resultsRoot.appendChild(empty);
+      drawer.dataset.caselawHasMore = "0";
       return 0;
     }
 
@@ -633,6 +672,53 @@
       resultsRoot.appendChild(card);
     });
 
+    const pageInfo = parseCaselawPagination(payload.html || "");
+    const page = Math.max(1, Number(payload.page || (append ? Number(drawer.dataset.caselawPage || 1) : 1)));
+    drawer.dataset.caselawQuery = cleanText(payload.query || drawer.dataset.caselawQuery || "");
+    drawer.dataset.caselawPage = String(page);
+    drawer.dataset.caselawHasMore = pageInfo.hasMore ? "1" : "0";
+
+    if (pageInfo.hasMore) {
+      const wrap = document.createElement("div");
+      wrap.className = "nsw-caselaw-load-more-wrap";
+      const loadMore = document.createElement("button");
+      loadMore.type = "button";
+      loadMore.className = "nsw-caselaw-load-more";
+      loadMore.textContent = "Load more";
+      loadMore.addEventListener("click", async () => {
+        if (loadMore.disabled) return;
+        const query = cleanText(drawer.dataset.caselawQuery || "");
+        const currentPage = Math.max(1, Number(drawer.dataset.caselawPage || 1));
+        if (!query) return;
+        loadMore.disabled = true;
+        loadMore.textContent = "Loading...";
+        try {
+          const nextPayload = await sendMessage({
+            type: "CASELAW_SEARCH",
+            query,
+            page: currentPage + 1
+          });
+          const added = renderCaselawResults(drawer, nextPayload || {}, { append: true });
+          const counts = getResearchCounts(drawer);
+          setResearchCounts(drawer, counts.news, counts.abn, counts.caselaw + added);
+          const status = drawer.querySelector(".nsw-news-status");
+          if (status) {
+            const total = counts.caselaw + added;
+            status.textContent = `Loaded more Caselaw results (${total} total).`;
+          }
+        } catch (error) {
+          const status = drawer.querySelector(".nsw-news-status");
+          if (status) {
+            status.textContent = `Caselaw pagination failed: ${String(error && error.message ? error.message : error)}`;
+          }
+          loadMore.disabled = false;
+          loadMore.textContent = "Load more";
+        }
+      });
+      wrap.appendChild(loadMore);
+      resultsRoot.appendChild(wrap);
+    }
+
     return items.length;
   }
 
@@ -676,13 +762,13 @@
       }
 
       if (caselawResult.status === "fulfilled") {
-        caselawCount = renderCaselawResults(drawer, caselawResult.value || {});
+        caselawCount = renderCaselawResults(drawer, caselawResult.value || {}, { append: false });
       } else {
         caselawError = String(caselawResult.reason && caselawResult.reason.message ? caselawResult.reason.message : caselawResult.reason);
         drawer.querySelector(".nsw-research-caselaw-panel").innerHTML = `<p class="nsw-news-empty">Caselaw lookup failed: ${caselawError}</p>`;
       }
 
-      updateResearchTabLabels(drawer, newsCount, abnCount, caselawCount);
+      setResearchCounts(drawer, newsCount, abnCount, caselawCount);
       if (newsCount === 0 && abnCount > 0) {
         setResearchTab(drawer, "abn");
       } else if (newsCount === 0 && caselawCount > 0) {
