@@ -239,6 +239,63 @@
     };
   }
 
+  function resolveFederalCourtLink(href) {
+    const raw = cleanText(href || "");
+    if (!raw) return "";
+    if (raw.startsWith("http")) return raw;
+    try {
+      return new URL(raw, "https://search.judgments.fedcourt.gov.au/s/").toString();
+    } catch (_error) {
+      return raw;
+    }
+  }
+
+  function parseFederalCourtSearchHtml(html) {
+    const text = String(html || "");
+    if (!text) return [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    const blocks = Array.from(doc.querySelectorAll(".search-results .result, .result"));
+    const out = [];
+    const seen = new Set();
+
+    blocks.forEach((block) => {
+      if (out.length >= 30) return;
+      const anchor = block.querySelector("h3 a");
+      if (!anchor) return;
+      const title = cleanText(anchor.textContent || "");
+      const link = resolveFederalCourtLink(anchor.getAttribute("href") || "");
+      if (!title || !link || seen.has(link)) return;
+      seen.add(link);
+
+      const excerpt = cleanText(block.querySelector("p.summary")?.textContent || "");
+      const meta = cleanText(block.querySelector("p.meta")?.textContent || "");
+
+      out.push({
+        title,
+        link,
+        excerpt,
+        meta
+      });
+    });
+
+    return out;
+  }
+
+  function parseFederalCourtPagination(html) {
+    const text = String(html || "");
+    if (!text) return { hasMore: false };
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "text/html");
+    const hasMore = Boolean(
+      doc.querySelector("#btpagination a.fb-next-result-page") ||
+      Array.from(doc.querySelectorAll("#btpagination a")).some((a) =>
+        /next\s*\d*/i.test(cleanText(a.textContent || ""))
+      )
+    );
+    return { hasMore };
+  }
+
   function setResearchDrawerBusy(drawer, isBusy) {
     drawer.querySelectorAll(".nsw-news-candidate").forEach((button) => {
       button.disabled = Boolean(isBusy);
@@ -270,13 +327,15 @@
     });
   }
 
-  function updateResearchTabLabels(drawer, newsCount, abnCount, caselawCount) {
+  function updateResearchTabLabels(drawer, newsCount, abnCount, caselawCount, federalCourtCount) {
     const newsTab = drawer.querySelector('.nsw-research-tab[data-tab="news"]');
     const abnTab = drawer.querySelector('.nsw-research-tab[data-tab="abn"]');
     const caselawTab = drawer.querySelector('.nsw-research-tab[data-tab="caselaw"]');
+    const federalCourtTab = drawer.querySelector('.nsw-research-tab[data-tab="federal-court"]');
     if (newsTab) newsTab.textContent = `Google News (${newsCount})`;
     if (abnTab) abnTab.textContent = `ABN (${abnCount})`;
     if (caselawTab) caselawTab.textContent = `Caselaw (${caselawCount})`;
+    if (federalCourtTab) federalCourtTab.textContent = `Federal Court (${federalCourtCount})`;
   }
 
   function isExactSearchEnabled(drawer) {
@@ -303,15 +362,23 @@
     return {
       news: Number(drawer.dataset.newsCount || 0),
       abn: Number(drawer.dataset.abnCount || 0),
-      caselaw: Number(drawer.dataset.caselawCount || 0)
+      caselaw: Number(drawer.dataset.caselawCount || 0),
+      federalCourt: Number(drawer.dataset.federalCourtCount || 0)
     };
   }
 
-  function setResearchCounts(drawer, newsCount, abnCount, caselawCount) {
+  function setResearchCounts(drawer, newsCount, abnCount, caselawCount, federalCourtCount) {
     drawer.dataset.newsCount = String(Number(newsCount || 0));
     drawer.dataset.abnCount = String(Number(abnCount || 0));
     drawer.dataset.caselawCount = String(Number(caselawCount || 0));
-    updateResearchTabLabels(drawer, Number(newsCount || 0), Number(abnCount || 0), Number(caselawCount || 0));
+    drawer.dataset.federalCourtCount = String(Number(federalCourtCount || 0));
+    updateResearchTabLabels(
+      drawer,
+      Number(newsCount || 0),
+      Number(abnCount || 0),
+      Number(caselawCount || 0),
+      Number(federalCourtCount || 0)
+    );
   }
 
   function digitsOnly(value) {
@@ -700,7 +767,7 @@
           });
           const added = renderCaselawResults(drawer, nextPayload || {}, { append: true });
           const counts = getResearchCounts(drawer);
-          setResearchCounts(drawer, counts.news, counts.abn, counts.caselaw + added);
+          setResearchCounts(drawer, counts.news, counts.abn, counts.caselaw + added, counts.federalCourt);
           const status = drawer.querySelector(".nsw-news-status");
           if (status) {
             const total = counts.caselaw + added;
@@ -710,6 +777,118 @@
           const status = drawer.querySelector(".nsw-news-status");
           if (status) {
             status.textContent = `Caselaw pagination failed: ${String(error && error.message ? error.message : error)}`;
+          }
+          loadMore.disabled = false;
+          loadMore.textContent = "Load more";
+        }
+      });
+      wrap.appendChild(loadMore);
+      resultsRoot.appendChild(wrap);
+    }
+
+    return items.length;
+  }
+
+  function renderFederalCourtResults(drawer, payload, options = {}) {
+    const resultsRoot = drawer.querySelector(".nsw-research-federal-court-panel");
+    const append = Boolean(options.append);
+    if (!append) {
+      resultsRoot.innerHTML = "";
+    } else {
+      const existingPager = resultsRoot.querySelector(".nsw-caselaw-load-more-wrap");
+      if (existingPager) existingPager.remove();
+    }
+
+    const items = parseFederalCourtSearchHtml(payload.html || "");
+    if (!items.length) {
+      const empty = document.createElement("p");
+      empty.className = "nsw-news-empty";
+      empty.textContent = "No Federal Court results found.";
+      resultsRoot.appendChild(empty);
+      drawer.dataset.federalCourtHasMore = "0";
+      return 0;
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement("details");
+      card.className = "nsw-caselaw-item";
+
+      const summary = document.createElement("summary");
+      summary.className = "nsw-caselaw-summary";
+
+      const header = document.createElement("div");
+      header.className = "nsw-caselaw-header";
+      const chevron = document.createElement("span");
+      chevron.className = "nsw-caselaw-chevron";
+      chevron.textContent = "▸";
+
+      const title = document.createElement("a");
+      title.className = "nsw-caselaw-title";
+      title.href = item.link || payload.web_url || "#";
+      title.target = "_blank";
+      title.rel = "noopener noreferrer";
+      title.textContent = item.title || "(Untitled)";
+      title.addEventListener("click", (event) => event.stopPropagation());
+
+      header.appendChild(chevron);
+      header.appendChild(title);
+      summary.appendChild(header);
+
+      const meta = document.createElement("div");
+      meta.className = "nsw-caselaw-meta";
+      meta.textContent = item.meta || "Federal Court";
+      summary.appendChild(meta);
+      card.appendChild(summary);
+
+      const body = document.createElement("div");
+      body.className = "nsw-caselaw-body";
+      const excerpt = document.createElement("p");
+      excerpt.className = "nsw-caselaw-excerpt";
+      excerpt.textContent = item.excerpt || "No excerpt available for this result.";
+      body.appendChild(excerpt);
+      card.appendChild(body);
+
+      resultsRoot.appendChild(card);
+    });
+
+    const pageInfo = parseFederalCourtPagination(payload.html || "");
+    const page = Math.max(1, Number(payload.page || (append ? Number(drawer.dataset.federalCourtPage || 1) : 1)));
+    drawer.dataset.federalCourtQuery = cleanText(payload.query || drawer.dataset.federalCourtQuery || "");
+    drawer.dataset.federalCourtPage = String(page);
+    drawer.dataset.federalCourtHasMore = pageInfo.hasMore ? "1" : "0";
+
+    if (pageInfo.hasMore) {
+      const wrap = document.createElement("div");
+      wrap.className = "nsw-caselaw-load-more-wrap";
+      const loadMore = document.createElement("button");
+      loadMore.type = "button";
+      loadMore.className = "nsw-caselaw-load-more";
+      loadMore.textContent = "Load more";
+      loadMore.addEventListener("click", async () => {
+        if (loadMore.disabled) return;
+        const query = cleanText(drawer.dataset.federalCourtQuery || "");
+        const currentPage = Math.max(1, Number(drawer.dataset.federalCourtPage || 1));
+        if (!query) return;
+        loadMore.disabled = true;
+        loadMore.textContent = "Loading...";
+        try {
+          const nextPayload = await sendMessage({
+            type: "FEDERAL_COURT_SEARCH",
+            query,
+            page: currentPage + 1
+          });
+          const added = renderFederalCourtResults(drawer, nextPayload || {}, { append: true });
+          const counts = getResearchCounts(drawer);
+          setResearchCounts(drawer, counts.news, counts.abn, counts.caselaw, counts.federalCourt + added);
+          const status = drawer.querySelector(".nsw-news-status");
+          if (status) {
+            const total = counts.federalCourt + added;
+            status.textContent = `Loaded more Federal Court results (${total} total).`;
+          }
+        } catch (error) {
+          const status = drawer.querySelector(".nsw-news-status");
+          if (status) {
+            status.textContent = `Federal Court pagination failed: ${String(error && error.message ? error.message : error)}`;
           }
           loadMore.disabled = false;
           loadMore.textContent = "Load more";
@@ -736,15 +915,18 @@
     let newsCount = 0;
     let abnCount = 0;
     let caselawCount = 0;
+    let federalCourtCount = 0;
     let newsError = "";
     let abnError = "";
     let caselawError = "";
+    let federalCourtError = "";
 
     try {
-      const [newsResult, abnResult, caselawResult] = await Promise.allSettled([
+      const [newsResult, abnResult, caselawResult, federalCourtResult] = await Promise.allSettled([
         sendMessage({ type: "NEWS_SEARCH", query: searchQuery }),
         sendMessage({ type: "ABN_SEARCH", query, maxResults: 12, exact }),
-        sendMessage({ type: "CASELAW_SEARCH", query: searchQuery })
+        sendMessage({ type: "CASELAW_SEARCH", query: searchQuery }),
+        sendMessage({ type: "FEDERAL_COURT_SEARCH", query: searchQuery })
       ]);
 
       if (newsResult.status === "fulfilled") {
@@ -768,24 +950,34 @@
         drawer.querySelector(".nsw-research-caselaw-panel").innerHTML = `<p class="nsw-news-empty">Caselaw lookup failed: ${caselawError}</p>`;
       }
 
-      setResearchCounts(drawer, newsCount, abnCount, caselawCount);
+      if (federalCourtResult.status === "fulfilled") {
+        federalCourtCount = renderFederalCourtResults(drawer, federalCourtResult.value || {}, { append: false });
+      } else {
+        federalCourtError = String(federalCourtResult.reason && federalCourtResult.reason.message ? federalCourtResult.reason.message : federalCourtResult.reason);
+        drawer.querySelector(".nsw-research-federal-court-panel").innerHTML = `<p class="nsw-news-empty">Federal Court lookup failed: ${federalCourtError}</p>`;
+      }
+
+      setResearchCounts(drawer, newsCount, abnCount, caselawCount, federalCourtCount);
       if (newsCount === 0 && abnCount > 0) {
         setResearchTab(drawer, "abn");
       } else if (newsCount === 0 && caselawCount > 0) {
         setResearchTab(drawer, "caselaw");
+      } else if (newsCount === 0 && federalCourtCount > 0) {
+        setResearchTab(drawer, "federal-court");
       } else {
         setResearchTab(drawer, "news");
       }
 
-      if (!newsError && !abnError && !caselawError) {
-        status.textContent = `${newsCount} news result${newsCount === 1 ? "" : "s"} | ${abnCount} ABN match${abnCount === 1 ? "" : "es"} | ${caselawCount} caselaw result${caselawCount === 1 ? "" : "s"}.`;
-      } else if (newsError && abnError && caselawError) {
-        status.textContent = "Google News, ABN lookup, and Caselaw lookup all failed.";
+      if (!newsError && !abnError && !caselawError && !federalCourtError) {
+        status.textContent = `${newsCount} news result${newsCount === 1 ? "" : "s"} | ${abnCount} ABN match${abnCount === 1 ? "" : "es"} | ${caselawCount} caselaw result${caselawCount === 1 ? "" : "s"} | ${federalCourtCount} Federal Court result${federalCourtCount === 1 ? "" : "s"}.`;
+      } else if (newsError && abnError && caselawError && federalCourtError) {
+        status.textContent = "Google News, ABN lookup, Caselaw lookup, and Federal Court lookup all failed.";
       } else {
         const summary = [];
         summary.push(newsError ? "News failed" : `News ${newsCount}`);
         summary.push(abnError ? "ABN failed" : `ABN ${abnCount}`);
         summary.push(caselawError ? "Caselaw failed" : `Caselaw ${caselawCount}`);
+        summary.push(federalCourtError ? "Federal Court failed" : `Federal Court ${federalCourtCount}`);
         status.textContent = summary.join(" | ");
       }
     } finally {
@@ -814,11 +1006,13 @@
         <button type="button" class="nsw-research-tab active" data-tab="news" role="tab" aria-selected="true">Google News (0)</button>
         <button type="button" class="nsw-research-tab" data-tab="abn" role="tab" aria-selected="false">ABN (0)</button>
         <button type="button" class="nsw-research-tab" data-tab="caselaw" role="tab" aria-selected="false">Caselaw (0)</button>
+        <button type="button" class="nsw-research-tab" data-tab="federal-court" role="tab" aria-selected="false">Federal Court (0)</button>
       </div>
       <div class="nsw-news-results">
         <section class="nsw-research-panel nsw-research-news-panel" data-panel="news"></section>
         <section class="nsw-research-panel nsw-research-abn-panel" data-panel="abn" hidden></section>
         <section class="nsw-research-panel nsw-research-caselaw-panel" data-panel="caselaw" hidden></section>
+        <section class="nsw-research-panel nsw-research-federal-court-panel" data-panel="federal-court" hidden></section>
       </div>
     `;
 
@@ -887,7 +1081,7 @@
     } else if (!civil && candidates.length === 1) {
       runResearch(drawer, candidates[0]);
     } else {
-      drawer.querySelector(".nsw-news-status").textContent = "Select a name to run News + ABN + Caselaw research.";
+      drawer.querySelector(".nsw-news-status").textContent = "Select a name to run News + ABN + Caselaw + Federal Court research.";
     }
   }
 

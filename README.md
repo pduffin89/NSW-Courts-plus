@@ -11,6 +11,7 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.
   - Caselaw tab for case search results (AustLII first, NSW Caselaw fallback) on the same party name, rendered as compact collapsible tiles with excerpts in expanded view.
+  - Federal Court tab for full-text Digital Law Library search hits with expandable excerpts and pagination.
 - Stores generated files in easy-to-find local folders.
 
 ## Key Workflows
@@ -19,10 +20,10 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 2. Click `Request Docs` for a matter.
 3. Select requested docs and generate forms.
 4. Gmail compose opens with attachments.
-5. Click `Research` to run News + ABN + Caselaw checks on the same party name.
-6. Use the `Exact` toggle in the Research panel to wrap the selected party name in quotes (for example `"Nick Shortt"`) across News, ABN, and Caselaw.
+5. Click `Research` to run News + ABN + Caselaw + Federal Court checks on the same party name.
+6. Use the `Exact` toggle in the Research panel to wrap the selected party name in quotes (for example `"Nick Shortt"`) across News, ABN, Caselaw, and Federal Court.
    - ABN exact mode applies phrase filtering to ABN entity names so exact mode materially narrows ABN matches.
-7. In `Caselaw`, use `Load more` to paginate additional result pages.
+7. In `Caselaw` and `Federal Court`, use `Load more` to paginate additional result pages.
 8. For multi-party matters, research auto-starts on the first detected party; click another party chip to switch.
 
 ## Architecture
@@ -79,4 +80,5 @@ Produces:
 - ABN lookup integration uses ABR web service + ABR details/history pages for expanded view data.
 - Caselaw lookup tries AustLII search URLs (including `excerpt=1`) and falls back to NSW Caselaw when AustLII blocks automated fetches.
 - Caselaw results are compact by default and show excerpt/catchwords when expanded.
+- Federal Court lookup uses the Federal Court Digital Law Library search endpoint (`search.judgments.fedcourt.gov.au`) with full-text query (`query_sand`) and `start_rank` pagination.
 - Extension version is bumped on every shipped UI/code change (mandatory project discipline).

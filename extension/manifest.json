@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NSW Court List Instant Applications",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Single-click generate NSW media access forms and draft Gmail email.",
   "permissions": [
     "tabs",
@@ -20,7 +20,8 @@
     "https://news.google.com/*",
     "https://abr.business.gov.au/*",
     "https://www.austlii.edu.au/*",
-    "https://www.caselaw.nsw.gov.au/*"
+    "https://www.caselaw.nsw.gov.au/*",
+    "https://search.judgments.fedcourt.gov.au/*"
   ],
   "content_scripts": [
     {

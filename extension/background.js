@@ -64,6 +64,38 @@ function buildNswCaselawSearchUrl(query, page = 1) {
     : `https://www.caselaw.nsw.gov.au/search?query=${q}`;
 }
 
+function buildFederalCourtSearchUrl(query, page = 1) {
+  const q = cleanSpaces(query);
+  const p = Math.max(1, Number(page || 1));
+  const startRank = ((p - 1) * 20) + 1;
+  const params = new URLSearchParams({
+    collection: "fca~sp-judgments-internet",
+    profile: "judgments-internet",
+    sort: "date",
+    meta_CourtID_orsand: "FCA FCAFC IRCA ACOMPT ACOPYT ADFDAT FPDT NFSC",
+    meta_MNC: "",
+    meta_Judge: "",
+    meta_Reported: "",
+    meta_FileNumber: "",
+    meta_NPA_phrase_orsand: "",
+    query_sand: q,
+    query_or: "",
+    query_not: "",
+    query_phrase: "",
+    query_prox: "",
+    meta_d: "",
+    meta_d1: "",
+    meta_d2: "",
+    meta_Legislation: "",
+    meta_CasesCited: "",
+    meta_Catchwords: ""
+  });
+  if (startRank > 1) {
+    params.set("start_rank", String(startRank));
+  }
+  return `https://search.judgments.fedcourt.gov.au/s/search.html?${params.toString()}`;
+}
+
 function digitsOnly(value) {
   return String(value || "").replace(/\D+/g, "");
 }
@@ -472,6 +504,30 @@ async function handleCaselawSearch(message) {
     source,
     austlii_excerpt_url: buildAustliiSearchUrl(query),
     nsw_caselaw_url: buildNswCaselawSearchUrl(query, page)
+  };
+}
+
+async function handleFederalCourtSearch(message) {
+  const query = cleanSpaces(message && message.query ? message.query : "");
+  if (!query) {
+    throw new Error("Missing Federal Court search query.");
+  }
+  const page = Math.max(1, Number(message?.page || 1));
+  const webUrl = buildFederalCourtSearchUrl(query, page);
+  const response = await fetch(webUrl, {
+    method: "GET",
+    cache: "no-store"
+  });
+  if (!response.ok) {
+    throw new Error(`Federal Court search request failed (${response.status}).`);
+  }
+  const html = await response.text();
+  return {
+    query,
+    page,
+    html,
+    web_url: webUrl,
+    source: "Federal Court"
   };
 }
 
@@ -965,6 +1021,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     if (message?.type === "CASELAW_SEARCH") {
       const data = await handleCaselawSearch(message);
+      sendResponse({ ok: true, data });
+      return;
+    }
+
+    if (message?.type === "FEDERAL_COURT_SEARCH") {
+      const data = await handleFederalCourtSearch(message);
       sendResponse({ ok: true, data });
       return;
     }
