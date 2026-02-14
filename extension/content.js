@@ -845,31 +845,27 @@
     label.textContent = civil
       ? "Choose a party to search:"
       : (candidates.length > 1 ? "Choose a party to search:" : "Auto-search target:");
-    if (!civil && candidates.length === 1) {
-      const head = document.createElement("div");
-      head.className = "nsw-news-candidates-head";
-      head.appendChild(label);
+    const head = document.createElement("div");
+    head.className = "nsw-news-candidates-head";
+    head.appendChild(label);
 
-      const exactToggle = document.createElement("button");
-      exactToggle.type = "button";
-      exactToggle.className = "nsw-research-exact-toggle";
-      exactToggle.textContent = "Exact";
-      exactToggle.setAttribute("aria-pressed", "false");
-      exactToggle.addEventListener("click", () => {
-        const next = !isExactSearchEnabled(drawer);
-        setExactSearchEnabled(drawer, next);
-        const activeCandidate = cleanText(drawer.dataset.activeCandidate || "");
-        if (activeCandidate) {
-          runResearch(drawer, activeCandidate).catch(() => {});
-        }
-      });
+    const exactToggle = document.createElement("button");
+    exactToggle.type = "button";
+    exactToggle.className = "nsw-research-exact-toggle";
+    exactToggle.textContent = "Exact";
+    exactToggle.setAttribute("aria-pressed", "false");
+    exactToggle.addEventListener("click", () => {
+      const next = !isExactSearchEnabled(drawer);
+      setExactSearchEnabled(drawer, next);
+      const activeCandidate = cleanText(drawer.dataset.activeCandidate || "");
+      if (activeCandidate) {
+        runResearch(drawer, activeCandidate).catch(() => {});
+      }
+    });
 
-      head.appendChild(exactToggle);
-      candidatesRoot.appendChild(head);
-      setExactSearchEnabled(drawer, false);
-    } else {
-      candidatesRoot.appendChild(label);
-    }
+    head.appendChild(exactToggle);
+    candidatesRoot.appendChild(head);
+    setExactSearchEnabled(drawer, false);
 
     const buttonsWrap = document.createElement("div");
     buttonsWrap.className = "nsw-news-candidates-list";

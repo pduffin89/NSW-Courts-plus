@@ -20,7 +20,7 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 3. Select requested docs and generate forms.
 4. Gmail compose opens with attachments.
 5. Click `Research` to run News + ABN + Caselaw checks on the same party name.
-6. For single-party auto-search, use the `Exact` toggle to wrap the name in quotes (for example `"Nick Shortt"`) across News, ABN, and Caselaw.
+6. Use the `Exact` toggle in the Research panel to wrap the selected party name in quotes (for example `"Nick Shortt"`) across News, ABN, and Caselaw.
 7. In `Caselaw`, use `Load more` to paginate additional result pages.
 
 ## Architecture
