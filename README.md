@@ -16,7 +16,7 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 ## Key Workflows
 
 1. Open NSW court list page.
-2. Click `Generate Application` for a matter.
+2. Click `Request Docs` for a matter.
 3. Select requested docs and generate forms.
 4. Gmail compose opens with attachments.
 5. Click `Research` to run News + ABN + Caselaw checks on the same party name.

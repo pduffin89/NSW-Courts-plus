@@ -988,7 +988,7 @@
     overlay.className = "nsw-autofill-modal-overlay";
     overlay.innerHTML = `
       <div class="nsw-autofill-modal">
-        <h2>Generate Application</h2>
+        <h2>Request Docs</h2>
         <div class="nsw-autofill-context">
           <strong>${matter.case_number}</strong> ${matter.matter_name}<br />
           ${matter.court}${matter.court_location ? ` - ${matter.court_location}` : ""}
@@ -1231,7 +1231,7 @@
     const generateButton = document.createElement("button");
     generateButton.type = "button";
     generateButton.className = "nsw-autofill-button";
-    generateButton.textContent = "Generate Application";
+    generateButton.textContent = "Request Docs";
     generateButton.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
