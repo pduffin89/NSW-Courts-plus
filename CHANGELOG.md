@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 - 2026-02-17
+
+- Fixed platform startup hints so they use real user-resolved paths:
+  - Windows now points to `%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd`.
+  - macOS now points to `$HOME/Applications/NSW Court Autofill/start-service.command`.
+- Removed placeholder `<you>` paths from extension runtime errors.
+
 ## 0.3.0 - 2026-02-17
 
 - Renamed extension to `NSW Courts+ Cross-Platform Autofill`.

@@ -34,10 +34,10 @@ function sleep(ms) {
 
 function getStartServiceHintForPlatform(os) {
   if (os === "win") {
-    return "'C:\\Users\\<you>\\Applications\\NSW Court Autofill\\start-service.cmd'";
+    return "'%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd'";
   }
   if (os === "mac") {
-    return "'/Users/<you>/Applications/NSW Court Autofill/start-service.command'";
+    return "'$HOME/Applications/NSW Court Autofill/start-service.command'";
   }
   return "'~/Applications/NSW Court Autofill/start-service.command'";
 }
