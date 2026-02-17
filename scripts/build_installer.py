@@ -12,8 +12,8 @@ def make_executable(path: Path) -> None:
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     dist_dir = repo_root / "dist"
-    stage_dir = dist_dir / "NSW-Court-Autofill-Installer"
-    zip_base = dist_dir / "NSW-Court-Autofill-Installer"
+    stage_dir = dist_dir / "NSW-Court-Autofill-Installer-Cross-Platform"
+    zip_base = dist_dir / "NSW-Court-Autofill-Installer-Cross-Platform"
 
     if stage_dir.exists():
         shutil.rmtree(stage_dir)
@@ -34,9 +34,12 @@ def main() -> None:
         ignore=ignore,
     )
     shutil.copy2(repo_root / "installer" / "install.command", stage_dir / "install.command")
+    shutil.copy2(repo_root / "installer" / "install.ps1", stage_dir / "install.ps1")
+    shutil.copy2(repo_root / "installer" / "install.py", stage_dir / "install.py")
     shutil.copy2(repo_root / "installer" / "README.txt", stage_dir / "README.txt")
 
     make_executable(stage_dir / "install.command")
+    make_executable(stage_dir / "install.py")
 
     shutil.make_archive(str(zip_base), "zip", root_dir=dist_dir, base_dir=stage_dir.name)
     shutil.rmtree(stage_dir)

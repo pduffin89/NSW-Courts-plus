@@ -37,6 +37,9 @@ NSW Courts+ is a Chrome extension + local FastAPI service that helps court repor
 - macOS generated files:
   - `~/Documents/Court Application Forms/Generated`
   - `~/Applications/NSW Court Autofill/data/Generated`
+- Windows generated files:
+  - `%USERPROFILE%\\Documents\\Court Application Forms\\Generated`
+  - `%USERPROFILE%\\Applications\\NSW Court Autofill\\data\\Generated`
 
 ## Local Development
 
@@ -72,7 +75,13 @@ python3 scripts/build_installer.py
 
 Produces:
 
-- `dist/NSW-Court-Autofill-Installer.zip`
+- `dist/NSW-Court-Autofill-Installer-Cross-Platform.zip`
+
+Installer entry points in the zip:
+
+- Auto-detect launcher: `install.py`
+- macOS: `install.command`
+- Windows (PowerShell): `install.ps1`
 
 ## Notes
 

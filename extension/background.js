@@ -32,6 +32,28 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getStartServiceHintForPlatform(os) {
+  if (os === "win") {
+    return "'C:\\Users\\<you>\\Applications\\NSW Court Autofill\\start-service.cmd'";
+  }
+  if (os === "mac") {
+    return "'/Users/<you>/Applications/NSW Court Autofill/start-service.command'";
+  }
+  return "'~/Applications/NSW Court Autofill/start-service.command'";
+}
+
+async function getPlatformOs() {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.getPlatformInfo((info) => {
+        resolve(info && info.os ? info.os : "unknown");
+      });
+    } catch (_) {
+      resolve("unknown");
+    }
+  });
+}
+
 function cleanSpaces(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -340,8 +362,10 @@ async function handleApiRequest(message) {
   if (lastError instanceof ApiHttpError) {
     throw lastError;
   }
+  const platformOs = await getPlatformOs();
+  const startHint = getStartServiceHintForPlatform(platformOs);
   throw new Error(
-    `Local service unreachable. Start '/Users/perry/Applications/NSW Court Autofill/start-service.command'. (${String(lastError && lastError.message ? lastError.message : lastError)})`
+    `Local service unreachable. Start ${startHint}. (${String(lastError && lastError.message ? lastError.message : lastError)})`
   );
 }
 
