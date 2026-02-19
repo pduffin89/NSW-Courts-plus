@@ -8,6 +8,9 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
 - Generates NSW court application PDFs from detected matter details.
 - Saves generated PDFs directly into Chrome Downloads under `Court Application Forms/Generated`.
 - Opens Gmail compose and auto-attaches generated PDFs via extension worker retries.
+- For Supreme Court media forms, mirrors Section C with a mode switch:
+  - `Bail applications`: Crown bundle, submissions by applicant, selected images (+ image details field).
+  - `All others incl. civil/criminal/appellate`: Originating process, transcript, exhibits, notice of appeal, other.
 - Adds a `Research` side panel with:
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.
@@ -20,6 +23,7 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
 1. Open NSW court list page.
 2. Click `Request Docs` for a matter.
 3. Select requested docs and generate forms.
+   - For Supreme Court, choose the Section C mode (`Bail applications` or `All others...`) in the popup.
 4. Gmail compose opens with attachments.
 5. Click `Research` to run News + ABN + Caselaw + Federal Court checks on the same party name.
 6. Use the `Exact` toggle in the Research panel to wrap the selected party name in quotes (for example `"Nick Shortt"`) across News, ABN, Caselaw, and Federal Court.
@@ -30,14 +34,10 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
 ## Architecture
 
 - `extension/` (Manifest V3): content UI, background service worker, Gmail attach injector, research panel logic.
-- `service/` (legacy): prior FastAPI implementation retained for reference only.
 - `installer/` + `scripts/build_installer.py`: package installer assets.
 
 ## Output Paths
 
-- macOS generated files:
-  - `~/Documents/Court Application Forms/Generated`
-  - `~/Applications/NSW Court Autofill/data/Generated`
 - All platforms generated files:
   - Chrome Downloads: `Court Application Forms/Generated`
 

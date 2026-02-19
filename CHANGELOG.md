@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.5 - 2026-02-20
+
+- Updated Supreme Court `Request Docs` popup to match Section C of the media form:
+  - Added Section C mode dropdown with `Bail applications` and `All others incl. civil/criminal/appellate`.
+  - `Bail applications` now exposes only Crown bundle, submissions by applicant, and selected images.
+  - `All others` now exposes only originating process, transcript, exhibits, notice of appeal, and other.
+  - Removed Supreme popup reliance on `indictment_can` for media selection.
+- Updated Supreme media reason text to expanded open-justice wording in generated PDF output.
+- Enforced Mode of access + Section D undertakings as always checked in generated Supreme media forms.
+- Removed obsolete local-service host permissions from manifest as part of extension-only cleanup.
+
 ## 0.3.4 - 2026-02-20
 
 - Fixed Chrome worker download crash by replacing `URL.createObjectURL` usage with base64 `data:` URL downloads in `chrome.downloads.download`.

@@ -3,7 +3,7 @@
   const CASE_NUMBER_RE = /\b\d{4}\/\d{1,10}\b|\b\d{12}\b/;
 
   const DOC_OPTIONS = [
-    { key: "indictment_can", label: "Indictment/CAN/commencing document", checked: true, group: "Crime (non-party)" },
+    { key: "indictment_can", label: "Indictment/CAN/commencing document", checked: false, group: "Crime (non-party)" },
     { key: "witness_statements", label: "Witness statements tendered", checked: false, group: "Crime (non-party)" },
     { key: "police_fact_sheet", label: "Police fact sheet (guilty plea)", checked: false, group: "Crime (non-party)" },
     { key: "transcript", label: "Transcript", checked: false, group: "Common" },
@@ -16,6 +16,26 @@
     { key: "exhibits", label: "Exhibits", checked: false, group: "Common" },
     { key: "civil_other_filed", label: "Other filed civil document", checked: false, group: "Civil (non-party)" },
     { key: "other", label: "Other", checked: false, group: "Common" }
+  ];
+  const SUPREME_BAIL_DOC_OPTIONS = [
+    { key: "crown_bundle", label: "Crown bundle", checked: false },
+    { key: "submissions", label: "Submissions by applicant", checked: false },
+    { key: "selected_images", label: "Selected images contained in court file", checked: false }
+  ];
+  const SUPREME_ALL_DOC_OPTIONS = [
+    { key: "originating_process", label: "Originating process / pleadings", checked: false },
+    { key: "transcript", label: "Transcript", checked: false },
+    { key: "exhibits", label: "Exhibits", checked: false },
+    { key: "notice_of_appeal", label: "Notice of appeal / grounds", checked: false },
+    { key: "other", label: "Other (specify)", checked: false }
+  ];
+  const SUPREME_NON_PARTY_EXTRA_OPTIONS = [
+    { key: "witness_statements", label: "Witness statements tendered", checked: false },
+    { key: "police_fact_sheet", label: "Police fact sheet (guilty plea)", checked: false },
+    { key: "record_conviction_or_order", label: "Record of conviction/order", checked: false },
+    { key: "sealed_copy_judgment", label: "Sealed copy judgment/order", checked: false },
+    { key: "certified_copy_reasons", label: "Certified reasons for judgment/order", checked: false },
+    { key: "civil_other_filed", label: "Other filed civil document", checked: false }
   ];
 
   const defaultMatter = {
@@ -1157,6 +1177,81 @@
     return Array.from(document.querySelectorAll("tr, [role='row'], .court-list-row"));
   }
 
+  function buildDocOptionCheckbox(doc, idPrefix) {
+    const label = document.createElement("label");
+    label.className = "nsw-doc-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "nsw-doc-input";
+    input.dataset.docKey = doc.key;
+    input.id = `${idPrefix}-${doc.key}`;
+    if (doc.checked) input.checked = true;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(` ${doc.label}`));
+    return label;
+  }
+
+  function appendDocSection(root, title, docs, sectionClass = "", idPrefix = "doc") {
+    const section = document.createElement("div");
+    section.className = `nsw-doc-section ${sectionClass}`.trim();
+    const h = document.createElement("h4");
+    h.textContent = title;
+    section.appendChild(h);
+
+    const grid = document.createElement("div");
+    grid.className = "nsw-autofill-grid";
+    docs.forEach((doc) => {
+      grid.appendChild(buildDocOptionCheckbox(doc, idPrefix));
+    });
+    section.appendChild(grid);
+    root.appendChild(section);
+    return section;
+  }
+
+  function syncSupremeModeSections(overlay) {
+    const mode = cleanText(overlay.querySelector("#nsw-supreme-doc-mode")?.value || "all");
+    const sections = Array.from(overlay.querySelectorAll(".nsw-supreme-mode-group"));
+    sections.forEach((section) => {
+      const isActive = section.dataset.mode === mode;
+      section.hidden = !isActive;
+      if (!isActive) {
+        section.querySelectorAll(".nsw-doc-input").forEach((input) => {
+          input.checked = false;
+        });
+      }
+    });
+  }
+
+  function syncSupremeNonPartyExtras(overlay) {
+    const section = overlay.querySelector("#nsw-supreme-non-party-extra");
+    if (!section) return;
+    const show = Boolean(overlay.querySelector("#nsw-non-party")?.checked);
+    section.hidden = !show;
+    if (!show) {
+      section.querySelectorAll(".nsw-doc-input").forEach((input) => {
+        input.checked = false;
+      });
+    }
+  }
+
+  function syncConditionalDetailFields(overlay) {
+    const checked = new Set(
+      Array.from(overlay.querySelectorAll(".nsw-doc-input:checked"))
+        .map((input) => cleanText(input.dataset.docKey || ""))
+        .filter(Boolean)
+    );
+    const show = (id, enabled) => {
+      const field = overlay.querySelector(id);
+      if (!field) return;
+      field.hidden = !enabled;
+      if (!enabled) field.value = "";
+    };
+    show("#detail-transcript", checked.has("transcript"));
+    show("#detail-exhibits", checked.has("exhibits"));
+    show("#detail-images", checked.has("selected_images"));
+    show("#detail-other", checked.has("other") || checked.has("civil_other_filed"));
+  }
+
   function buildModal(matter) {
     const isSupreme = /supreme/i.test(matter.court || "");
     const courtOptions = [
@@ -1198,13 +1293,22 @@
         </label>
 
         <h3>Requested documents</h3>
+        <div id="nsw-supreme-doc-config" ${isSupreme ? "" : "hidden"}>
+          <label class="nsw-autofill-inline-field">
+            Section C mode
+            <select id="nsw-supreme-doc-mode">
+              <option value="all">All others incl. civil/criminal/appellate</option>
+              <option value="bail">Bail applications</option>
+            </select>
+          </label>
+        </div>
         <div id="nsw-docs-groups"></div>
 
         <div class="nsw-autofill-detail-grid">
-          <input id="detail-transcript" placeholder="Transcript dates (optional)" />
-          <input id="detail-exhibits" placeholder="Exhibits details (optional)" />
-          <input id="detail-images" placeholder="Selected images details (optional)" />
-          <input id="detail-other" placeholder="Other document details (optional)" />
+          <input id="detail-transcript" placeholder="Transcript dates (optional)" hidden />
+          <input id="detail-exhibits" placeholder="Exhibits details (optional)" hidden />
+          <input id="detail-images" placeholder="Selected images details (optional)" hidden />
+          <input id="detail-other" placeholder="Other document details (optional)" hidden />
           <input id="detail-additional" placeholder="Additional details for non-party form (optional)" />
         </div>
 
@@ -1230,24 +1334,47 @@
     `;
 
     const groupsRoot = overlay.querySelector("#nsw-docs-groups");
-    Object.keys(grouped).forEach((groupName) => {
-      const section = document.createElement("div");
-      section.className = "nsw-doc-section";
-      const h = document.createElement("h4");
-      h.textContent = groupName;
-      section.appendChild(h);
+    if (isSupreme) {
+      const bailSection = appendDocSection(
+        groupsRoot,
+        "Bail applications",
+        SUPREME_BAIL_DOC_OPTIONS,
+        "nsw-supreme-mode-group",
+        "doc-bail"
+      );
+      bailSection.dataset.mode = "bail";
 
-      const grid = document.createElement("div");
-      grid.className = "nsw-autofill-grid";
-      grouped[groupName].forEach((doc) => {
-        const id = `doc-${doc.key}`;
-        const wrapper = document.createElement("label");
-        wrapper.innerHTML = `<input id="${id}" type="checkbox" ${doc.checked ? "checked" : ""}/> ${doc.label}`;
-        grid.appendChild(wrapper);
+      const allSection = appendDocSection(
+        groupsRoot,
+        "All others incl. civil/criminal/appellate",
+        SUPREME_ALL_DOC_OPTIONS,
+        "nsw-supreme-mode-group",
+        "doc-all"
+      );
+      allSection.dataset.mode = "all";
+
+      const extraSection = appendDocSection(
+        groupsRoot,
+        "Non-party extras",
+        SUPREME_NON_PARTY_EXTRA_OPTIONS,
+        "",
+        "doc-nonparty-extra"
+      );
+      extraSection.id = "nsw-supreme-non-party-extra";
+      const note = document.createElement("p");
+      note.className = "nsw-doc-note";
+      note.textContent = "For Supreme matters, indictment/CAN is covered by Crown bundle or Originating process.";
+      extraSection.appendChild(note);
+
+      syncSupremeModeSections(overlay);
+      syncSupremeNonPartyExtras(overlay);
+      syncConditionalDetailFields(overlay);
+    } else {
+      Object.keys(grouped).forEach((groupName) => {
+        appendDocSection(groupsRoot, groupName, grouped[groupName], "", `doc-${groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
       });
-      section.appendChild(grid);
-      groupsRoot.appendChild(section);
-    });
+      syncConditionalDetailFields(overlay);
+    }
 
     return overlay;
   }
@@ -1294,10 +1421,10 @@
   }
 
   function gatherSelection(overlay) {
-    const selectedDocs = DOC_OPTIONS.filter((doc) => {
-      const box = overlay.querySelector(`#doc-${doc.key}`);
-      return box && box.checked;
-    }).map((doc) => doc.key);
+    const selectedDocs = Array.from(overlay.querySelectorAll(".nsw-doc-input:checked"))
+      .map((input) => cleanText(input.dataset.docKey || ""))
+      .filter(Boolean);
+    const selectedDocSet = Array.from(new Set(selectedDocs));
 
     return {
       matter_overrides: {
@@ -1308,7 +1435,7 @@
         media_access_2026: Boolean(overlay.querySelector("#nsw-media-2026")?.checked),
         non_party_access: Boolean(overlay.querySelector("#nsw-non-party")?.checked)
       },
-      requested_documents: selectedDocs,
+      requested_documents: selectedDocSet,
       document_details: {
         transcript_dates: cleanText(overlay.querySelector("#detail-transcript")?.value || ""),
         exhibits: cleanText(overlay.querySelector("#detail-exhibits")?.value || ""),
@@ -1357,8 +1484,30 @@
     const drawer = overlay.querySelector("#nsw-profile-drawer");
     const cancel = overlay.querySelector("#nsw-cancel");
     const generate = overlay.querySelector("#nsw-generate");
+    const supremeMode = overlay.querySelector("#nsw-supreme-doc-mode");
+    const nonPartyToggle = overlay.querySelector("#nsw-non-party");
 
     loadProfileIntoDrawer(overlay);
+
+    if (supremeMode) {
+      supremeMode.addEventListener("change", () => {
+        syncSupremeModeSections(overlay);
+        syncConditionalDetailFields(overlay);
+      });
+    }
+
+    if (nonPartyToggle) {
+      nonPartyToggle.addEventListener("change", () => {
+        syncSupremeNonPartyExtras(overlay);
+        syncConditionalDetailFields(overlay);
+      });
+    }
+
+    overlay.querySelectorAll(".nsw-doc-input").forEach((input) => {
+      input.addEventListener("change", () => {
+        syncConditionalDetailFields(overlay);
+      });
+    });
 
     toggleProfile.addEventListener("click", () => {
       drawer.hidden = !drawer.hidden;

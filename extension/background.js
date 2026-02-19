@@ -9,7 +9,6 @@ const APP_TZ = "Australia/Sydney";
 const FORM_TEMPLATE_MEDIA = "forms/access_application_2026.pdf";
 const FORM_TEMPLATE_NON_PARTY = "forms/application_non_party_access.pdf";
 const DOWNLOAD_SUBDIR = "Court Application Forms/Generated";
-const DEFAULT_REQUESTED_DOCS = new Set(["originating_process", "transcript", "exhibits"]);
 const NON_PARTY_FIELD_FONT_SIZES = {
   Text28: 9,
   Text29: 9,
@@ -50,61 +49,6 @@ try {
   importScripts("vendor/pdf-lib.min.js");
 } catch (_error) {
   // Guarded at runtime by ensurePdfLibLoaded.
-}
-
-class ApiHttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.name = "ApiHttpError";
-    this.status = status;
-  }
-}
-
-function detailToMessage(payload, status) {
-  if (payload && typeof payload === "object" && payload.detail) {
-    const detail = payload.detail;
-    if (typeof detail === "string") return detail;
-    if (detail && typeof detail === "object" && detail.message) return String(detail.message);
-    return JSON.stringify(detail);
-  }
-  if (typeof payload === "string" && payload.trim()) return payload.trim();
-  return `Request failed (${status})`;
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function getStartServiceHintForPlatform(os) {
-  if (os === "win") {
-    return "%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd";
-  }
-  if (os === "mac") {
-    return "$HOME/Applications/NSW Court Autofill/start-service.command";
-  }
-  return "~/Applications/NSW Court Autofill/start-service.command";
-}
-
-function getServiceLogHintForPlatform(os) {
-  if (os === "win") {
-    return "%USERPROFILE%\\Applications\\NSW Court Autofill\\service.log";
-  }
-  if (os === "mac") {
-    return "$HOME/Applications/NSW Court Autofill/service.log";
-  }
-  return "~/Applications/NSW Court Autofill/service.log";
-}
-
-async function getPlatformOs() {
-  return new Promise((resolve) => {
-    try {
-      chrome.runtime.getPlatformInfo((info) => {
-        resolve(info && info.os ? info.os : "unknown");
-      });
-    } catch (_) {
-      resolve("unknown");
-    }
-  });
 }
 
 function cleanSpaces(value) {
@@ -253,15 +197,6 @@ function effectiveApplications(courtText, requestedApps) {
     media_access_2026: mediaSelected,
     non_party_access: nonPartySelected
   };
-}
-
-function effectiveRequestedDocs(courtText, jurisdictionText, requestedDocs) {
-  const court = cleanSpaces(courtText).toLowerCase();
-  const jurisdiction = cleanSpaces(jurisdictionText).toLowerCase();
-  if (court.includes("local") && jurisdiction.includes("criminal")) {
-    return new Set(["indictment_can"]);
-  }
-  return requestedDocs;
 }
 
 function resolveCourtRecipient(courtText) {
@@ -667,7 +602,12 @@ function mediaValues(profile, matter, requestedDocs, details) {
     "Applicant Signature": signatureText,
     Dated: longDate,
     "I submit that access to records on the court file should be granted because":
-      "Public interest reporting by accredited media.",
+      (
+        "There is significant public interest in accredited media having access to documents deployed " +
+        "in open court in order to fairly and accurately report on matters before the court - in " +
+        "accordance with the principles of open justice and with full acknowledgement of restrictions " +
+        "on publication including suppression, non-publication and statutory prohibitions."
+      ),
     "Transcript dates": cleanSpaces(details.transcript_dates || ""),
     Exhibits: cleanSpaces(details.exhibits || ""),
     Others: mediaOther,
@@ -843,9 +783,8 @@ async function generateLocally(body) {
 
   const requestedDocsRaw = Array.isArray(body && body.requested_documents)
     ? body.requested_documents
-    : Array.from(DEFAULT_REQUESTED_DOCS);
+    : [];
   let requestedDocs = new Set(requestedDocsRaw.map((item) => cleanSpaces(item)).filter(Boolean));
-  requestedDocs = effectiveRequestedDocs(matter.court, matter.jurisdiction, requestedDocs);
   const details = body && body.document_details && typeof body.document_details === "object"
     ? body.document_details
     : {};

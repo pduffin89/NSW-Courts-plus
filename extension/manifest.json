@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NSW Courts+ Cross-Platform Autofill",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Single-click generate NSW media access forms and draft Gmail email.",
   "permissions": [
     "tabs",
@@ -15,8 +15,6 @@
   },
   "host_permissions": [
     "https://onlineregistry.lawlink.nsw.gov.au/*",
-    "http://127.0.0.1:8765/*",
-    "http://localhost:8765/*",
     "https://mail.google.com/*",
     "https://news.google.com/*",
     "https://abr.business.gov.au/*",
