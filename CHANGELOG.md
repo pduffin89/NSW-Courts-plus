@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.8 - 2026-02-20
+
+- Critical PDF checkbox fix:
+  - Replaced fragile `constructor.name` type checks in local PDF generation with method-based detection (`check/uncheck`, `setText`, `select`).
+  - Restored reliable ticking of requested document checkboxes and always-on fields (Mode of access + Section D) in generated Supreme media forms.
+  - Added `updateFieldAppearances()` call to improve checkbox rendering consistency.
+
 ## 0.3.7 - 2026-02-20
 
 - Privacy hardening cleanup before Web Store packaging:

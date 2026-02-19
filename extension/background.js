@@ -679,38 +679,52 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   Object.entries(values || {}).forEach(([name, rawValue]) => {
     const field = fieldMap.get(name);
     if (!field) return;
-    const className = field.constructor && field.constructor.name ? field.constructor.name : "";
     try {
-      if (className === "PDFCheckBox") {
+      const isCheckBox = typeof field.check === "function" && typeof field.uncheck === "function";
+      const isTextField = typeof field.setText === "function";
+      const isSelectable = typeof field.select === "function";
+      const hasOptions = typeof field.getOptions === "function";
+
+      if (isCheckBox) {
         if (boolFromPdfValue(rawValue)) field.check();
         else field.uncheck();
         return;
       }
-      if (className === "PDFTextField") {
+
+      if (isTextField) {
         field.setText(rawValue === undefined || rawValue === null ? "" : String(rawValue));
         if (fieldFontSizes[name] && typeof field.setFontSize === "function") {
           field.setFontSize(Number(fieldFontSizes[name]));
         }
         return;
       }
-      if (className === "PDFDropdown" || className === "PDFOptionList") {
+
+      if (isSelectable) {
+        if (hasOptions) {
+          const options = field.getOptions();
+          if (Array.isArray(options) && options.length) {
+            if (boolFromPdfValue(rawValue)) {
+              const valueText = rawValue === undefined || rawValue === null ? "" : String(rawValue);
+              field.select(options.includes(valueText) ? valueText : options[0]);
+            } else if (typeof field.clear === "function") {
+              field.clear();
+            }
+          }
+          return;
+        }
         field.select(rawValue === undefined || rawValue === null ? "" : String(rawValue));
         return;
-      }
-      if (className === "PDFRadioGroup") {
-        if (boolFromPdfValue(rawValue)) {
-          const options = field.getOptions();
-          if (Array.isArray(options) && options.length) field.select(options[0]);
-        }
-        return;
-      }
-      if (typeof field.setText === "function") {
-        field.setText(rawValue === undefined || rawValue === null ? "" : String(rawValue));
       }
     } catch (_err) {
       // Continue writing remaining fields even if one field fails.
     }
   });
+
+  try {
+    form.updateFieldAppearances();
+  } catch (_error) {
+    // Some templates may not support appearance regeneration; saved values still persist.
+  }
 
   return new Uint8Array(await pdfDoc.save({ useObjectStreams: false }));
 }
