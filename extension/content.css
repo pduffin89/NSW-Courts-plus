@@ -561,3 +561,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Template upload section ---- */
+.nsw-templates-info {
+  font-size: 12px;
+  color: #475569;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+#nsw-template-status {
+  font-size: 12px;
+  color: #1e40af;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.nsw-template-upload-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.nsw-template-upload-label input[type="file"] {
+  font-size: 12px;
+  margin-top: 2px;
+}

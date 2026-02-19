@@ -1221,7 +1221,30 @@
           </div>
         </div>
 
+        <div class="nsw-profile-drawer" id="nsw-templates-drawer" hidden>
+          <h3>PDF Templates</h3>
+          <p class="nsw-templates-info">
+            Forms are filled in-browser. Upload the NSW court PDF templates once — they are stored locally in the extension.
+          </p>
+          <div id="nsw-template-status">Checking templates…</div>
+          <div class="nsw-autofill-detail-grid nsw-template-upload-area">
+            <label class="nsw-template-upload-label">
+              Media access 2026
+              <input id="nsw-tmpl-media" type="file" accept=".pdf" />
+            </label>
+            <label class="nsw-template-upload-label">
+              Non-party access
+              <input id="nsw-tmpl-nonparty" type="file" accept=".pdf" />
+            </label>
+          </div>
+          <div class="nsw-autofill-actions">
+            <button id="nsw-templates-upload" class="primary">Upload Templates</button>
+            <span id="nsw-templates-msg" style="font-size:12px;margin-left:8px;"></span>
+          </div>
+        </div>
+
         <div class="nsw-autofill-actions">
+          <button id="nsw-templates-toggle">Templates ▾</button>
           <button id="nsw-profile-toggle">Edit Profile ▾</button>
           <button id="nsw-cancel">Cancel</button>
           <button id="nsw-generate" class="primary">Generate + Draft Email</button>
@@ -1351,14 +1374,79 @@
     });
   }
 
+  async function refreshTemplateStatus(overlay) {
+    const statusEl = overlay.querySelector("#nsw-template-status");
+    if (!statusEl) return;
+    try {
+      const result = await sendMessage({ type: "TEMPLATE_CHECK" });
+      const d = (result && result.data) ? result.data : {};
+      const lines = [
+        `Media access 2026: ${d.media ? "✓ loaded" : "✗ not loaded"}`,
+        `Non-party access: ${d.non_party ? "✓ loaded" : "✗ not loaded"}`,
+      ];
+      statusEl.textContent = lines.join("  |  ");
+    } catch (_) {
+      statusEl.textContent = "Could not check template status.";
+    }
+  }
+
   function attachModalHandlers(matter, overlay) {
-    const toggleProfile = overlay.querySelector("#nsw-profile-toggle");
-    const saveProfile = overlay.querySelector("#nsw-profile-save");
-    const drawer = overlay.querySelector("#nsw-profile-drawer");
-    const cancel = overlay.querySelector("#nsw-cancel");
-    const generate = overlay.querySelector("#nsw-generate");
+    const toggleProfile   = overlay.querySelector("#nsw-profile-toggle");
+    const toggleTemplates = overlay.querySelector("#nsw-templates-toggle");
+    const saveProfile     = overlay.querySelector("#nsw-profile-save");
+    const drawer          = overlay.querySelector("#nsw-profile-drawer");
+    const templatesDrawer = overlay.querySelector("#nsw-templates-drawer");
+    const cancel          = overlay.querySelector("#nsw-cancel");
+    const generate        = overlay.querySelector("#nsw-generate");
 
     loadProfileIntoDrawer(overlay);
+    refreshTemplateStatus(overlay);
+
+    toggleTemplates.addEventListener("click", () => {
+      templatesDrawer.hidden = !templatesDrawer.hidden;
+      toggleTemplates.textContent = templatesDrawer.hidden ? "Templates ▾" : "Templates ▴";
+      if (!templatesDrawer.hidden) refreshTemplateStatus(overlay);
+    });
+
+    const uploadBtn = overlay.querySelector("#nsw-templates-upload");
+    const uploadMsg = overlay.querySelector("#nsw-templates-msg");
+    if (uploadBtn) {
+      uploadBtn.addEventListener("click", async () => {
+        const mediaInput    = overlay.querySelector("#nsw-tmpl-media");
+        const nonPartyInput = overlay.querySelector("#nsw-tmpl-nonparty");
+        const jobs = [];
+        if (mediaInput && mediaInput.files && mediaInput.files[0]) {
+          jobs.push({ name: "media_access_2026", file: mediaInput.files[0] });
+        }
+        if (nonPartyInput && nonPartyInput.files && nonPartyInput.files[0]) {
+          jobs.push({ name: "non_party_access", file: nonPartyInput.files[0] });
+        }
+        if (!jobs.length) {
+          if (uploadMsg) uploadMsg.textContent = "Select at least one PDF file first.";
+          return;
+        }
+        uploadBtn.disabled = true;
+        if (uploadMsg) uploadMsg.textContent = "Uploading…";
+        try {
+          for (const job of jobs) {
+            const arrayBuffer = await job.file.arrayBuffer();
+            const bytes       = new Uint8Array(arrayBuffer);
+            // Convert to base64 in chunks
+            let binary = "";
+            for (let i = 0; i < bytes.length; i += 8192) {
+              binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+            }
+            await sendMessage({ type: "TEMPLATE_STORE", name: job.name, data: btoa(binary) });
+          }
+          if (uploadMsg) uploadMsg.textContent = `Saved ${jobs.length} template(s).`;
+          refreshTemplateStatus(overlay);
+        } catch (err) {
+          if (uploadMsg) uploadMsg.textContent = `Error: ${err && err.message ? err.message : err}`;
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      });
+    }
 
     toggleProfile.addEventListener("click", () => {
       drawer.hidden = !drawer.hidden;

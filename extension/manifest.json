@@ -1,17 +1,24 @@
 {
   "manifest_version": 3,
   "name": "NSW Courts+ Cross-Platform Autofill",
-  "version": "0.3.2",
-  "description": "Single-click generate NSW media access forms and draft Gmail email.",
+  "version": "0.4.0",
+  "description": "Single-click generate NSW media access forms and draft Gmail email. Runs fully in-browser — no local service required.",
   "permissions": [
     "tabs",
     "storage",
     "alarms",
-    "scripting"
+    "scripting",
+    "downloads"
   ],
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/pdf-lib.min.js", "pdf_engine.js"],
+      "matches":   ["<all_urls>"]
+    }
+  ],
   "host_permissions": [
     "https://onlineregistry.lawlink.nsw.gov.au/*",
     "http://127.0.0.1:8765/*",

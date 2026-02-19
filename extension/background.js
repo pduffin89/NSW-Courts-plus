@@ -1,3 +1,11 @@
+// Load pdf-lib and the in-extension PDF engine before any other code runs.
+// These scripts are bundled inside the extension; no local service required.
+try {
+  importScripts("lib/pdf-lib.min.js", "pdf_engine.js");
+} catch (e) {
+  console.error("[NSW Autofill] Failed to load PDF engine scripts:", e);
+}
+
 const API_BASES = ["http://127.0.0.1:8765", "http://localhost:8765"];
 const PROFILE_KEY = "nsw_autofill_profile";
 
@@ -341,6 +349,31 @@ async function handleApiRequest(message) {
   const method = (message.method || "GET").toUpperCase();
   const body = message.body;
 
+  // --- In-extension handlers (no local service required) ---
+
+  if (path === "/health" || path === "/health/") {
+    return { status: "ok", mode: "in-extension" };
+  }
+
+  if ((path === "/generate" || path === "/intake" || path === "/generate/" || path === "/intake/") && method === "POST") {
+    if (typeof generateFormsInExtension !== "function") {
+      throw new Error("PDF engine not loaded. Reload the extension.");
+    }
+    return generateFormsInExtension(body);
+  }
+
+  if ((path === "/profile" || path === "/profile/") && method === "GET") {
+    const profile = await storageGet(PROFILE_KEY);
+    return profile || {};
+  }
+
+  if ((path === "/profile" || path === "/profile/") && method === "POST") {
+    if (body) await storageSet({ [PROFILE_KEY]: body });
+    return { saved: true };
+  }
+
+  // --- Fallback: forward to local service (legacy / Tailscale mode) ---
+
   let lastError = null;
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     for (const base of API_BASES) {
@@ -603,23 +636,38 @@ async function handleFetchAttachments(message) {
   const out = [];
   for (let i = 0; i < attachments.length; i += 1) {
     const item = attachments[i] || {};
-    const response = await fetch(item.url, { method: "GET" });
-    if (!response.ok) {
+
+    // In-extension mode: attachment already carries base64 data - no HTTP fetch needed.
+    if (item.data) {
+      out.push({
+        name:   item.name   || `attachment-${i + 1}.pdf`,
+        mime:   item.mime   || "application/pdf",
+        base64: item.data,
+      });
       continue;
     }
-    const blob = await response.blob();
-    const arrayBuffer = await blob.arrayBuffer();
-    let binary = "";
-    const bytes = new Uint8Array(arrayBuffer);
-    const chunkSize = 0x8000;
-    for (let pos = 0; pos < bytes.length; pos += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(pos, pos + chunkSize));
+
+    // Legacy / Tailscale mode: fetch PDF bytes from the local service via HTTP.
+    if (!item.url) continue;
+    try {
+      const response = await fetch(item.url, { method: "GET" });
+      if (!response.ok) continue;
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(arrayBuffer);
+      const chunkSize = 0x8000;
+      for (let pos = 0; pos < bytes.length; pos += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(pos, pos + chunkSize));
+      }
+      out.push({
+        name:   item.name || `attachment-${i + 1}.pdf`,
+        mime:   blob.type || "application/pdf",
+        base64: btoa(binary),
+      });
+    } catch (_) {
+      // Skip attachments that cannot be fetched.
     }
-    out.push({
-      name: item.name || `attachment-${i + 1}.pdf`,
-      mime: blob.type || "application/pdf",
-      base64: btoa(binary)
-    });
   }
   return out;
 }
@@ -1082,6 +1130,47 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const profile = message.profile || {};
       await storageSet({ [PROFILE_KEY]: profile });
       sendResponse({ ok: true, data: { saved: true } });
+      return;
+    }
+
+    // ---- Template management (in-extension PDF mode) ----
+
+    if (message?.type === "TEMPLATE_STORE") {
+      // message.name: TEMPLATE_NAMES.MEDIA or TEMPLATE_NAMES.NON_PARTY
+      // message.data: base64-encoded PDF bytes
+      if (typeof storeTemplateBytes !== "function") {
+        sendResponse({ ok: false, error: "PDF engine not loaded." });
+        return;
+      }
+      const bytes = Uint8Array.from(atob(message.data), (c) => c.charCodeAt(0));
+      await storeTemplateBytes(message.name, bytes);
+      sendResponse({ ok: true, data: { stored: message.name } });
+      return;
+    }
+
+    if (message?.type === "TEMPLATE_LIST") {
+      if (typeof listStoredTemplates !== "function") {
+        sendResponse({ ok: false, error: "PDF engine not loaded." });
+        return;
+      }
+      const names = await listStoredTemplates();
+      sendResponse({ ok: true, data: { templates: names } });
+      return;
+    }
+
+    if (message?.type === "TEMPLATE_CHECK") {
+      if (typeof listStoredTemplates !== "function") {
+        sendResponse({ ok: true, data: { media: false, non_party: false } });
+        return;
+      }
+      const names = await listStoredTemplates();
+      sendResponse({
+        ok: true,
+        data: {
+          media:     names.includes("media_access_2026"),
+          non_party: names.includes("non_party_access"),
+        },
+      });
       return;
     }
 
