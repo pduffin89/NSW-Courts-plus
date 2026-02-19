@@ -776,34 +776,30 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
 }
 
 async function savePdfToDownloads(fileName, bytes) {
-  const blob = new Blob([bytes], { type: "application/pdf" });
-  const url = URL.createObjectURL(blob);
-  try {
-    await new Promise((resolve, reject) => {
-      chrome.downloads.download(
-        {
-          url,
-          filename: `${DOWNLOAD_SUBDIR}/${fileName}`,
-          saveAs: false,
-          conflictAction: "uniquify"
-        },
-        (downloadId) => {
-          const err = chrome.runtime.lastError;
-          if (err) {
-            reject(new Error(err.message || "Download failed."));
-            return;
-          }
-          if (!downloadId) {
-            reject(new Error("Download failed."));
-            return;
-          }
-          resolve();
+  const base64 = uint8ToBase64(bytes);
+  const dataUrl = `data:application/pdf;base64,${base64}`;
+  await new Promise((resolve, reject) => {
+    chrome.downloads.download(
+      {
+        url: dataUrl,
+        filename: `${DOWNLOAD_SUBDIR}/${fileName}`,
+        saveAs: false,
+        conflictAction: "uniquify"
+      },
+      (downloadId) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          reject(new Error(err.message || "Download failed."));
+          return;
         }
-      );
-    });
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-  }
+        if (!downloadId) {
+          reject(new Error("Download failed."));
+          return;
+        }
+        resolve();
+      }
+    );
+  });
 }
 
 function ensureProfileFromPayload(profile) {

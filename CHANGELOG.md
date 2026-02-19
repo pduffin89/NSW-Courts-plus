@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4 - 2026-02-20
+
+- Fixed Chrome worker download crash by replacing `URL.createObjectURL` usage with base64 `data:` URL downloads in `chrome.downloads.download`.
+- Resolves: `Generation failed: URL.createObjectURL is not a function`.
+
 ## 0.3.3 - 2026-02-20
 
 - Removed local-service dependency for generation by moving `/generate` into the extension background worker.
