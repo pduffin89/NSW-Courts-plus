@@ -1,4 +1,3 @@
-const API_BASES = ["http://127.0.0.1:8765", "http://localhost:8765"];
 const PROFILE_KEY = "nsw_autofill_profile";
 
 const ATTACH_MAX_ATTEMPTS = 8;
@@ -6,8 +5,52 @@ const ATTACH_RETRY_MS = 2000;
 const ATTACH_KEY_PREFIX = "nsw_attach_pending_";
 const ATTACH_ALARM_PREFIX = "nsw_attach_alarm_";
 const ABN_GUID = "912aeab3-605b-4dc8-8aa5-9f5f70f65902";
+const APP_TZ = "Australia/Sydney";
+const FORM_TEMPLATE_MEDIA = "forms/access_application_2026.pdf";
+const FORM_TEMPLATE_NON_PARTY = "forms/application_non_party_access.pdf";
+const DOWNLOAD_SUBDIR = "Court Application Forms/Generated";
+const DEFAULT_REQUESTED_DOCS = new Set(["originating_process", "transcript", "exhibits"]);
+const NON_PARTY_FIELD_FONT_SIZES = {
+  Text28: 9,
+  Text29: 9,
+  Text48: 11,
+  Text51: 11
+};
+const MEDIA_DOC_TO_FIELD = {
+  crown_bundle: "Check Box39",
+  submissions: "Check Box40",
+  selected_images: "Check Box41",
+  originating_process: "Check Box50",
+  transcript: "Check Box51",
+  exhibits: "Check Box52",
+  notice_of_appeal: "Check Box53",
+  other: "Check Box54"
+};
+const NON_PARTY_ACK_FIELDS = [
+  "Button39",
+  "Button40",
+  "Button41",
+  "Button42",
+  "Button43",
+  "Button44",
+  "Button45",
+  "Button46",
+  "Button47"
+];
+const EMAIL_BODY = [
+  "Hey folks",
+  "Can I please get the latest outcomes, next dates, NPOs or any other orders, suburb and YOB.",
+  "Applying for the following docs as well.",
+  "Thanks heaps"
+].join("\n");
 
 const activeAttachRuns = new Set();
+
+try {
+  importScripts("vendor/pdf-lib.min.js");
+} catch (_error) {
+  // Guarded at runtime by ensurePdfLibLoaded.
+}
 
 class ApiHttpError extends Error {
   constructor(status, message) {
@@ -66,6 +109,215 @@ async function getPlatformOs() {
 
 function cleanSpaces(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function slug(value) {
+  const cleaned = String(value || "").trim().replace(/[^a-zA-Z0-9]+/g, "_");
+  return cleaned.replace(/^_+|_+$/g, "") || "matter";
+}
+
+function truncateText(value, maxLen) {
+  const text = cleanSpaces(value);
+  if (text.length <= maxLen) return text;
+  if (maxLen <= 3) return text.slice(0, maxLen);
+  return `${text.slice(0, maxLen - 3).trimEnd()}...`;
+}
+
+function stripSignaturePrefix(value) {
+  return cleanSpaces(value).replace(/^\/s\/\s*/i, "");
+}
+
+function signatureFromProfile(profile) {
+  const explicit = stripSignaturePrefix(profile && profile.signature_text ? profile.signature_text : "");
+  if (explicit) return explicit;
+  return stripSignaturePrefix(profile && profile.applicant_name ? profile.applicant_name : "");
+}
+
+function splitParties(matter) {
+  const plaintiff = cleanSpaces(matter && matter.plaintiff ? matter.plaintiff : "");
+  const defendant = cleanSpaces(matter && matter.defendant ? matter.defendant : "");
+  if (plaintiff && defendant) return [plaintiff, defendant];
+  const parts = cleanSpaces(matter && matter.matter_name ? matter.matter_name : "").split(/\bv\b/i);
+  if (parts.length >= 2) {
+    return [
+      cleanSpaces(parts[0].replace(/^[\s\-:]+|[\s\-:]+$/g, "")),
+      cleanSpaces(parts[1].replace(/^[\s\-:]+|[\s\-:]+$/g, ""))
+    ];
+  }
+  return [cleanSpaces(matter && matter.matter_name ? matter.matter_name : ""), ""];
+}
+
+function lastName(value) {
+  const text = cleanSpaces(value);
+  if (!text) return "";
+  const tokens = text.match(/[A-Za-z][A-Za-z'\\-]*/g);
+  if (tokens && tokens.length) return tokens[tokens.length - 1];
+  const split = text.split(/\s+/);
+  return split[split.length - 1];
+}
+
+function compactCaseTitle(matter, maxLen = 24) {
+  const full = cleanSpaces(matter && matter.matter_name ? matter.matter_name : "");
+  if (!full) return truncateText(matter && matter.case_number ? matter.case_number : "", maxLen);
+  if (full.length <= maxLen) return full;
+  const [plaintiff, defendant] = splitParties(matter);
+  const lhs = cleanSpaces(plaintiff) || "R";
+  const rhs = lastName((matter && matter.defendant) || defendant);
+  if (rhs) {
+    const candidate = cleanSpaces(`${lhs} v ${rhs}`);
+    if (candidate.length <= maxLen) return candidate;
+  }
+  return truncateText(full, maxLen);
+}
+
+function abbreviateCourtName(court) {
+  let text = cleanSpaces(court);
+  if (!text) return "";
+  const substitutions = [
+    [/\bSupreme Court\b/gi, "Supreme Ct"],
+    [/\bDistrict Court\b/gi, "District Ct"],
+    [/\bLocal Court\b/gi, "Local Ct"],
+    [/\bChildren'?s Court\b/gi, "Children's Ct"],
+    [/\bCoroner'?s Court\b/gi, "Coroner's Ct"]
+  ];
+  substitutions.forEach(([pattern, replacement]) => {
+    text = text.replace(pattern, replacement);
+  });
+  return cleanSpaces(text);
+}
+
+function compactCourtText(matter, maxLen = 24) {
+  const location = cleanSpaces(matter && matter.court_location ? matter.court_location : "");
+  const shortLocation = cleanSpaces(location.replace(/\bDivision\b/gi, "Div").replace(/\bCourt\b/gi, "Ct"));
+  const court = abbreviateCourtName(matter && matter.court ? matter.court : "");
+  if (shortLocation && shortLocation.length <= maxLen) return shortLocation;
+  if (location && location.length <= maxLen) return location;
+  if (court && court.length <= maxLen) return court;
+  if (location && court) {
+    const withCourt = cleanSpaces(`${location} (${court})`);
+    if (withCourt.length <= maxLen) return withCourt;
+  }
+  if (location) return truncateText(shortLocation, maxLen);
+  return truncateText(court || (matter && matter.court ? matter.court : ""), maxLen);
+}
+
+function formatNowLongDate() {
+  const now = new Date();
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: APP_TZ, day: "numeric" }).format(now);
+  const monthYear = new Intl.DateTimeFormat("en-AU", {
+    timeZone: APP_TZ,
+    month: "long",
+    year: "numeric"
+  }).format(now);
+  return `${day} ${monthYear}`;
+}
+
+function formatNowShortDate() {
+  const now = new Date();
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: APP_TZ, day: "numeric" }).format(now);
+  const month = new Intl.DateTimeFormat("en-AU", { timeZone: APP_TZ, month: "numeric" }).format(now);
+  const year = new Intl.DateTimeFormat("en-AU", { timeZone: APP_TZ, year: "numeric" }).format(now);
+  return `${day}/${month}/${year}`;
+}
+
+function timestampStamp() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: APP_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(now);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}${map.month}${map.day}_${map.hour}${map.minute}${map.second}`;
+}
+
+function effectiveApplications(courtText, requestedApps) {
+  const lowerCourt = cleanSpaces(courtText).toLowerCase();
+  const isSupreme = lowerCourt.includes("supreme");
+  let mediaSelected = Boolean(requestedApps && requestedApps.media_access_2026 !== undefined
+    ? requestedApps.media_access_2026
+    : true);
+  let nonPartySelected = Boolean(requestedApps && requestedApps.non_party_access
+    ? requestedApps.non_party_access
+    : false);
+  if (!isSupreme && mediaSelected) {
+    mediaSelected = false;
+    nonPartySelected = true;
+  }
+  return {
+    media_access_2026: mediaSelected,
+    non_party_access: nonPartySelected
+  };
+}
+
+function effectiveRequestedDocs(courtText, jurisdictionText, requestedDocs) {
+  const court = cleanSpaces(courtText).toLowerCase();
+  const jurisdiction = cleanSpaces(jurisdictionText).toLowerCase();
+  if (court.includes("local") && jurisdiction.includes("criminal")) {
+    return new Set(["indictment_can"]);
+  }
+  return requestedDocs;
+}
+
+function resolveCourtRecipient(courtText) {
+  const text = cleanSpaces(courtText).toLowerCase();
+  if (text.includes("supreme")) return ["media@courts.nsw.gov.au", "supreme"];
+  if (text.includes("district")) return ["mediadistrictcourt@dcj.nsw.gov.au", "district"];
+  if (text.includes("local") || text.includes("children") || text.includes("childrens") || text.includes("coroner")) {
+    return ["localcourtmedia@courts.nsw.gov.au", "local_children_coroner"];
+  }
+  return ["media@courts.nsw.gov.au", "supreme"];
+}
+
+function normalizeMatterName(caseNumber, matterName) {
+  let text = cleanSpaces(matterName);
+  if (!text) return cleanSpaces(caseNumber);
+  const escapedCase = cleanSpaces(caseNumber).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (escapedCase) text = text.replace(new RegExp(`^\\s*${escapedCase}\\s*`, "i"), "").trim();
+  text = text.replace(/^\s*[A-Za-z]{3}\s+\d{1,2}:\d{2}\s*(?:am|pm)\s*/i, "").trim();
+  text = text.replace(/^\s*\d{1,2}\s+[A-Za-z]{3}\s+\d{1,2}:\d{2}\s*(?:am|pm)\s*/i, "").trim();
+  if (escapedCase) text = text.replace(new RegExp(`^\\s*${escapedCase}\\s*`, "i"), "").trim();
+  text = text.replace(/\s+(Criminal|Civil)\s+(Local Court|District Court|Supreme Court).*$/i, "").trim();
+  return text || cleanSpaces(caseNumber);
+}
+
+function composeGmailUrl(to, subject, body) {
+  const params = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: cleanSpaces(to),
+    su: cleanSpaces(subject),
+    body: String(body || "")
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+function boolFromPdfValue(value) {
+  if (typeof value === "string") {
+    return value !== "/Off" && cleanSpaces(value) !== "";
+  }
+  return Boolean(value);
+}
+
+function uint8ToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let pos = 0; pos < bytes.length; pos += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(pos, pos + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function ensurePdfLibLoaded() {
+  if (!globalThis.PDFLib || !globalThis.PDFLib.PDFDocument) {
+    throw new Error("PDF engine not loaded in extension worker.");
+  }
+  return globalThis.PDFLib;
 }
 
 function buildGoogleNewsSearchUrl(query) {
@@ -336,48 +588,348 @@ async function fetchAbnJsonDetails(abn) {
   };
 }
 
+function nonPartyJurisdictionField(courtText, jurisdictionText = "") {
+  const text = cleanSpaces(courtText).toLowerCase();
+  const jurisdiction = cleanSpaces(jurisdictionText).toLowerCase();
+  if (text.includes("children")) return "Button8";
+  if (text.includes("district")) return "Button7";
+  if (text.includes("local") || text.includes("coroner")) {
+    if (text.includes("civil") || jurisdiction.includes("civil")) return "Button10";
+    return "Button6";
+  }
+  return "";
+}
+
+function applyNonPartyDocumentMap(requestedDocs, details, values) {
+  if (requestedDocs.has("indictment_can") || requestedDocs.has("originating_process")) values.Button11 = true;
+  if (requestedDocs.has("transcript")) {
+    values.Button14 = true;
+    values.Text34 = cleanSpaces(details.transcript_dates || "");
+  }
+  if (requestedDocs.has("witness_statements")) values.Button12 = true;
+  if (requestedDocs.has("police_fact_sheet")) values.Button13 = true;
+  if (requestedDocs.has("record_conviction_or_order")) values.Button15 = true;
+  if (requestedDocs.has("sealed_copy_judgment")) values.Button17 = true;
+  if (requestedDocs.has("certified_copy_reasons")) values.Button18 = true;
+  if (requestedDocs.has("civil_pleading") || requestedDocs.has("originating_process")) {
+    values.Button20 = true;
+    values.Text31 = cleanSpaces(details.civil_pleading || "Pleadings / originating process");
+  }
+  if (requestedDocs.has("civil_other_filed")) {
+    values.Button21 = true;
+    values.Text32 = cleanSpaces(details.civil_other_filed || "Other filed civil document");
+  }
+  if (requestedDocs.has("exhibits")) {
+    values.Button21 = true;
+    values.Text32 = cleanSpaces(details.exhibits || "Exhibits");
+  }
+  if (requestedDocs.has("notice_of_appeal")) {
+    values.Button16 = true;
+    values.Text33 = "Notice of Appeal / grounds of appeal";
+  }
+  if (requestedDocs.has("other")) {
+    values.Button16 = true;
+    values.Text33 = cleanSpaces(details.other || "Other documents as selected");
+  }
+  if (requestedDocs.has("selected_images")) {
+    values.Button16 = true;
+    values.Text33 = cleanSpaces(details.selected_images || "Selected images in court file");
+  }
+}
+
+function mediaValues(profile, matter, requestedDocs, details) {
+  const longDate = formatNowLongDate();
+  const [plaintiff, defendant] = splitParties(matter);
+  const signatureText = signatureFromProfile(profile);
+  const allowed = new Set([
+    "crown_bundle",
+    "submissions",
+    "selected_images",
+    "originating_process",
+    "transcript",
+    "exhibits",
+    "notice_of_appeal",
+    "other"
+  ]);
+  const unsupported = Array.from(requestedDocs).filter((doc) => doc && !allowed.has(doc)).sort();
+  let mediaOther = cleanSpaces(details.other || "");
+  if (unsupported.length) {
+    mediaOther = cleanSpaces([mediaOther, unsupported.join(", ")].filter(Boolean).join("; "));
+  }
+  const values = {
+    Name: cleanSpaces(profile.applicant_name || ""),
+    Organisation: cleanSpaces(profile.organisation || ""),
+    "Contact number": cleanSpaces(profile.contact_number || ""),
+    Email: cleanSpaces(profile.email || ""),
+    "Case number yearnumber": cleanSpaces(matter.case_number || ""),
+    "Plaintiff  Appellant name": plaintiff,
+    "Defendant  Respondent name": defendant,
+    "Applicant Signature": signatureText,
+    Dated: longDate,
+    "I submit that access to records on the court file should be granted because":
+      "Public interest reporting by accredited media.",
+    "Transcript dates": cleanSpaces(details.transcript_dates || ""),
+    Exhibits: cleanSpaces(details.exhibits || ""),
+    Others: mediaOther,
+    "specify images": cleanSpaces(details.selected_images || ""),
+    "Check Box63": true,
+    "Check Box64": true,
+    "Check Box65": true
+  };
+  Object.entries(MEDIA_DOC_TO_FIELD).forEach(([docKey, fieldName]) => {
+    values[fieldName] = requestedDocs.has(docKey);
+  });
+  return values;
+}
+
+function nonPartyValues(profile, matter, requestedDocs, details) {
+  const shortDate = formatNowShortDate();
+  const signatureText = signatureFromProfile(profile);
+  const values = {
+    Button1: true,
+    Button2: false,
+    Button3: false,
+    Text22: cleanSpaces(profile.applicant_name || ""),
+    Text23: cleanSpaces(profile.occupation || "Journalist"),
+    Text24: cleanSpaces(profile.organisation || ""),
+    Text25: cleanSpaces(profile.email || ""),
+    Text26: cleanSpaces(profile.contact_number || ""),
+    Button4: true,
+    Button5: false,
+    Text27: cleanSpaces(matter.case_number || ""),
+    Text28: compactCaseTitle(matter),
+    Text29: compactCourtText(matter),
+    Text35: cleanSpaces(details.additional_details || ""),
+    Button37: true,
+    Text48: signatureText,
+    Text49: shortDate,
+    Text50: cleanSpaces(profile.applicant_name || ""),
+    Text51: signatureText,
+    Text52: shortDate,
+    Button6: false,
+    Button7: false,
+    Button8: false,
+    Button10: false
+  };
+  const jurisdictionField = nonPartyJurisdictionField(matter.court, matter.jurisdiction);
+  if (jurisdictionField) values[jurisdictionField] = true;
+  NON_PARTY_ACK_FIELDS.forEach((fieldName) => {
+    values[fieldName] = true;
+  });
+  applyNonPartyDocumentMap(requestedDocs, details, values);
+  return values;
+}
+
+async function loadTemplateBytes(templateRelativePath) {
+  const url = chrome.runtime.getURL(templateRelativePath);
+  const response = await fetch(url, { method: "GET", cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Missing form template in extension: ${templateRelativePath}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}) {
+  const pdfLib = await ensurePdfLibLoaded();
+  const templateBytes = await loadTemplateBytes(templateRelativePath);
+  const pdfDoc = await pdfLib.PDFDocument.load(templateBytes, { ignoreEncryption: true });
+  const form = pdfDoc.getForm();
+  const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
+
+  Object.entries(values || {}).forEach(([name, rawValue]) => {
+    const field = fieldMap.get(name);
+    if (!field) return;
+    const className = field.constructor && field.constructor.name ? field.constructor.name : "";
+    try {
+      if (className === "PDFCheckBox") {
+        if (boolFromPdfValue(rawValue)) field.check();
+        else field.uncheck();
+        return;
+      }
+      if (className === "PDFTextField") {
+        field.setText(rawValue === undefined || rawValue === null ? "" : String(rawValue));
+        if (fieldFontSizes[name] && typeof field.setFontSize === "function") {
+          field.setFontSize(Number(fieldFontSizes[name]));
+        }
+        return;
+      }
+      if (className === "PDFDropdown" || className === "PDFOptionList") {
+        field.select(rawValue === undefined || rawValue === null ? "" : String(rawValue));
+        return;
+      }
+      if (className === "PDFRadioGroup") {
+        if (boolFromPdfValue(rawValue)) {
+          const options = field.getOptions();
+          if (Array.isArray(options) && options.length) field.select(options[0]);
+        }
+        return;
+      }
+      if (typeof field.setText === "function") {
+        field.setText(rawValue === undefined || rawValue === null ? "" : String(rawValue));
+      }
+    } catch (_err) {
+      // Continue writing remaining fields even if one field fails.
+    }
+  });
+
+  return new Uint8Array(await pdfDoc.save({ useObjectStreams: false }));
+}
+
+async function savePdfToDownloads(fileName, bytes) {
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  try {
+    await new Promise((resolve, reject) => {
+      chrome.downloads.download(
+        {
+          url,
+          filename: `${DOWNLOAD_SUBDIR}/${fileName}`,
+          saveAs: false,
+          conflictAction: "uniquify"
+        },
+        (downloadId) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            reject(new Error(err.message || "Download failed."));
+            return;
+          }
+          if (!downloadId) {
+            reject(new Error("Download failed."));
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+}
+
+function ensureProfileFromPayload(profile) {
+  const candidate = profile || {};
+  if (!cleanSpaces(candidate.applicant_name)) {
+    throw new Error("Profile missing. Set applicant details in the extension drawer, then generate again.");
+  }
+  return {
+    applicant_name: cleanSpaces(candidate.applicant_name),
+    organisation: cleanSpaces(candidate.organisation || ""),
+    contact_number: cleanSpaces(candidate.contact_number || ""),
+    email: cleanSpaces(candidate.email || ""),
+    occupation: cleanSpaces(candidate.occupation || "Journalist"),
+    signature_text: cleanSpaces(candidate.signature_text || "")
+  };
+}
+
+async function generateLocally(body) {
+  const matterRaw = body && body.matter ? body.matter : {};
+  const matter = {
+    case_number: cleanSpaces(matterRaw.case_number || ""),
+    matter_name: cleanSpaces(matterRaw.matter_name || ""),
+    court: cleanSpaces(matterRaw.court || ""),
+    jurisdiction: cleanSpaces(matterRaw.jurisdiction || ""),
+    court_location: cleanSpaces(matterRaw.court_location || ""),
+    listing_date: cleanSpaces(matterRaw.listing_date || ""),
+    plaintiff: cleanSpaces(matterRaw.plaintiff || ""),
+    defendant: cleanSpaces(matterRaw.defendant || "")
+  };
+
+  if (!matter.case_number) {
+    throw new Error("Missing case number.");
+  }
+
+  const incomingProfile = body && body.profile ? body.profile : null;
+  const storedProfile = await storageGet(PROFILE_KEY);
+  const profile = ensureProfileFromPayload(incomingProfile || storedProfile || {});
+  if (incomingProfile) {
+    await storageSet({ [PROFILE_KEY]: profile });
+  }
+
+  const requestedDocsRaw = Array.isArray(body && body.requested_documents)
+    ? body.requested_documents
+    : Array.from(DEFAULT_REQUESTED_DOCS);
+  let requestedDocs = new Set(requestedDocsRaw.map((item) => cleanSpaces(item)).filter(Boolean));
+  requestedDocs = effectiveRequestedDocs(matter.court, matter.jurisdiction, requestedDocs);
+  const details = body && body.document_details && typeof body.document_details === "object"
+    ? body.document_details
+    : {};
+  const applications = effectiveApplications(matter.court, body && body.applications ? body.applications : {});
+
+  const stamp = timestampStamp();
+  const safeCase = slug(matter.case_number);
+  const safeName = slug(matter.matter_name).slice(0, 60);
+  const baseName = `${stamp}_${safeCase}_${safeName || "matter"}`;
+
+  const generatedFiles = [];
+  const attachments = [];
+
+  if (applications.media_access_2026) {
+    const fileName = `${baseName}_media_access_2026.pdf`;
+    const pdfBytes = await fillPdfTemplate(
+      FORM_TEMPLATE_MEDIA,
+      mediaValues(profile, matter, requestedDocs, details),
+      {}
+    );
+    await savePdfToDownloads(fileName, pdfBytes);
+    generatedFiles.push(`${DOWNLOAD_SUBDIR}/${fileName}`);
+    attachments.push({
+      name: fileName,
+      mime: "application/pdf",
+      base64: uint8ToBase64(pdfBytes)
+    });
+  }
+
+  if (applications.non_party_access) {
+    const fileName = `${baseName}_non_party_access.pdf`;
+    const pdfBytes = await fillPdfTemplate(
+      FORM_TEMPLATE_NON_PARTY,
+      nonPartyValues(profile, matter, requestedDocs, details),
+      NON_PARTY_FIELD_FONT_SIZES
+    );
+    await savePdfToDownloads(fileName, pdfBytes);
+    generatedFiles.push(`${DOWNLOAD_SUBDIR}/${fileName}`);
+    attachments.push({
+      name: fileName,
+      mime: "application/pdf",
+      base64: uint8ToBase64(pdfBytes)
+    });
+  }
+
+  if (!generatedFiles.length) {
+    throw new Error("No forms selected for generation.");
+  }
+
+  const [recipient] = resolveCourtRecipient(matter.court);
+  const subjectMatter = normalizeMatterName(matter.case_number, matter.matter_name);
+  const subject = cleanSpaces(`${matter.case_number} ${subjectMatter}`);
+  return {
+    generated_files: generatedFiles,
+    output_folder: "Chrome Downloads",
+    attachment_urls: attachments,
+    email_to: recipient,
+    email_subject: subject,
+    email_body: EMAIL_BODY,
+    gmail_compose_url: composeGmailUrl(recipient, subject, EMAIL_BODY),
+    gmail_draft_id: null,
+    open_email_url: composeGmailUrl(recipient, subject, EMAIL_BODY),
+    applications_effective: applications
+  };
+}
+
 async function handleApiRequest(message) {
   const path = message.path || "/health";
   const method = (message.method || "GET").toUpperCase();
   const body = message.body;
-
-  let lastError = null;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
-    for (const base of API_BASES) {
-      try {
-        const response = await fetch(`${base}${path}`, {
-          method,
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: body ? JSON.stringify(body) : undefined
-        });
-
-        const contentType = response.headers.get("content-type") || "";
-        const payload = contentType.includes("application/json") ? await response.json() : await response.text();
-        if (!response.ok) {
-          throw new ApiHttpError(response.status, detailToMessage(payload, response.status));
-        }
-        return payload;
-      } catch (error) {
-        if (error instanceof ApiHttpError) {
-          throw error;
-        }
-        lastError = error;
-      }
-    }
-    await sleep(350);
+  if (path === "/health" && method === "GET") {
+    return {
+      status: "ok",
+      mode: "extension_local"
+    };
   }
-
-  if (lastError instanceof ApiHttpError) {
-    throw lastError;
+  if (path === "/generate" && method === "POST") {
+    return generateLocally(body || {});
   }
-  const platformOs = await getPlatformOs();
-  const startHint = getStartServiceHintForPlatform(platformOs);
-  const logHint = getServiceLogHintForPlatform(platformOs);
-  throw new Error(
-    `Local service unreachable. Run ${startHint}, then retry. If it still fails, check ${logHint}. (${String(lastError && lastError.message ? lastError.message : lastError)})`
-  );
+  throw new Error(`Unsupported local API route: ${method} ${path}`);
 }
 
 async function handleNewsSearch(message) {
@@ -603,6 +1155,17 @@ async function handleFetchAttachments(message) {
   const out = [];
   for (let i = 0; i < attachments.length; i += 1) {
     const item = attachments[i] || {};
+    if (item.base64) {
+      out.push({
+        name: item.name || `attachment-${i + 1}.pdf`,
+        mime: item.mime || "application/pdf",
+        base64: String(item.base64)
+      });
+      continue;
+    }
+    if (!item.url) {
+      continue;
+    }
     const response = await fetch(item.url, { method: "GET" });
     if (!response.ok) {
       continue;
@@ -1006,7 +1569,7 @@ async function tryAttachOnTab(tabId) {
       attachments: Array.isArray(pending.attachments) ? pending.attachments : []
     });
     if (!filePayloads.length) {
-      await failAndRetry(tabId, pending, "Could not fetch attachment files from local service.");
+      await failAndRetry(tabId, pending, "Could not prepare attachment files.");
       return;
     }
 

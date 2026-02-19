@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.3 - 2026-02-20
+
+- Removed local-service dependency for generation by moving `/generate` into the extension background worker.
+- Added bundled PDF templates and bundled `pdf-lib` for in-extension form filling.
+- Added automatic PDF saves to Chrome Downloads under `Court Application Forms/Generated`.
+- Updated Gmail attachment pipeline to accept in-memory attachment payloads (no local attachment URLs required).
+- Added `downloads` permission in the extension manifest.
+
 ## 0.3.2 - 2026-02-19
 
 - Fixed Windows/macOS local-service error hints to avoid non-runnable quote wrapping.

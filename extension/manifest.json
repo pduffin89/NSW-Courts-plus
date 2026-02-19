@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "NSW Courts+ Cross-Platform Autofill",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Single-click generate NSW media access forms and draft Gmail email.",
   "permissions": [
     "tabs",
     "storage",
     "alarms",
-    "scripting"
+    "scripting",
+    "downloads"
   ],
   "background": {
     "service_worker": "background.js"
