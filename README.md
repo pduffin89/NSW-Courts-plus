@@ -10,7 +10,9 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
 - Opens Gmail compose and auto-attaches generated PDFs via extension worker retries.
 - For Supreme Court media forms, mirrors Section C with a mode switch:
   - `Bail applications`: Crown bundle, submissions by applicant, selected images (+ image details field).
-  - `All others incl. civil/criminal/appellate`: Originating process, transcript, exhibits, notice of appeal, other.
+  - `Civil/Criminal (excl. bail)`: Originating process, transcript, exhibits, notice of appeal, other.
+  - Auto-selects `Bail applications` when listing type is `Bail Hearing` or `Callover (Bail)`.
+  - Supreme popup removes media/non-party form-type checkboxes (media form section only).
 - Adds a `Research` side panel with:
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.
@@ -23,7 +25,7 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
 1. Open NSW court list page.
 2. Click `Request Docs` for a matter.
 3. Select requested docs and generate forms.
-   - For Supreme Court, choose the Section C mode (`Bail applications` or `All others...`) in the popup.
+   - For Supreme Court, use Section C mode (`Bail applications` or `Civil/Criminal (excl. bail)`); bail-related listing types preselect bail mode.
 4. Gmail compose opens with attachments.
 5. Click `Research` to run News + ABN + Caselaw + Federal Court checks on the same party name.
 6. Use the `Exact` toggle in the Research panel to wrap the selected party name in quotes (for example `"Nick Shortt"`) across News, ABN, Caselaw, and Federal Court.

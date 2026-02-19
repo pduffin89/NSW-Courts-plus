@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.6 - 2026-02-20
+
+- Supreme popup now auto-selects `Bail applications` when listing type indicates `Bail Hearing` or `Callover (Bail)`.
+- Renamed the non-bail Section C mode label to `Civil/Criminal (excl. bail)`.
+- Supreme popup now hides media/non-party form-type checkboxes to match the underlying Supreme media form flow.
+- Supreme bail mode now keeps `submissions by applicant` visible and uses a `specify images` detail field instead of showing non-party additional-details input.
+
 ## 0.3.5 - 2026-02-20
 
 - Updated Supreme Court `Request Docs` popup to match Section C of the media form:

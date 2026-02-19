@@ -29,14 +29,6 @@
     { key: "notice_of_appeal", label: "Notice of appeal / grounds", checked: false },
     { key: "other", label: "Other (specify)", checked: false }
   ];
-  const SUPREME_NON_PARTY_EXTRA_OPTIONS = [
-    { key: "witness_statements", label: "Witness statements tendered", checked: false },
-    { key: "police_fact_sheet", label: "Police fact sheet (guilty plea)", checked: false },
-    { key: "record_conviction_or_order", label: "Record of conviction/order", checked: false },
-    { key: "sealed_copy_judgment", label: "Sealed copy judgment/order", checked: false },
-    { key: "certified_copy_reasons", label: "Certified reasons for judgment/order", checked: false },
-    { key: "civil_other_filed", label: "Other filed civil document", checked: false }
-  ];
 
   const defaultMatter = {
     case_number: "",
@@ -44,6 +36,7 @@
     court: "Supreme Court",
     jurisdiction: "",
     court_location: "",
+    listing_type: "",
     listing_date: "",
     plaintiff: "",
     defendant: ""
@@ -1135,6 +1128,7 @@
       const matterName = cleanText(cells[3].innerText || cells[3].textContent || "");
       const jurisdictionCell = cleanText(cells[4].innerText || cells[4].textContent || "");
       const courtCell = cleanText(cells[5].innerText || cells[5].textContent || "");
+      const listingTypeCell = cleanText(cells[6].innerText || cells[6].textContent || "");
       const locationCell = cleanText(cells[8].innerText || cells[8].textContent || "");
       const listingDate = cleanText(
         `${cleanText(cells[0].innerText || cells[0].textContent || "")} ${cleanText(cells[1].innerText || cells[1].textContent || "")}`
@@ -1155,6 +1149,7 @@
         court: courtCell || inferCourtFromContext(row, matterName),
         jurisdiction: jurisdictionCell,
         court_location: locationCell,
+        listing_type: listingTypeCell,
         listing_date: listingDate,
         plaintiff,
         defendant
@@ -1222,24 +1217,15 @@
     });
   }
 
-  function syncSupremeNonPartyExtras(overlay) {
-    const section = overlay.querySelector("#nsw-supreme-non-party-extra");
-    if (!section) return;
-    const show = Boolean(overlay.querySelector("#nsw-non-party")?.checked);
-    section.hidden = !show;
-    if (!show) {
-      section.querySelectorAll(".nsw-doc-input").forEach((input) => {
-        input.checked = false;
-      });
-    }
-  }
-
   function syncConditionalDetailFields(overlay) {
     const checked = new Set(
       Array.from(overlay.querySelectorAll(".nsw-doc-input:checked"))
         .map((input) => cleanText(input.dataset.docKey || ""))
         .filter(Boolean)
     );
+    const supremeMode = cleanText(overlay.querySelector("#nsw-supreme-doc-mode")?.value || "");
+    const isSupreme = Boolean(supremeMode);
+    const nonPartyEnabled = Boolean(overlay.querySelector("#nsw-non-party")?.checked);
     const show = (id, enabled) => {
       const field = overlay.querySelector(id);
       if (!field) return;
@@ -1248,12 +1234,23 @@
     };
     show("#detail-transcript", checked.has("transcript"));
     show("#detail-exhibits", checked.has("exhibits"));
-    show("#detail-images", checked.has("selected_images"));
+    show("#detail-images", checked.has("selected_images") || supremeMode === "bail");
     show("#detail-other", checked.has("other") || checked.has("civil_other_filed"));
+    show("#detail-additional", nonPartyEnabled && !isSupreme);
+  }
+
+  function inferSupremeDocMode(matter) {
+    const haystack = cleanText(
+      `${matter && matter.listing_type ? matter.listing_type : ""} ${matter && matter.matter_name ? matter.matter_name : ""}`
+    );
+    if (/bail hearing/i.test(haystack)) return "bail";
+    if (/callover\s*\(\s*bail\s*\)/i.test(haystack)) return "bail";
+    return "all";
   }
 
   function buildModal(matter) {
     const isSupreme = /supreme/i.test(matter.court || "");
+    const initialSupremeMode = inferSupremeDocMode(matter);
     const courtOptions = [
       "Supreme Court",
       "District Court",
@@ -1286,19 +1283,21 @@
           <input id="nsw-court-location" placeholder="Court location" value="${matter.court_location || ""}" />
         </div>
 
-        ${isSupreme ? `<label><input id="nsw-media-2026" type="checkbox" checked /> Media access 2026</label><br />` : `<input id="nsw-media-2026" type="checkbox" hidden />`}
+        ${isSupreme
+          ? `<input id="nsw-media-2026" type="checkbox" checked hidden /><input id="nsw-non-party" type="checkbox" hidden />`
+          : `<input id="nsw-media-2026" type="checkbox" hidden />
         <label>
-          <input id="nsw-non-party" type="checkbox" ${isSupreme ? "" : "checked"} />
+          <input id="nsw-non-party" type="checkbox" checked />
           Non-party access (auto-ticks s314 + fair and accurate report)
-        </label>
+        </label>`}
 
         <h3>Requested documents</h3>
         <div id="nsw-supreme-doc-config" ${isSupreme ? "" : "hidden"}>
           <label class="nsw-autofill-inline-field">
             Section C mode
             <select id="nsw-supreme-doc-mode">
-              <option value="all">All others incl. civil/criminal/appellate</option>
-              <option value="bail">Bail applications</option>
+              <option value="all" ${initialSupremeMode === "all" ? "selected" : ""}>Civil/Criminal (excl. bail)</option>
+              <option value="bail" ${initialSupremeMode === "bail" ? "selected" : ""}>Bail applications</option>
             </select>
           </label>
         </div>
@@ -1307,9 +1306,9 @@
         <div class="nsw-autofill-detail-grid">
           <input id="detail-transcript" placeholder="Transcript dates (optional)" hidden />
           <input id="detail-exhibits" placeholder="Exhibits details (optional)" hidden />
-          <input id="detail-images" placeholder="Selected images details (optional)" hidden />
+          <input id="detail-images" placeholder="specify images" hidden />
           <input id="detail-other" placeholder="Other document details (optional)" hidden />
-          <input id="detail-additional" placeholder="Additional details for non-party form (optional)" />
+          <input id="detail-additional" placeholder="Additional details for non-party form (optional)" hidden />
         </div>
 
         <div class="nsw-profile-drawer" id="nsw-profile-drawer" hidden>
@@ -1346,28 +1345,14 @@
 
       const allSection = appendDocSection(
         groupsRoot,
-        "All others incl. civil/criminal/appellate",
+        "Civil/Criminal (excl. bail)",
         SUPREME_ALL_DOC_OPTIONS,
         "nsw-supreme-mode-group",
         "doc-all"
       );
       allSection.dataset.mode = "all";
 
-      const extraSection = appendDocSection(
-        groupsRoot,
-        "Non-party extras",
-        SUPREME_NON_PARTY_EXTRA_OPTIONS,
-        "",
-        "doc-nonparty-extra"
-      );
-      extraSection.id = "nsw-supreme-non-party-extra";
-      const note = document.createElement("p");
-      note.className = "nsw-doc-note";
-      note.textContent = "For Supreme matters, indictment/CAN is covered by Crown bundle or Originating process.";
-      extraSection.appendChild(note);
-
       syncSupremeModeSections(overlay);
-      syncSupremeNonPartyExtras(overlay);
       syncConditionalDetailFields(overlay);
     } else {
       Object.keys(grouped).forEach((groupName) => {
@@ -1498,7 +1483,6 @@
 
     if (nonPartyToggle) {
       nonPartyToggle.addEventListener("change", () => {
-        syncSupremeNonPartyExtras(overlay);
         syncConditionalDetailFields(overlay);
       });
     }
