@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7 - 2026-02-20
+
+- Privacy hardening cleanup before Web Store packaging:
+  - Replaced user-specific macOS launch label namespace in installer with `com.nswcourtautofill.service`.
+  - Sanitized repository agent notes to remove user-specific absolute paths.
+  - Stripped template PDF document metadata to generic producer/creator values.
+
 ## 0.3.6 - 2026-02-20
 
 - Supreme popup now auto-selects `Bail applications` when listing type indicates `Bail Hearing` or `Callover (Bail)`.

@@ -92,12 +92,12 @@ Key implementation file:
 
 - Every extension code or UI change MUST bump `extension/manifest.json` version (patch increment at minimum).
 - Every release sync MUST copy updated extension files to installed path:
-  - `/Users/perry/Applications/NSW Court Autofill/extension`
+  - `/Users/<user>/Applications/NSW Court Autofill/extension`
 - Never claim fix shipped until Chrome shows the new version in `chrome://extensions`.
 
 ## Repo Sync Discipline (Mandatory)
 
-- After every completed task, commit changes in `/Users/perry/LocalProjects/applicator`.
+- After every completed task, commit changes in the active project repository.
 - Keep `README.md` current when behavior, setup, or workflow changes.
 - Push to the GitHub `main` branch the same session once verified.
 - Do not mark work complete until local commit and remote push both succeed.

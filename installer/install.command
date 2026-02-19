@@ -14,7 +14,7 @@ PROFILE_FILE="$APP_DATA_DIR/profile.json"
 LEGACY_FORM_ROOT="$HOME/Documents/Court Application Forms"
 DOCS_FORM_ROOT="$HOME/Documents/Court Application Forms"
 DOCS_GENERATED_PATH="$DOCS_FORM_ROOT/Generated"
-LAUNCH_LABEL="com.perry.nswcourtautofill"
+LAUNCH_LABEL="com.nswcourtautofill.service"
 LAUNCH_PLIST="$HOME/Library/LaunchAgents/$LAUNCH_LABEL.plist"
 
 if [ ! -d "$PAYLOAD_DIR/service" ] || [ ! -d "$PAYLOAD_DIR/extension" ]; then
