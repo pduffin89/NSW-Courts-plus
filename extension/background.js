@@ -34,12 +34,22 @@ function sleep(ms) {
 
 function getStartServiceHintForPlatform(os) {
   if (os === "win") {
-    return "'%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd'";
+    return "%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd";
   }
   if (os === "mac") {
-    return "'$HOME/Applications/NSW Court Autofill/start-service.command'";
+    return "$HOME/Applications/NSW Court Autofill/start-service.command";
   }
-  return "'~/Applications/NSW Court Autofill/start-service.command'";
+  return "~/Applications/NSW Court Autofill/start-service.command";
+}
+
+function getServiceLogHintForPlatform(os) {
+  if (os === "win") {
+    return "%USERPROFILE%\\Applications\\NSW Court Autofill\\service.log";
+  }
+  if (os === "mac") {
+    return "$HOME/Applications/NSW Court Autofill/service.log";
+  }
+  return "~/Applications/NSW Court Autofill/service.log";
 }
 
 async function getPlatformOs() {
@@ -364,8 +374,9 @@ async function handleApiRequest(message) {
   }
   const platformOs = await getPlatformOs();
   const startHint = getStartServiceHintForPlatform(platformOs);
+  const logHint = getServiceLogHintForPlatform(platformOs);
   throw new Error(
-    `Local service unreachable. Start ${startHint}. (${String(lastError && lastError.message ? lastError.message : lastError)})`
+    `Local service unreachable. Run ${startHint}, then retry. If it still fails, check ${logHint}. (${String(lastError && lastError.message ? lastError.message : lastError)})`
   );
 }
 

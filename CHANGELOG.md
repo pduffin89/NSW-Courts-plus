@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 - 2026-02-19
+
+- Fixed Windows/macOS local-service error hints to avoid non-runnable quote wrapping.
+- Updated unreachable-service error text to:
+  - tell users to run the startup script path directly
+  - include the platform-specific `service.log` path for immediate troubleshooting
+
 ## 0.3.1 - 2026-02-17
 
 - Fixed platform startup hints so they use real user-resolved paths:

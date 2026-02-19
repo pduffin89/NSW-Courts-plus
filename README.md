@@ -86,6 +86,10 @@ Installer entry points in the zip:
 ## Notes
 
 - Local service target is `http://127.0.0.1:8765`.
+- If generation reports local service unreachable:
+  - Windows: run `%USERPROFILE%\\Applications\\NSW Court Autofill\\start-service.cmd`
+  - macOS: run `$HOME/Applications/NSW Court Autofill/start-service.command`
+  - Then inspect `service.log` in the same `Applications/NSW Court Autofill` folder if it still fails.
 - ABN lookup integration uses ABR web service + ABR details/history pages for expanded view data.
 - Caselaw lookup tries AustLII search URLs (including `excerpt=1`) and falls back to NSW Caselaw when AustLII blocks automated fetches.
 - Caselaw results are compact by default and show excerpt/catchwords when expanded.
