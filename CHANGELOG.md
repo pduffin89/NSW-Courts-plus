@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.11 - 2026-02-20
+
+- Local/District reliability + signature rendering hardening:
+  - Fixed non-party text field writes for fields missing/invalid `DA` by forcing a safe default field appearance before `setText`.
+  - Ensured District Court and requested local/district document ticks (including police fact sheet) are consistently reflected in generated non-party PDFs.
+  - Reworked signature rendering to deterministic handwritten overlays on signature lines and removed legacy signature widgets that displayed `{GENERATED SIGNATURE}`.
+  - Replaced broken/unsupported signature font asset with a valid static handwriting TTF bundled in the extension.
+  - Added test artifact hygiene by ignoring local `.tmp/` runs in git.
+
+## 0.3.10 - 2026-02-20
+
+- Local/District form reliability fixes:
+  - Added bundled `fontkit` and registered it with `pdf-lib` so custom handwriting signature font embedding works reliably.
+  - Reset all non-party document checkboxes to `false` before applying selections, preventing template-default ticks from overriding requested options.
+  - Improved non-party jurisdiction detection by including court location signals and stronger District keyword matching.
+
 ## 0.3.9 - 2026-02-20
 
 - Signature generation update (Supreme + Local/District):

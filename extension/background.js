@@ -49,6 +49,7 @@ const activeAttachRuns = new Set();
 
 try {
   importScripts("vendor/pdf-lib.min.js");
+  importScripts("vendor/fontkit.umd.min.js");
 } catch (_error) {
   // Guarded at runtime by ensurePdfLibLoaded.
 }
@@ -270,6 +271,9 @@ function uint8ToBase64(bytes) {
 async function ensurePdfLibLoaded() {
   if (!globalThis.PDFLib || !globalThis.PDFLib.PDFDocument) {
     throw new Error("PDF engine not loaded in extension worker.");
+  }
+  if (!globalThis.fontkit) {
+    throw new Error("PDF fontkit runtime not loaded in extension worker.");
   }
   return globalThis.PDFLib;
 }
@@ -668,9 +672,22 @@ function nonPartyValues(profile, matter, requestedDocs, details) {
     Button6: false,
     Button7: false,
     Button8: false,
-    Button10: false
+    Button10: false,
+    Button11: false,
+    Button12: false,
+    Button13: false,
+    Button14: false,
+    Button15: false,
+    Button16: false,
+    Button17: false,
+    Button18: false,
+    Button20: false,
+    Button21: false
   };
-  const jurisdictionField = nonPartyJurisdictionField(matter.court, matter.jurisdiction);
+  const jurisdictionField = nonPartyJurisdictionField(
+    cleanSpaces(`${matter.court || ""} ${matter.court_location || ""}`),
+    matter.jurisdiction
+  );
   if (jurisdictionField) values[jurisdictionField] = true;
   NON_PARTY_ACK_FIELDS.forEach((fieldName) => {
     values[fieldName] = true;
@@ -688,13 +705,117 @@ async function loadRuntimeBytes(relativePath) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+function findFieldPageIndex(pdfDoc, pdfLib, fieldName) {
+  const titleKey = pdfLib.PDFName.of("T");
+  const pages = pdfDoc.getPages();
+  for (let idx = 0; idx < pages.length; idx += 1) {
+    const annots = pages[idx].node && typeof pages[idx].node.Annots === "function"
+      ? pages[idx].node.Annots()
+      : null;
+    if (!annots || typeof annots.asArray !== "function") continue;
+    const refs = annots.asArray();
+    for (let i = 0; i < refs.length; i += 1) {
+      const dict = pdfDoc.context.lookup(refs[i]);
+      if (!dict || typeof dict.get !== "function") continue;
+      const rawTitle = dict.get(titleKey);
+      const title = rawTitle && typeof rawTitle.decodeText === "function"
+        ? cleanSpaces(rawTitle.decodeText())
+        : "";
+      if (title === fieldName) return idx;
+    }
+  }
+  return -1;
+}
+
+function drawSignatureOverlays(pdfDoc, pdfLib, form, values, handwritingFont) {
+  if (!handwritingFont) return;
+  const pages = pdfDoc.getPages();
+  SIGNATURE_FIELD_NAMES.forEach((fieldName) => {
+    const text = cleanSpaces(values && values[fieldName] ? values[fieldName] : "");
+    if (!text) return;
+    let field = null;
+    try {
+      field = form.getTextField(fieldName);
+    } catch (_error) {
+      field = null;
+    }
+    if (!field || !field.acroField || typeof field.acroField.getWidgets !== "function") return;
+    const widgets = field.acroField.getWidgets();
+    if (!Array.isArray(widgets) || !widgets.length) return;
+    const pageIndex = findFieldPageIndex(pdfDoc, pdfLib, fieldName);
+    if (pageIndex < 0 || pageIndex >= pages.length) return;
+    const page = pages[pageIndex];
+
+    widgets.forEach((widget) => {
+      if (!widget || typeof widget.getRectangle !== "function") return;
+      const rect = widget.getRectangle();
+      if (!rect || !Number.isFinite(rect.x) || !Number.isFinite(rect.y)) return;
+      const width = Number(rect.width || 0);
+      const height = Number(rect.height || 0);
+      if (width <= 0 || height <= 0) return;
+
+      const inset = 0.8;
+      const drawWidth = Math.max(0, width - inset * 2);
+      const drawHeight = Math.max(0, height - inset * 2);
+      page.drawRectangle({
+        x: rect.x + inset,
+        y: rect.y + inset,
+        width: drawWidth,
+        height: drawHeight,
+        color: pdfLib.rgb(1, 1, 1)
+      });
+
+      const maxWidth = Math.max(0, width - 6);
+      let fontSize = Math.max(9, Math.min(12, height * 0.7));
+      if (typeof handwritingFont.widthOfTextAtSize === "function" && maxWidth > 0) {
+        while (fontSize > 6 && handwritingFont.widthOfTextAtSize(text, fontSize) > maxWidth) {
+          fontSize -= 0.5;
+        }
+      }
+      page.drawText(text, {
+        x: rect.x + 3,
+        y: rect.y + Math.max(1, (height - fontSize) / 2),
+        size: fontSize,
+        font: handwritingFont,
+        color: pdfLib.rgb(0, 0, 0)
+      });
+    });
+  });
+}
+
+function removeSignatureWidgets(pdfDoc, pdfLib) {
+  const titleKey = pdfLib.PDFName.of("T");
+  const annotsKey = pdfLib.PDFName.of("Annots");
+  const pages = pdfDoc.getPages();
+  pages.forEach((page) => {
+    const annots = page.node && typeof page.node.Annots === "function"
+      ? page.node.Annots()
+      : null;
+    if (!annots || typeof annots.asArray !== "function") return;
+    const kept = annots.asArray().filter((ref) => {
+      const dict = pdfDoc.context.lookup(ref);
+      if (!dict || typeof dict.get !== "function") return true;
+      const rawTitle = dict.get(titleKey);
+      const title = rawTitle && typeof rawTitle.decodeText === "function"
+        ? cleanSpaces(rawTitle.decodeText())
+        : "";
+      return !SIGNATURE_FIELD_NAMES.has(title);
+    });
+    page.node.set(annotsKey, pdfDoc.context.obj(kept));
+  });
+}
+
 async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}) {
   const pdfLib = await ensurePdfLibLoaded();
   const templateBytes = await loadRuntimeBytes(templateRelativePath);
   const pdfDoc = await pdfLib.PDFDocument.load(templateBytes, { ignoreEncryption: true });
+  pdfDoc.registerFontkit(globalThis.fontkit);
+  const DA_KEY = pdfLib.PDFName.of("DA");
+  const FALLBACK_DA = pdfLib.PDFString.of("/Helvetica 11 Tf 0 g");
   const form = pdfDoc.getForm();
   const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
   let handwritingFont = null;
+  const textFields = [];
 
   const hasSignatureValues = Object.entries(values || {}).some(([name, value]) =>
     SIGNATURE_FIELD_NAMES.has(name) && cleanSpaces(value) !== ""
@@ -705,6 +826,9 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
       handwritingFont = await pdfDoc.embedFont(handwritingFontBytes, { subset: true });
     } catch (_error) {
       handwritingFont = null;
+    }
+    if (!handwritingFont) {
+      throw new Error("Unable to load signature font. Reload the extension and try again.");
     }
   }
 
@@ -724,21 +848,15 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
       }
 
       if (isTextField) {
+        if (field && field.acroField && field.acroField.dict) {
+          field.acroField.dict.set(DA_KEY, FALLBACK_DA);
+        }
         const textValue = rawValue === undefined || rawValue === null ? "" : String(rawValue);
         field.setText(textValue);
         if (fieldFontSizes[name] && typeof field.setFontSize === "function") {
           field.setFontSize(Number(fieldFontSizes[name]));
         }
-        if (handwritingFont && SIGNATURE_FIELD_NAMES.has(name) && textValue) {
-          if (!fieldFontSizes[name] && typeof field.setFontSize === "function") {
-            field.setFontSize(11);
-          }
-          if (typeof field.updateAppearances === "function") {
-            field.updateAppearances(handwritingFont);
-          } else if (typeof field.defaultUpdateAppearances === "function") {
-            field.defaultUpdateAppearances(handwritingFont);
-          }
-        }
+        textFields.push({ field, name, textValue });
         return;
       }
 
@@ -763,7 +881,26 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     }
   });
 
-  return new Uint8Array(await pdfDoc.save({ useObjectStreams: false }));
+  textFields.forEach(({ field, name, textValue }) => {
+    const isSignatureField = Boolean(SIGNATURE_FIELD_NAMES.has(name) && textValue);
+    try {
+      if (isSignatureField) {
+        return;
+      }
+      if (typeof field.defaultUpdateAppearances === "function") {
+        field.defaultUpdateAppearances();
+      }
+    } catch (error) {
+      // Keep generating if one non-signature text appearance cannot update.
+    }
+  });
+
+  if (hasSignatureValues) {
+    drawSignatureOverlays(pdfDoc, pdfLib, form, values, handwritingFont);
+    removeSignatureWidgets(pdfDoc, pdfLib);
+  }
+
+  return new Uint8Array(await pdfDoc.save({ useObjectStreams: false, updateFieldAppearances: false }));
 }
 
 async function savePdfToDownloads(fileName, bytes) {

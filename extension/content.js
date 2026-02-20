@@ -1121,11 +1121,11 @@
   function detectCourtFromText(text) {
     const haystack = cleanText(text).toLowerCase();
     if (!haystack) return "";
+    if (haystack.includes("district court") || /\bdistrict\b/.test(haystack)) return "District Court";
     if (haystack.includes("supreme court")) return "Supreme Court";
-    if (haystack.includes("district court")) return "District Court";
     if (haystack.includes("children")) return "Children's Court";
     if (haystack.includes("coroner")) return "Coroner's Court";
-    if (haystack.includes("local court")) return "Local Court";
+    if (haystack.includes("local court") || /\blocal\b/.test(haystack)) return "Local Court";
     return "";
   }
 
