@@ -120,13 +120,36 @@ function lastName(value) {
   return split[split.length - 1];
 }
 
+function canonicalCriminalPlaintiff(value) {
+  const text = cleanSpaces(value);
+  if (!text) return "R";
+  if (/^(r|regina|the king|the queen)$/i.test(text)) return "R";
+  return text;
+}
+
+function isCriminalStyleMatter(matter, plaintiff) {
+  const jurisdiction = cleanSpaces(matter && matter.jurisdiction ? matter.jurisdiction : "").toLowerCase();
+  if (jurisdiction.includes("criminal")) return true;
+
+  const lhs = cleanSpaces(plaintiff).toLowerCase();
+  if (/^(r|regina|the king|the queen|dpp|director of public prosecutions)\b/.test(lhs)) return true;
+
+  const name = cleanSpaces(matter && matter.matter_name ? matter.matter_name : "").toLowerCase();
+  if (/^r\s*v\b/.test(name)) return true;
+
+  return false;
+}
+
 function compactCaseTitle(matter, maxLen = 24) {
   const full = cleanSpaces(matter && matter.matter_name ? matter.matter_name : "");
   if (!full) return truncateText(matter && matter.case_number ? matter.case_number : "", maxLen);
-  if (full.length <= maxLen) return full;
   const [plaintiff, defendant] = splitParties(matter);
   const lhs = cleanSpaces(plaintiff) || "R";
-  const rhs = lastName((matter && matter.defendant) || defendant);
+  const rhs = titleCaseToken(lastName((matter && matter.defendant) || defendant));
+  if (isCriminalStyleMatter(matter, lhs) && rhs) {
+    return truncateText(cleanSpaces(`${canonicalCriminalPlaintiff(lhs)} v ${rhs}`), maxLen);
+  }
+  if (full.length <= maxLen) return full;
   if (rhs) {
     const candidate = cleanSpaces(`${lhs} v ${rhs}`);
     if (candidate.length <= maxLen) return candidate;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.13 - 2026-02-20
+
+- Non-party case title compaction update:
+  - Criminal-style matters now prefer `R v <LastName>` formatting in the case-name field.
+  - Example: `R v PAUL DOUGLAS SMITH` now writes as `R v Smith`.
+  - Prevents long criminal defendant names from clipping in the non-party PDF case-name box.
+
 ## 0.3.12 - 2026-02-20
 
 - Critical non-party PDF checkbox rendering fix:
