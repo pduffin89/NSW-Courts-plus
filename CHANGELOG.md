@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.12 - 2026-02-20
+
+- Critical non-party PDF checkbox rendering fix:
+  - Synced checkbox widget appearance states with selected values during generation.
+  - Added deterministic non-party checked-box overlays and removed non-party checkbox widgets so selected boxes render visibly in all viewers.
+  - Resolves District Court + police fact sheet visual unticked outputs in generated non-party PDFs.
+- Local/District popup alignment with non-party template:
+  - Replaced mixed document groups with a `Non-party document mode` dropdown (`Crime` or `Civil`) auto-selected from court-list jurisdiction.
+  - Crime mode now exposes only template-matching crime checkboxes.
+  - Civil mode now exposes only template-matching civil checkboxes.
+  - Added distinct detail inputs for crime `other`, civil `pleading filed`, and civil `other document filed`.
+
 ## 0.3.11 - 2026-02-20
 
 - Local/District reliability + signature rendering hardening:

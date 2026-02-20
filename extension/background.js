@@ -805,12 +805,76 @@ function removeSignatureWidgets(pdfDoc, pdfLib) {
   });
 }
 
+function removeNonPartyCheckboxWidgets(pdfDoc, pdfLib) {
+  const titleKey = pdfLib.PDFName.of("T");
+  const annotsKey = pdfLib.PDFName.of("Annots");
+  const pages = pdfDoc.getPages();
+  pages.forEach((page) => {
+    const annots = page.node && typeof page.node.Annots === "function"
+      ? page.node.Annots()
+      : null;
+    if (!annots || typeof annots.asArray !== "function") return;
+    const kept = annots.asArray().filter((ref) => {
+      const dict = pdfDoc.context.lookup(ref);
+      if (!dict || typeof dict.get !== "function") return true;
+      const rawTitle = dict.get(titleKey);
+      const title = rawTitle && typeof rawTitle.decodeText === "function"
+        ? cleanSpaces(rawTitle.decodeText())
+        : "";
+      return !/^Button\d+$/i.test(title);
+    });
+    page.node.set(annotsKey, pdfDoc.context.obj(kept));
+  });
+}
+
+async function drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, values) {
+  let markerFont = null;
+  try {
+    markerFont = await pdfDoc.embedFont(pdfLib.StandardFonts.HelveticaBold);
+  } catch (_error) {
+    markerFont = null;
+  }
+  if (!markerFont) return;
+
+  const pages = pdfDoc.getPages();
+  Object.entries(values || {}).forEach(([fieldName, rawValue]) => {
+    const field = fieldMap.get(fieldName);
+    if (!field) return;
+    const isCheckBox = typeof field.check === "function" && typeof field.uncheck === "function";
+    if (!isCheckBox || !boolFromPdfValue(rawValue)) return;
+    if (!field.acroField || typeof field.acroField.getWidgets !== "function") return;
+
+    const pageIndex = findFieldPageIndex(pdfDoc, pdfLib, fieldName);
+    if (pageIndex < 0 || pageIndex >= pages.length) return;
+    const page = pages[pageIndex];
+
+    field.acroField.getWidgets().forEach((widget) => {
+      if (!widget || typeof widget.getRectangle !== "function") return;
+      const rect = widget.getRectangle();
+      if (!rect || !Number.isFinite(rect.x) || !Number.isFinite(rect.y)) return;
+      const width = Number(rect.width || 0);
+      const height = Number(rect.height || 0);
+      if (width <= 0 || height <= 0) return;
+
+      const size = Math.max(7, Math.min(11, Math.min(width, height) * 0.8));
+      page.drawText("X", {
+        x: rect.x + 1,
+        y: rect.y + Math.max(0.6, (height - size) / 2),
+        size,
+        font: markerFont,
+        color: pdfLib.rgb(0, 0, 0)
+      });
+    });
+  });
+}
+
 async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}) {
   const pdfLib = await ensurePdfLibLoaded();
   const templateBytes = await loadRuntimeBytes(templateRelativePath);
   const pdfDoc = await pdfLib.PDFDocument.load(templateBytes, { ignoreEncryption: true });
   pdfDoc.registerFontkit(globalThis.fontkit);
   const DA_KEY = pdfLib.PDFName.of("DA");
+  const OFF_AP_STATE = pdfLib.PDFName.of("Off");
   const FALLBACK_DA = pdfLib.PDFString.of("/Helvetica 11 Tf 0 g");
   const form = pdfDoc.getForm();
   const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
@@ -842,8 +906,21 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
       const hasOptions = typeof field.getOptions === "function";
 
       if (isCheckBox) {
-        if (boolFromPdfValue(rawValue)) field.check();
+        const checked = boolFromPdfValue(rawValue);
+        if (checked) field.check();
         else field.uncheck();
+        if (field.acroField && typeof field.acroField.getWidgets === "function") {
+          field.acroField.getWidgets().forEach((widget) => {
+            try {
+              const onState = typeof widget.getOnValue === "function" ? widget.getOnValue() : null;
+              if (typeof widget.setAppearanceState === "function") {
+                widget.setAppearanceState(checked && onState ? onState : OFF_AP_STATE);
+              }
+            } catch (_error) {
+              // Keep processing remaining widgets/fields.
+            }
+          });
+        }
         return;
       }
 
@@ -898,6 +975,11 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   if (hasSignatureValues) {
     drawSignatureOverlays(pdfDoc, pdfLib, form, values, handwritingFont);
     removeSignatureWidgets(pdfDoc, pdfLib);
+  }
+
+  if (templateRelativePath === FORM_TEMPLATE_NON_PARTY) {
+    await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, values);
+    removeNonPartyCheckboxWidgets(pdfDoc, pdfLib);
   }
 
   return new Uint8Array(await pdfDoc.save({ useObjectStreams: false, updateFieldAppearances: false }));

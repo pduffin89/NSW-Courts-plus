@@ -2,20 +2,19 @@
   const ROW_FLAG = "nswAutofillInjected";
   const CASE_NUMBER_RE = /\b\d{4}\/\d{1,10}\b|\b\d{12}\b/;
 
-  const DOC_OPTIONS = [
-    { key: "indictment_can", label: "Indictment/CAN/commencing document", checked: false, group: "Crime (non-party)" },
-    { key: "witness_statements", label: "Witness statements tendered", checked: false, group: "Crime (non-party)" },
-    { key: "police_fact_sheet", label: "Police fact sheet (guilty plea)", checked: false, group: "Crime (non-party)" },
-    { key: "transcript", label: "Transcript", checked: false, group: "Common" },
-    { key: "record_conviction_or_order", label: "Record of conviction/order", checked: false, group: "Crime (non-party)" },
-    { key: "selected_images", label: "Selected images", checked: false, group: "Media 2026" },
-    { key: "originating_process", label: "Originating process/pleadings", checked: false, group: "Civil/Media" },
-    { key: "sealed_copy_judgment", label: "Sealed copy judgment/order", checked: false, group: "Civil (non-party)" },
-    { key: "certified_copy_reasons", label: "Certified reasons for judgment/order", checked: false, group: "Civil (non-party)" },
-    { key: "notice_of_appeal", label: "Notice of appeal/grounds", checked: false, group: "Media 2026" },
-    { key: "exhibits", label: "Exhibits", checked: false, group: "Common" },
-    { key: "civil_other_filed", label: "Other filed civil document", checked: false, group: "Civil (non-party)" },
-    { key: "other", label: "Other", checked: false, group: "Common" }
+  const NON_PARTY_CRIME_DOC_OPTIONS = [
+    { key: "indictment_can", label: "Indictment / CAN / commencing document", checked: false },
+    { key: "witness_statements", label: "Witness statements tendered as evidence", checked: false },
+    { key: "police_fact_sheet", label: "Police fact sheet (in case of guilty plea)", checked: false },
+    { key: "transcript", label: "Transcript of evidence (dates)", checked: false },
+    { key: "record_conviction_or_order", label: "Any record of conviction or order", checked: false },
+    { key: "other", label: "Other", checked: false }
+  ];
+  const NON_PARTY_CIVIL_DOC_OPTIONS = [
+    { key: "sealed_copy_judgment", label: "Sealed copy of judgment / order", checked: false },
+    { key: "certified_copy_reasons", label: "Certified copy of reasons for judgment / order", checked: false },
+    { key: "civil_pleading", label: "Pleading filed in the proceedings", checked: false },
+    { key: "civil_other_filed", label: "Other document filed in the proceedings", checked: false }
   ];
   const SUPREME_BAIL_DOC_OPTIONS = [
     { key: "crown_bundle", label: "Crown bundle", checked: false },
@@ -1236,6 +1235,20 @@
     });
   }
 
+  function syncNonPartyModeSections(overlay) {
+    const mode = cleanText(overlay.querySelector("#nsw-non-party-doc-mode")?.value || "crime");
+    const sections = Array.from(overlay.querySelectorAll(".nsw-nonparty-mode-group"));
+    sections.forEach((section) => {
+      const isActive = section.dataset.mode === mode;
+      section.hidden = !isActive;
+      if (!isActive) {
+        section.querySelectorAll(".nsw-doc-input").forEach((input) => {
+          input.checked = false;
+        });
+      }
+    });
+  }
+
   function syncConditionalDetailFields(overlay) {
     const checked = new Set(
       Array.from(overlay.querySelectorAll(".nsw-doc-input:checked"))
@@ -1243,6 +1256,7 @@
         .filter(Boolean)
     );
     const supremeMode = cleanText(overlay.querySelector("#nsw-supreme-doc-mode")?.value || "");
+    const nonPartyMode = cleanText(overlay.querySelector("#nsw-non-party-doc-mode")?.value || "");
     const isSupreme = Boolean(supremeMode);
     const nonPartyEnabled = Boolean(overlay.querySelector("#nsw-non-party")?.checked);
     const show = (id, enabled) => {
@@ -1252,9 +1266,12 @@
       if (!enabled) field.value = "";
     };
     show("#detail-transcript", checked.has("transcript"));
-    show("#detail-exhibits", checked.has("exhibits"));
-    show("#detail-images", checked.has("selected_images") || supremeMode === "bail");
-    show("#detail-other", checked.has("other") || checked.has("civil_other_filed"));
+    show("#detail-exhibits", isSupreme && checked.has("exhibits"));
+    show("#detail-images", isSupreme && (checked.has("selected_images") || supremeMode === "bail"));
+    show("#detail-other", isSupreme && checked.has("other"));
+    show("#detail-other-crime", !isSupreme && checked.has("other") && nonPartyMode === "crime");
+    show("#detail-civil-pleading", !isSupreme && checked.has("civil_pleading"));
+    show("#detail-civil-other", !isSupreme && checked.has("civil_other_filed"));
     show("#detail-additional", nonPartyEnabled && !isSupreme);
   }
 
@@ -1267,9 +1284,14 @@
     return "all";
   }
 
+  function inferNonPartyDocMode(matter) {
+    return isCivilMatter(matter) ? "civil" : "crime";
+  }
+
   function buildModal(matter) {
     const isSupreme = /supreme/i.test(matter.court || "");
     const initialSupremeMode = inferSupremeDocMode(matter);
+    const initialNonPartyMode = inferNonPartyDocMode(matter);
     const courtOptions = [
       "Supreme Court",
       "District Court",
@@ -1280,12 +1302,6 @@
     const courtSelectHtml = courtOptions
       .map((label) => `<option value="${label}" ${matter.court === label ? "selected" : ""}>${label}</option>`)
       .join("");
-
-    const grouped = DOC_OPTIONS.reduce((acc, d) => {
-      if (!acc[d.group]) acc[d.group] = [];
-      acc[d.group].push(d);
-      return acc;
-    }, {});
 
     const overlay = document.createElement("div");
     overlay.className = "nsw-autofill-modal-overlay";
@@ -1320,6 +1336,15 @@
             </select>
           </label>
         </div>
+        <div id="nsw-non-party-doc-config" ${isSupreme ? "hidden" : ""}>
+          <label class="nsw-autofill-inline-field">
+            Non-party document mode
+            <select id="nsw-non-party-doc-mode">
+              <option value="crime" ${initialNonPartyMode === "crime" ? "selected" : ""}>Crime</option>
+              <option value="civil" ${initialNonPartyMode === "civil" ? "selected" : ""}>Civil</option>
+            </select>
+          </label>
+        </div>
         <div id="nsw-docs-groups"></div>
 
         <div class="nsw-autofill-detail-grid">
@@ -1327,6 +1352,9 @@
           <input id="detail-exhibits" placeholder="Exhibits details (optional)" hidden />
           <input id="detail-images" placeholder="specify images" hidden />
           <input id="detail-other" placeholder="Other document details (optional)" hidden />
+          <input id="detail-other-crime" placeholder="Other (crime) details" hidden />
+          <input id="detail-civil-pleading" placeholder="Pleading filed in proceedings" hidden />
+          <input id="detail-civil-other" placeholder="Other civil document filed in proceedings" hidden />
           <input id="detail-additional" placeholder="Additional details for non-party form (optional)" hidden />
         </div>
 
@@ -1374,9 +1402,25 @@
       syncSupremeModeSections(overlay);
       syncConditionalDetailFields(overlay);
     } else {
-      Object.keys(grouped).forEach((groupName) => {
-        appendDocSection(groupsRoot, groupName, grouped[groupName], "", `doc-${groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
-      });
+      const crimeSection = appendDocSection(
+        groupsRoot,
+        "Crime",
+        NON_PARTY_CRIME_DOC_OPTIONS,
+        "nsw-nonparty-mode-group",
+        "doc-nonparty-crime"
+      );
+      crimeSection.dataset.mode = "crime";
+
+      const civilSection = appendDocSection(
+        groupsRoot,
+        "Civil",
+        NON_PARTY_CIVIL_DOC_OPTIONS,
+        "nsw-nonparty-mode-group",
+        "doc-nonparty-civil"
+      );
+      civilSection.dataset.mode = "civil";
+
+      syncNonPartyModeSections(overlay);
       syncConditionalDetailFields(overlay);
     }
 
@@ -1425,6 +1469,9 @@
   }
 
   function gatherSelection(overlay) {
+    const isSupreme = Boolean(overlay.querySelector("#nsw-supreme-doc-mode"));
+    const supremeOther = cleanText(overlay.querySelector("#detail-other")?.value || "");
+    const nonPartyOther = cleanText(overlay.querySelector("#detail-other-crime")?.value || "");
     const selectedDocs = Array.from(overlay.querySelectorAll(".nsw-doc-input:checked"))
       .map((input) => cleanText(input.dataset.docKey || ""))
       .filter(Boolean);
@@ -1444,7 +1491,9 @@
         transcript_dates: cleanText(overlay.querySelector("#detail-transcript")?.value || ""),
         exhibits: cleanText(overlay.querySelector("#detail-exhibits")?.value || ""),
         selected_images: cleanText(overlay.querySelector("#detail-images")?.value || ""),
-        other: cleanText(overlay.querySelector("#detail-other")?.value || ""),
+        other: isSupreme ? supremeOther : nonPartyOther,
+        civil_pleading: cleanText(overlay.querySelector("#detail-civil-pleading")?.value || ""),
+        civil_other_filed: cleanText(overlay.querySelector("#detail-civil-other")?.value || ""),
         additional_details: cleanText(overlay.querySelector("#detail-additional")?.value || "")
       }
     };
@@ -1489,6 +1538,7 @@
     const cancel = overlay.querySelector("#nsw-cancel");
     const generate = overlay.querySelector("#nsw-generate");
     const supremeMode = overlay.querySelector("#nsw-supreme-doc-mode");
+    const nonPartyDocMode = overlay.querySelector("#nsw-non-party-doc-mode");
     const nonPartyToggle = overlay.querySelector("#nsw-non-party");
 
     loadProfileIntoDrawer(overlay);
@@ -1496,6 +1546,13 @@
     if (supremeMode) {
       supremeMode.addEventListener("change", () => {
         syncSupremeModeSections(overlay);
+        syncConditionalDetailFields(overlay);
+      });
+    }
+
+    if (nonPartyDocMode) {
+      nonPartyDocMode.addEventListener("change", () => {
+        syncNonPartyModeSections(overlay);
         syncConditionalDetailFields(overlay);
       });
     }
