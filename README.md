@@ -13,6 +13,7 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
   - `Civil/Criminal (excl. bail)`: Originating process, transcript, exhibits, notice of appeal, other.
   - Auto-selects `Bail applications` when listing type is `Bail Hearing` or `Callover (Bail)`.
   - Supreme popup removes media/non-party form-type checkboxes (media form section only).
+- Signature fields are auto-generated as `FirstInitial.LastName` and rendered with a handwriting font across Supreme and non-party forms.
 - Adds a `Research` side panel with:
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.

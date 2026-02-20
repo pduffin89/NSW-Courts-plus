@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.9 - 2026-02-20
+
+- Signature generation update (Supreme + Local/District):
+  - Standardized signatures to generated `FirstInitial.LastName` format (for example `P.Duffin`) when no explicit signature text is set.
+  - Applied bundled handwriting font (`Caveat`) to signature fields across both forms for consistent signature styling.
+- PDF rendering fix:
+  - Removed global appearance regeneration that was inflating font sizes in Supreme media output.
+  - Kept targeted field-level appearance updates for signature fields.
+- Court detection hardening:
+  - Improved row-level court resolution in the popup to reduce Local-vs-District misclassification by scanning full row/cell court signals.
+
 ## 0.3.8 - 2026-02-20
 
 - Critical PDF checkbox fix:

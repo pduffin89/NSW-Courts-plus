@@ -8,7 +8,9 @@ const ABN_GUID = "912aeab3-605b-4dc8-8aa5-9f5f70f65902";
 const APP_TZ = "Australia/Sydney";
 const FORM_TEMPLATE_MEDIA = "forms/access_application_2026.pdf";
 const FORM_TEMPLATE_NON_PARTY = "forms/application_non_party_access.pdf";
+const HANDWRITING_FONT_PATH = "vendor/fonts/Caveat-Regular.ttf";
 const DOWNLOAD_SUBDIR = "Court Application Forms/Generated";
+const SIGNATURE_FIELD_NAMES = new Set(["Applicant Signature", "Text48", "Text51"]);
 const NON_PARTY_FIELD_FONT_SIZES = {
   Text28: 9,
   Text29: 9,
@@ -71,10 +73,27 @@ function stripSignaturePrefix(value) {
   return cleanSpaces(value).replace(/^\/s\/\s*/i, "");
 }
 
+function titleCaseToken(value) {
+  const text = cleanSpaces(value);
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+
+function initialLastSignature(value) {
+  const text = cleanSpaces(value);
+  if (!text) return "";
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (!parts.length) return "";
+  const first = parts[0].charAt(0).toUpperCase();
+  const last = titleCaseToken(parts[parts.length - 1]);
+  if (!first || !last) return text;
+  return `${first}.${last}`;
+}
+
 function signatureFromProfile(profile) {
   const explicit = stripSignaturePrefix(profile && profile.signature_text ? profile.signature_text : "");
   if (explicit) return explicit;
-  return stripSignaturePrefix(profile && profile.applicant_name ? profile.applicant_name : "");
+  return initialLastSignature(profile && profile.applicant_name ? profile.applicant_name : "");
 }
 
 function splitParties(matter) {
@@ -660,21 +679,34 @@ function nonPartyValues(profile, matter, requestedDocs, details) {
   return values;
 }
 
-async function loadTemplateBytes(templateRelativePath) {
-  const url = chrome.runtime.getURL(templateRelativePath);
+async function loadRuntimeBytes(relativePath) {
+  const url = chrome.runtime.getURL(relativePath);
   const response = await fetch(url, { method: "GET", cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Missing form template in extension: ${templateRelativePath}`);
+    throw new Error(`Missing extension runtime asset: ${relativePath}`);
   }
   return new Uint8Array(await response.arrayBuffer());
 }
 
 async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}) {
   const pdfLib = await ensurePdfLibLoaded();
-  const templateBytes = await loadTemplateBytes(templateRelativePath);
+  const templateBytes = await loadRuntimeBytes(templateRelativePath);
   const pdfDoc = await pdfLib.PDFDocument.load(templateBytes, { ignoreEncryption: true });
   const form = pdfDoc.getForm();
   const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
+  let handwritingFont = null;
+
+  const hasSignatureValues = Object.entries(values || {}).some(([name, value]) =>
+    SIGNATURE_FIELD_NAMES.has(name) && cleanSpaces(value) !== ""
+  );
+  if (hasSignatureValues) {
+    try {
+      const handwritingFontBytes = await loadRuntimeBytes(HANDWRITING_FONT_PATH);
+      handwritingFont = await pdfDoc.embedFont(handwritingFontBytes, { subset: true });
+    } catch (_error) {
+      handwritingFont = null;
+    }
+  }
 
   Object.entries(values || {}).forEach(([name, rawValue]) => {
     const field = fieldMap.get(name);
@@ -692,9 +724,20 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
       }
 
       if (isTextField) {
-        field.setText(rawValue === undefined || rawValue === null ? "" : String(rawValue));
+        const textValue = rawValue === undefined || rawValue === null ? "" : String(rawValue);
+        field.setText(textValue);
         if (fieldFontSizes[name] && typeof field.setFontSize === "function") {
           field.setFontSize(Number(fieldFontSizes[name]));
+        }
+        if (handwritingFont && SIGNATURE_FIELD_NAMES.has(name) && textValue) {
+          if (!fieldFontSizes[name] && typeof field.setFontSize === "function") {
+            field.setFontSize(11);
+          }
+          if (typeof field.updateAppearances === "function") {
+            field.updateAppearances(handwritingFont);
+          } else if (typeof field.defaultUpdateAppearances === "function") {
+            field.defaultUpdateAppearances(handwritingFont);
+          }
         }
         return;
       }
@@ -719,12 +762,6 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
       // Continue writing remaining fields even if one field fails.
     }
   });
-
-  try {
-    form.updateFieldAppearances();
-  } catch (_error) {
-    // Some templates may not support appearance regeneration; saved values still persist.
-  }
 
   return new Uint8Array(await pdfDoc.save({ useObjectStreams: false }));
 }

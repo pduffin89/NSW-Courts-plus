@@ -1118,6 +1118,24 @@
     return "Supreme Court";
   }
 
+  function detectCourtFromText(text) {
+    const haystack = cleanText(text).toLowerCase();
+    if (!haystack) return "";
+    if (haystack.includes("supreme court")) return "Supreme Court";
+    if (haystack.includes("district court")) return "District Court";
+    if (haystack.includes("children")) return "Children's Court";
+    if (haystack.includes("coroner")) return "Coroner's Court";
+    if (haystack.includes("local court")) return "Local Court";
+    return "";
+  }
+
+  function resolveCourtFromRow(row, parts) {
+    const combined = cleanText((parts || []).join(" "));
+    const direct = detectCourtFromText(combined);
+    if (direct) return direct;
+    return inferCourtFromContext(row, combined);
+  }
+
   function parseMatterFromRow(row) {
     const cells = Array.from(row.querySelectorAll("td"));
     if (cells.length >= 10) {
@@ -1133,6 +1151,7 @@
       const listingDate = cleanText(
         `${cleanText(cells[0].innerText || cells[0].textContent || "")} ${cleanText(cells[1].innerText || cells[1].textContent || "")}`
       );
+      const rowText = cleanText(row.innerText || row.textContent || "");
 
       let plaintiff = "";
       let defendant = "";
@@ -1146,7 +1165,7 @@
         ...defaultMatter,
         case_number: caseNumber,
         matter_name: matterName || caseNumber,
-        court: courtCell || inferCourtFromContext(row, matterName),
+        court: resolveCourtFromRow(row, [courtCell, jurisdictionCell, locationCell, rowText, matterName]),
         jurisdiction: jurisdictionCell,
         court_location: locationCell,
         listing_type: listingTypeCell,
@@ -1164,7 +1183,7 @@
       ...defaultMatter,
       case_number: caseNumber,
       matter_name: caseNumber,
-      court: inferCourtFromContext(row, text)
+      court: resolveCourtFromRow(row, [text])
     };
   }
 
