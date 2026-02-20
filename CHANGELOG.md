@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.14 - 2026-02-20
+
+- Supreme media form rendering fix:
+  - Fixed missing applicant/case/details text on generated Supreme PDFs where only checkboxes appeared.
+  - Root cause was text appearance regeneration failing without a resolved default font (`font undefined`).
+  - Added explicit fallback text appearance font embedding and field appearance updates for non-signature text fields.
+
 ## 0.3.13 - 2026-02-20
 
 - Non-party case title compaction update:

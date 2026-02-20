@@ -902,6 +902,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   const form = pdfDoc.getForm();
   const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
   let handwritingFont = null;
+  let textAppearanceFont = null;
   const textFields = [];
 
   const hasSignatureValues = Object.entries(values || {}).some(([name, value]) =>
@@ -917,6 +918,12 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     if (!handwritingFont) {
       throw new Error("Unable to load signature font. Reload the extension and try again.");
     }
+  }
+
+  try {
+    textAppearanceFont = await pdfDoc.embedFont(pdfLib.StandardFonts.Helvetica);
+  } catch (_error) {
+    textAppearanceFont = null;
   }
 
   Object.entries(values || {}).forEach(([name, rawValue]) => {
@@ -985,6 +992,10 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     const isSignatureField = Boolean(SIGNATURE_FIELD_NAMES.has(name) && textValue);
     try {
       if (isSignatureField) {
+        return;
+      }
+      if (textAppearanceFont && typeof field.updateAppearances === "function") {
+        field.updateAppearances(textAppearanceFont);
         return;
       }
       if (typeof field.defaultUpdateAppearances === "function") {
