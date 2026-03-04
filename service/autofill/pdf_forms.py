@@ -53,31 +53,57 @@ def _truncate(value: str, max_len: int) -> str:
     return f"{text[: max_len - 3].rstrip()}..."
 
 
-def _last_name(value: str) -> str:
+def _canonical_criminal_plaintiff(value: str) -> str:
     text = _clean_spaces(value)
     if not text:
-        return ""
-    tokens = re.findall(r"[A-Za-z][A-Za-z'\\-]*", text)
-    if tokens:
-        return tokens[-1]
-    return text.split()[-1]
+        return "R"
+    if re.match(r"^(r|regina|the king|the queen)$", text, flags=re.IGNORECASE):
+        return "R"
+    return text
 
 
-def _compact_case_title(matter: Matter, max_len: int = 24) -> str:
+def _is_criminal_style_matter(matter: Matter, plaintiff: str) -> bool:
+    jurisdiction = _clean_spaces(matter.jurisdiction).lower()
+    if "criminal" in jurisdiction:
+        return True
+    lhs = _clean_spaces(plaintiff).lower()
+    if re.match(r"^(r|regina|the king|the queen|dpp|director of public prosecutions)\b", lhs):
+        return True
+    name = _clean_spaces(matter.matter_name).lower()
+    return bool(re.match(r"^r\s*v\b", name))
+
+
+def _compact_case_title(matter: Matter, max_len: int = 64) -> str:
     full = _clean_spaces(matter.matter_name)
     if not full:
         return _truncate(matter.case_number, max_len)
-    if len(full) <= max_len:
-        return full
 
     plaintiff, defendant = split_parties(matter)
     lhs = _clean_spaces(plaintiff) or "R"
-    rhs = _last_name(matter.defendant or defendant)
-    if rhs:
-        candidate = _clean_spaces(f"{lhs} v {rhs}")
+    rhs_full = _clean_spaces(matter.defendant or defendant)
+
+    if _is_criminal_style_matter(matter, lhs) and rhs_full:
+        candidate = _clean_spaces(f"{_canonical_criminal_plaintiff(lhs)} v {rhs_full}")
         if len(candidate) <= max_len:
             return candidate
-    return _truncate(full, max_len)
+        return _truncate(candidate, max_len)
+
+    if full:
+        return _truncate(full, max_len)
+    return _truncate(matter.case_number, max_len)
+
+
+def _auto_case_title_font_size(case_title: str, default_size: float = 9.0) -> float:
+    length = len(_clean_spaces(case_title))
+    if length <= 24:
+        return default_size
+    if length <= 34:
+        return 8.0
+    if length <= 44:
+        return 7.5
+    if length <= 56:
+        return 7.0
+    return 6.5
 
 
 def _abbreviate_court_name(court: str) -> str:
@@ -198,6 +224,12 @@ def fill_pdf(
     reader = PdfReader(str(template_path))
     checkbox_states = _checkbox_on_values(reader)
     normalized_values = _normalize_pdf_values(values, checkbox_states)
+    effective_field_font_sizes = dict(field_font_sizes or {})
+    if "Text28" in normalized_values:
+        effective_field_font_sizes["Text28"] = _auto_case_title_font_size(
+            str(normalized_values.get("Text28") or ""),
+            default_size=float(effective_field_font_sizes.get("Text28", 9.0)),
+        )
 
     writer = PdfWriter()
     writer.clone_document_from_reader(reader)
@@ -207,9 +239,9 @@ def fill_pdf(
         writer,
         normalized_values,
         checkbox_states,
-        field_font_sizes=field_font_sizes or {},
+        field_font_sizes=effective_field_font_sizes,
     )
-    _apply_widget_font_sizes(writer, field_font_sizes or {})
+    _apply_widget_font_sizes(writer, effective_field_font_sizes)
     writer.update_page_form_field_values(
         list(writer.pages),
         normalized_values,

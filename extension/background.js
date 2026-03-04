@@ -111,15 +111,6 @@ function splitParties(matter) {
   return [cleanSpaces(matter && matter.matter_name ? matter.matter_name : ""), ""];
 }
 
-function lastName(value) {
-  const text = cleanSpaces(value);
-  if (!text) return "";
-  const tokens = text.match(/[A-Za-z][A-Za-z'\\-]*/g);
-  if (tokens && tokens.length) return tokens[tokens.length - 1];
-  const split = text.split(/\s+/);
-  return split[split.length - 1];
-}
-
 function canonicalCriminalPlaintiff(value) {
   const text = cleanSpaces(value);
   if (!text) return "R";
@@ -140,19 +131,23 @@ function isCriminalStyleMatter(matter, plaintiff) {
   return false;
 }
 
-function compactCaseTitle(matter, maxLen = 24) {
+function autoCaseTitleFontSize(caseTitle, defaultSize = 9) {
+  const length = cleanSpaces(caseTitle).length;
+  if (length <= 24) return defaultSize;
+  if (length <= 34) return 8;
+  if (length <= 44) return 7.5;
+  if (length <= 56) return 7;
+  return 6.5;
+}
+
+function compactCaseTitle(matter, maxLen = 64) {
   const full = cleanSpaces(matter && matter.matter_name ? matter.matter_name : "");
   if (!full) return truncateText(matter && matter.case_number ? matter.case_number : "", maxLen);
   const [plaintiff, defendant] = splitParties(matter);
   const lhs = cleanSpaces(plaintiff) || "R";
-  const rhs = titleCaseToken(lastName((matter && matter.defendant) || defendant));
-  if (isCriminalStyleMatter(matter, lhs) && rhs) {
-    return truncateText(cleanSpaces(`${canonicalCriminalPlaintiff(lhs)} v ${rhs}`), maxLen);
-  }
-  if (full.length <= maxLen) return full;
-  if (rhs) {
-    const candidate = cleanSpaces(`${lhs} v ${rhs}`);
-    if (candidate.length <= maxLen) return candidate;
+  const rhsFull = cleanSpaces((matter && matter.defendant) || defendant);
+  if (isCriminalStyleMatter(matter, lhs) && rhsFull) {
+    return truncateText(cleanSpaces(`${canonicalCriminalPlaintiff(lhs)} v ${rhsFull}`), maxLen);
   }
   return truncateText(full, maxLen);
 }
@@ -911,6 +906,17 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   Object.entries(values || {}).forEach(([name, rawValue]) => {
     effectiveValues[name] = rawValue;
   });
+  const effectiveFieldFontSizes = { ...(fieldFontSizes || {}) };
+  if (templateRelativePath === FORM_TEMPLATE_NON_PARTY && Object.prototype.hasOwnProperty.call(effectiveValues, "Text28")) {
+    effectiveFieldFontSizes.Text28 = autoCaseTitleFontSize(
+      String(effectiveValues.Text28 || ""),
+      Number(
+        Object.prototype.hasOwnProperty.call(effectiveFieldFontSizes, "Text28")
+          ? effectiveFieldFontSizes.Text28
+          : 9
+      )
+    );
+  }
   let handwritingFont = null;
   let textAppearanceFont = null;
   const textFields = [];
@@ -970,8 +976,8 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
         }
         const textValue = rawValue === undefined || rawValue === null ? "" : String(rawValue);
         field.setText(textValue);
-        if (fieldFontSizes[name] && typeof field.setFontSize === "function") {
-          field.setFontSize(Number(fieldFontSizes[name]));
+        if (effectiveFieldFontSizes[name] && typeof field.setFontSize === "function") {
+          field.setFontSize(Number(effectiveFieldFontSizes[name]));
         }
         textFields.push({ field, name, textValue });
         return;

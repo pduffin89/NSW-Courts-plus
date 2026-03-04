@@ -14,6 +14,7 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
   - Auto-selects `Bail applications` when listing type is `Bail Hearing` or `Callover (Bail)`.
   - Supreme popup removes media/non-party form-type checkboxes (media form section only).
 - For Local/District non-party forms, uses a `Crime` / `Civil` dropdown (auto-selected from list jurisdiction) and only shows template-matching checkboxes for the chosen mode.
+- For criminal non-party matters, case title now prefers full defendant names in `R v <Full Name>` format with adaptive font sizing to reduce clipping in the case-title box.
 - Signature fields are auto-generated as `FirstInitial.LastName` and rendered as handwritten overlays (`P.Duffin` style) across Supreme and non-party forms.
 - Flattens generated PDFs before save so current values are baked into the file (prevents disappearing text/checkbox state drift in some viewers).
 - Enforces deterministic checkbox behavior by resetting all checkbox fields to off, then applying only selected options (no template-default or court-mode checkbox carryover).

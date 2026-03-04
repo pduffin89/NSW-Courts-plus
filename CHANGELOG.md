@@ -7,6 +7,13 @@
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
 - Expanded project docs (`README.md`, `AGENTS.md`) with final PDF determinism guardrails and workflow.
 
+## 0.3.17 - 2026-03-04
+
+- Non-party case-title rendering update:
+  - Restored criminal case titles to use full defendant names (for example `R v William James Hosey`) instead of last-name-only compaction.
+  - Added adaptive case-title font sizing for `Text28` in both service and extension generation paths to reduce clipping risk in the narrow field.
+  - Keeps deterministic flatten/overlay pipeline unchanged.
+
 ## 0.3.16 - 2026-03-04
 
 - Final checkbox determinism fix (root-cause release):
