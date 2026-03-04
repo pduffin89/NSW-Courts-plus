@@ -845,6 +845,37 @@ function removeNonPartyCheckboxWidgets(pdfDoc, pdfLib) {
   });
 }
 
+function normalizeAcroFormFieldsFromPageWidgets(pdfDoc, pdfLib) {
+  const subtypeKey = pdfLib.PDFName.of("Subtype");
+  const widgetSubtype = pdfLib.PDFName.of("Widget");
+  const fieldsKey = pdfLib.PDFName.of("Fields");
+  const pageKey = pdfLib.PDFName.of("P");
+  const widgetRefs = [];
+
+  const pages = pdfDoc.getPages();
+  pages.forEach((page) => {
+    const annots = page.node && typeof page.node.Annots === "function"
+      ? page.node.Annots()
+      : null;
+    if (!annots || typeof annots.asArray !== "function") return;
+
+    annots.asArray().forEach((ref) => {
+      const dict = pdfDoc.context.lookup(ref);
+      if (!dict || typeof dict.get !== "function") return;
+      const subtype = dict.get(subtypeKey);
+      if (!subtype || String(subtype) !== String(widgetSubtype)) return;
+      if (typeof dict.set === "function") {
+        dict.set(pageKey, page.ref);
+      }
+      widgetRefs.push(ref);
+    });
+  });
+
+  if (!widgetRefs.length) return;
+  const acroForm = pdfDoc.catalog.getOrCreateAcroForm();
+  acroForm.dict.set(fieldsKey, pdfDoc.context.obj(widgetRefs));
+}
+
 async function drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, values) {
   let markerFont = null;
   try {
@@ -891,6 +922,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   const templateBytes = await loadRuntimeBytes(templateRelativePath);
   const pdfDoc = await pdfLib.PDFDocument.load(templateBytes, { ignoreEncryption: true });
   pdfDoc.registerFontkit(globalThis.fontkit);
+  normalizeAcroFormFieldsFromPageWidgets(pdfDoc, pdfLib);
   const DA_KEY = pdfLib.PDFName.of("DA");
   const OFF_AP_STATE = pdfLib.PDFName.of("Off");
   const FALLBACK_DA = pdfLib.PDFString.of("/Helvetica 11 Tf 0 g");

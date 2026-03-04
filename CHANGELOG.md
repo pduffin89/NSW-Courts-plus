@@ -7,6 +7,13 @@
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
 - Expanded project docs (`README.md`, `AGENTS.md`) with final PDF determinism guardrails and workflow.
 
+## 0.3.19 - 2026-03-04
+
+- Extension flattening hotfix (live):
+  - Fixed persistent `Could not find page for PDFRef ...` failures during `form.flatten()` on non-party template.
+  - Root cause: template `/AcroForm/Fields` references orphan field objects while actual widget annotations live on page `/Annots`.
+  - Resolution: normalize AcroForm fields from page widget annotations and attach widget `/P` page references before any field writes/flatten.
+
 ## 0.3.18 - 2026-03-04
 
 - Live flatten hotfix:
