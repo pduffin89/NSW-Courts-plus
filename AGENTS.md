@@ -118,3 +118,16 @@ When debugging, always capture:
 1. Extension version shown in Chrome.
 2. Exact retry reason from service worker logs.
 3. Whether generated PDF exists in Documents `Generated` folder.
+
+## PDF Determinism Guardrail
+
+For PDF check/uncheck reliability, use:
+
+- `skills/nsw-court-pdf-determinism/SKILL.md`
+
+Minimum requirements before calling a PDF checkbox issue fixed:
+
+1. Confirm selected docs are not coerced by court/jurisdiction.
+2. Confirm all checkbox fields are initialized to Off before selected fields are applied.
+3. Confirm checked states are visually baked (`X` overlays) before output finalization.
+4. Confirm generated file has no live form layers (`get_fields()` empty and `/Annots` absent).

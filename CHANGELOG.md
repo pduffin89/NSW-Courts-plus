@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
+  - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.
+  - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
+- Expanded project docs (`README.md`, `AGENTS.md`) with final PDF determinism guardrails and workflow.
+
 ## 0.3.16 - 2026-03-04
 
 - Final checkbox determinism fix (root-cause release):

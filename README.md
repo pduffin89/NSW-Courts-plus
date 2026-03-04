@@ -78,6 +78,16 @@ Installer entry points in the zip:
 ## Notes
 
 - Generation is fully local inside the extension worker (no background service required).
+- PDF checkbox/text determinism (finalized):
+  - Root cause 1 (fixed): Local Criminal doc coercion in service generation dropped selected docs (for example `police_fact_sheet`).
+  - Root cause 2 (fixed): checkbox fields not explicitly initialized to off allowed template defaults to leak into output.
+  - Permanent pattern:
+    - never coerce selected docs by court/jurisdiction
+    - initialize all checkbox fields to off
+    - apply only selected fields to on
+    - overlay visual `X` for checked boxes
+    - flatten and strip form interactivity before save
+  - Reference skill: `skills/nsw-court-pdf-determinism/SKILL.md`
 - ABN lookup integration uses ABR web service + ABR details/history pages for expanded view data.
 - Caselaw lookup tries AustLII search URLs (including `excerpt=1`) and falls back to NSW Caselaw when AustLII blocks automated fetches.
 - Caselaw results are compact by default and show excerpt/catchwords when expanded.

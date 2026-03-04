@@ -1,0 +1,4 @@
+interface:
+  display_name: "NSW PDF Determinism"
+  short_description: "Enforce deterministic checkbox/text rendering in NSW generated PDFs"
+  default_prompt: "Stabilize NSW court PDF output so checkbox and text states are deterministic, flattened, and visually baked into final files across viewers."
