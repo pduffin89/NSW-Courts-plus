@@ -1024,12 +1024,10 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
 
   if (hasSignatureValues) {
     drawSignatureOverlays(pdfDoc, pdfLib, form, effectiveValues, handwritingFont);
-    removeSignatureWidgets(pdfDoc, pdfLib);
   }
 
   if (templateRelativePath === FORM_TEMPLATE_NON_PARTY) {
     await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, effectiveValues);
-    removeNonPartyCheckboxWidgets(pdfDoc, pdfLib);
   }
 
   if (typeof form.flatten !== "function") {

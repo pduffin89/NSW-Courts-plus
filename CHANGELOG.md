@@ -7,6 +7,13 @@
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
 - Expanded project docs (`README.md`, `AGENTS.md`) with final PDF determinism guardrails and workflow.
 
+## 0.3.18 - 2026-03-04
+
+- Live flatten hotfix:
+  - Fixed extension generation failure `Unable to flatten generated PDF: Could not find page for PDFRef ...`.
+  - Root cause was removing checkbox/signature widgets before `form.flatten()` in extension generation.
+  - Resolution: keep overlay drawing, but defer widget removal entirely and let `form.flatten()` operate on intact field/page references.
+
 ## 0.3.17 - 2026-03-04
 
 - Non-party case-title rendering update:
