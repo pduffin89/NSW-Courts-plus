@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.15 - 2026-03-04
+
+- PDF output hardening (extension + service):
+  - Added mandatory form flattening on every generated export so values are burned into page content.
+  - Eliminates viewer-dependent disappearing text/checkbox rendering and stale visual form-state carryover.
+  - Extension now fails generation explicitly if flattening support is unavailable, instead of silently outputting unflattened forms.
+
 ## 0.3.14 - 2026-02-20
 
 - Supreme media form rendering fix:

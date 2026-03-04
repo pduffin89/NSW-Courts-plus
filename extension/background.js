@@ -1016,6 +1016,16 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     removeNonPartyCheckboxWidgets(pdfDoc, pdfLib);
   }
 
+  if (typeof form.flatten !== "function") {
+    throw new Error("PDF engine does not support form flattening.");
+  }
+  try {
+    form.flatten({ updateFieldAppearances: true });
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error || "unknown error");
+    throw new Error(`Unable to flatten generated PDF: ${message}`);
+  }
+
   return new Uint8Array(await pdfDoc.save({ useObjectStreams: false, updateFieldAppearances: false }));
 }
 

@@ -15,6 +15,7 @@ NSW Courts+ is a Chrome extension that runs fully locally in Chrome to move cour
   - Supreme popup removes media/non-party form-type checkboxes (media form section only).
 - For Local/District non-party forms, uses a `Crime` / `Civil` dropdown (auto-selected from list jurisdiction) and only shows template-matching checkboxes for the chosen mode.
 - Signature fields are auto-generated as `FirstInitial.LastName` and rendered as handwritten overlays (`P.Duffin` style) across Supreme and non-party forms.
+- Flattens generated PDFs before save so current values are baked into the file (prevents disappearing text/checkbox state drift in some viewers).
 - Adds a `Research` side panel with:
   - Google News tab for party-name news sweeps.
   - ABN tab for entity lookup with expandable current and historical ABN detail snapshots.

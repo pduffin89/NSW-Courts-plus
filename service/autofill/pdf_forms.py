@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, TextStringObject
+from pypdf.generic import ArrayObject, NameObject, TextStringObject
 
 from .config import APP_TZ, MEDIA_DOC_TO_FIELD, NON_PARTY_ACK_FIELDS
 from .models import Matter, Profile
@@ -207,10 +207,31 @@ def fill_pdf(
         field_font_sizes=field_font_sizes or {},
     )
     _apply_widget_font_sizes(writer, field_font_sizes or {})
-    writer.set_need_appearances_writer()
+    writer.update_page_form_field_values(
+        list(writer.pages),
+        normalized_values,
+        auto_regenerate=True,
+        flatten=True,
+    )
+    _strip_form_interactivity(writer)
 
     with output_path.open("wb") as handle:
         writer.write(handle)
+
+
+def _strip_form_interactivity(writer: PdfWriter) -> None:
+    annots_key = NameObject("/Annots")
+    for page in writer.pages:
+        if annots_key in page:
+            del page[annots_key]
+
+    acro = writer.root_object.get("/AcroForm")
+    if not acro:
+        return
+    acro_obj = acro.get_object()
+    acro_obj[NameObject("/Fields")] = ArrayObject()
+    if NameObject("/NeedAppearances") in acro_obj:
+        del acro_obj[NameObject("/NeedAppearances")]
 
 
 def _set_widget_appearance(field_obj: Any, value_name: NameObject) -> None:
