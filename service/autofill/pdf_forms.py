@@ -1,10 +1,12 @@
 import re
+from io import BytesIO
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import ArrayObject, NameObject, TextStringObject
+from reportlab.pdfgen import canvas
 
 from .config import APP_TZ, MEDIA_DOC_TO_FIELD, NON_PARTY_ACK_FIELDS
 from .models import Matter, Profile
@@ -213,6 +215,9 @@ def fill_pdf(
         auto_regenerate=True,
         flatten=True,
     )
+    checked_boxes = _checked_checkbox_fields(normalized_values, checkbox_states)
+    if checked_boxes:
+        _overlay_checked_boxes(writer, checked_boxes)
     _strip_form_interactivity(writer)
 
     with output_path.open("wb") as handle:
@@ -232,6 +237,84 @@ def _strip_form_interactivity(writer: PdfWriter) -> None:
     acro_obj[NameObject("/Fields")] = ArrayObject()
     if NameObject("/NeedAppearances") in acro_obj:
         del acro_obj[NameObject("/NeedAppearances")]
+
+
+def _pdf_value_is_checked(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip() != "" and value != "/Off"
+    return bool(value)
+
+
+def _checked_checkbox_fields(
+    normalized_values: dict[str, Any], checkbox_states: dict[str, str]
+) -> set[str]:
+    checked: set[str] = set()
+    for field_name in checkbox_states:
+        if _pdf_value_is_checked(normalized_values.get(field_name)):
+            checked.add(field_name)
+    return checked
+
+
+def _overlay_checked_boxes(writer: PdfWriter, checked_fields: set[str]) -> None:
+    if not checked_fields:
+        return
+
+    for page in writer.pages:
+        annots = page.get("/Annots")
+        if not annots:
+            continue
+        try:
+            widgets = list(annots)
+        except TypeError:
+            widgets = list(annots.get_object())
+
+        marks: list[tuple[float, float, float, float]] = []
+        for widget_ref in widgets:
+            widget = widget_ref.get_object()
+            field_obj = widget
+            parent = widget.get("/Parent")
+            if parent:
+                field_obj = parent.get_object()
+
+            ftype = field_obj.get("/FT") or widget.get("/FT")
+            if str(ftype) != "/Btn":
+                continue
+
+            name_obj = widget.get("/T") or field_obj.get("/T")
+            if name_obj is None:
+                continue
+            field_name = str(name_obj)
+            if field_name not in checked_fields:
+                continue
+
+            rect_obj = widget.get("/Rect")
+            if not rect_obj or len(rect_obj) < 4:
+                continue
+            x0, y0, x1, y1 = [float(v) for v in rect_obj]
+            left = min(x0, x1)
+            bottom = min(y0, y1)
+            right = max(x0, x1)
+            top = max(y0, y1)
+            marks.append((left, bottom, right, top))
+
+        if not marks:
+            continue
+
+        width = float(page.mediabox.width)
+        height = float(page.mediabox.height)
+        packet = BytesIO()
+        c = canvas.Canvas(packet, pagesize=(width, height))
+        for left, bottom, right, top in marks:
+            box_w = max(0.0, right - left)
+            box_h = max(0.0, top - bottom)
+            size = max(7.0, min(11.0, min(box_w, box_h) * 0.8))
+            c.setFont("Helvetica-Bold", size)
+            c.drawString(left + 1.0, bottom + max(0.6, (box_h - size) / 2), "X")
+        c.save()
+        packet.seek(0)
+
+        overlay_reader = PdfReader(packet)
+        page.merge_page(overlay_reader.pages[0])
 
 
 def _set_widget_appearance(field_obj: Any, value_name: NameObject) -> None:

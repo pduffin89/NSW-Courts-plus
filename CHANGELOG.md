@@ -6,6 +6,7 @@
   - Added mandatory form flattening on every generated export so values are burned into page content.
   - Eliminates viewer-dependent disappearing text/checkbox rendering and stale visual form-state carryover.
   - Extension now fails generation explicitly if flattening support is unavailable, instead of silently outputting unflattened forms.
+  - Service generation now stamps explicit checked-box overlays before stripping form interactivity so critical ticks (for example police fact sheet) remain visible in flattened outputs.
 
 ## 0.3.14 - 2026-02-20
 
