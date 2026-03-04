@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.16 - 2026-03-04
+
+- Final checkbox determinism fix (root-cause release):
+  - Removed Local Court Criminal requested-document coercion in service generation; selected docs are no longer silently replaced with `indictment_can`.
+  - Service PDF normalization now starts with every checkbox field forced `Off`, then applies explicit requested states.
+  - Extension PDF generation now does the same checkbox reset pass before applying selected states, preventing template default tick carryover.
+  - Combined with existing flatten+overlay flow, this makes check/uncheck behavior deterministic and stable across viewers.
+
 ## 0.3.15 - 2026-03-04
 
 - PDF output hardening (extension + service):

@@ -901,11 +901,21 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   const FALLBACK_DA = pdfLib.PDFString.of("/Helvetica 11 Tf 0 g");
   const form = pdfDoc.getForm();
   const fieldMap = new Map(form.getFields().map((field) => [field.getName(), field]));
+  const effectiveValues = {};
+  fieldMap.forEach((field, name) => {
+    const isCheckBox = typeof field.check === "function" && typeof field.uncheck === "function";
+    if (isCheckBox) {
+      effectiveValues[name] = false;
+    }
+  });
+  Object.entries(values || {}).forEach(([name, rawValue]) => {
+    effectiveValues[name] = rawValue;
+  });
   let handwritingFont = null;
   let textAppearanceFont = null;
   const textFields = [];
 
-  const hasSignatureValues = Object.entries(values || {}).some(([name, value]) =>
+  const hasSignatureValues = Object.entries(effectiveValues).some(([name, value]) =>
     SIGNATURE_FIELD_NAMES.has(name) && cleanSpaces(value) !== ""
   );
   if (hasSignatureValues) {
@@ -926,7 +936,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     textAppearanceFont = null;
   }
 
-  Object.entries(values || {}).forEach(([name, rawValue]) => {
+  Object.entries(effectiveValues).forEach(([name, rawValue]) => {
     const field = fieldMap.get(name);
     if (!field) return;
     try {
@@ -1007,12 +1017,12 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   });
 
   if (hasSignatureValues) {
-    drawSignatureOverlays(pdfDoc, pdfLib, form, values, handwritingFont);
+    drawSignatureOverlays(pdfDoc, pdfLib, form, effectiveValues, handwritingFont);
     removeSignatureWidgets(pdfDoc, pdfLib);
   }
 
   if (templateRelativePath === FORM_TEMPLATE_NON_PARTY) {
-    await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, values);
+    await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, effectiveValues);
     removeNonPartyCheckboxWidgets(pdfDoc, pdfLib);
   }
 

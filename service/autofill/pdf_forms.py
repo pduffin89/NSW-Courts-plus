@@ -174,7 +174,8 @@ def _checkbox_on_values(reader: PdfReader) -> dict[str, str]:
 def _normalize_pdf_values(
     values: dict[str, Any], checkbox_states: dict[str, str]
 ) -> dict[str, Any]:
-    normalized: dict[str, Any] = {}
+    # Start from all checkboxes off so template default ticks never leak into output.
+    normalized: dict[str, Any] = {key: "/Off" for key in checkbox_states}
     for key, value in values.items():
         if key in checkbox_states:
             if isinstance(value, str) and value.startswith("/"):

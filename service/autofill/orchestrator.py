@@ -80,17 +80,6 @@ def _effective_applications(court_text: str, requested: dict[str, bool]) -> dict
     }
 
 
-def _effective_requested_docs(
-    court_text: str, jurisdiction_text: str, requested_docs: set[str]
-) -> set[str]:
-    court = (court_text or "").lower()
-    jurisdiction = (jurisdiction_text or "").lower()
-    if "local" in court and "criminal" in jurisdiction:
-        # Match the validated local-court exemplar by default.
-        return {"indictment_can"}
-    return requested_docs
-
-
 def generate_forms_and_draft(request: GenerateRequest) -> dict[str, Any]:
     ensure_dirs()
 
@@ -115,9 +104,6 @@ def generate_forms_and_draft(request: GenerateRequest) -> dict[str, Any]:
 
     requested_docs = set(request.requested_documents) or set(DEFAULT_REQUESTED_DOCS)
     matter = request.matter
-    requested_docs = _effective_requested_docs(
-        matter.court, matter.jurisdiction, requested_docs
-    )
     now = datetime.now(APP_TZ)
     stamp = now.strftime("%Y%m%d_%H%M%S")
     safe_case = slug(matter.case_number)
