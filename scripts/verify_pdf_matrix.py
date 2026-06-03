@@ -58,6 +58,21 @@ DETAILS = {
 
 MEDIA_REASON_PHRASE = "significant public interest in accredited media"
 EXPECTED_SIGNATURE = "P.Duffin"
+MEDIA_PROFILE_TEXT = (
+    PROFILE.applicant_name,
+    EXPECTED_SIGNATURE,
+    PROFILE.organisation,
+    PROFILE.contact_number,
+    PROFILE.email,
+)
+NON_PARTY_PROFILE_TEXT = (
+    PROFILE.applicant_name,
+    EXPECTED_SIGNATURE,
+    PROFILE.occupation,
+    PROFILE.organisation,
+    PROFILE.email,
+    PROFILE.contact_number,
+)
 SUPREME_BAIL_DOCS = ("crown_bundle", "submissions", "selected_images")
 SUPREME_GENERAL_DOCS = ("originating_process", "transcript", "exhibits", "notice_of_appeal", "other")
 NON_PARTY_CRIME_DOCS = (
@@ -317,9 +332,7 @@ def build_exhaustive_cases(
     district_civil: Matter,
 ) -> list[PdfCase]:
     media_base = (
-        PROFILE.applicant_name,
-        EXPECTED_SIGNATURE,
-        PROFILE.organisation,
+        *MEDIA_PROFILE_TEXT,
         "2026/100001",
         "R",
         "Alexandra Example",
@@ -369,8 +382,7 @@ def build_exhaustive_cases(
                     matter=matter,
                     docs=docs,
                     expected_text=(
-                        PROFILE.applicant_name,
-                        EXPECTED_SIGNATURE,
+                        *NON_PARTY_PROFILE_TEXT,
                         matter.case_number,
                         case_title,
                         court_text,
@@ -403,8 +415,7 @@ def build_exhaustive_cases(
                     matter=matter,
                     docs=docs,
                     expected_text=(
-                        PROFILE.applicant_name,
-                        EXPECTED_SIGNATURE,
+                        *NON_PARTY_PROFILE_TEXT,
                         matter.case_number,
                         case_title,
                         court_text,
@@ -484,7 +495,7 @@ def build_cases() -> list[PdfCase]:
         defendant="Delta Pty Ltd",
     )
 
-    media_base = (PROFILE.applicant_name, EXPECTED_SIGNATURE, PROFILE.organisation, "2026/100001", "R", "Alexandra Example", expected_long_date(), MEDIA_REASON_PHRASE)
+    media_base = (*MEDIA_PROFILE_TEXT, "2026/100001", "R", "Alexandra Example", expected_long_date(), MEDIA_REASON_PHRASE)
     cases: list[PdfCase] = [
         PdfCase(
             name="supreme_bail_all",
@@ -509,7 +520,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=local_crime,
             docs={"indictment_can", "witness_statements", "police_fact_sheet", "transcript", "record_conviction_or_order", "other"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/200001", "R v Benjamin Crime", "Downing Centre Local Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/200001", "R v Benjamin Crime", "Downing Centre Local Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button6", "Button11", "Button12", "Button13", "Button14", "Button15", "Button16", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
         ),
@@ -518,7 +529,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=district_crime,
             docs={"indictment_can", "witness_statements", "police_fact_sheet", "transcript", "record_conviction_or_order", "other"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/200002", "R v Charlotte District", "Sydney District Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/200002", "R v Charlotte District", "Sydney District Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button7", "Button11", "Button12", "Button13", "Button14", "Button15", "Button16", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
         ),
@@ -527,7 +538,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=children_crime,
             docs={"police_fact_sheet", "record_conviction_or_order"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/200003", "R v Child Example", "Parramatta Children's Ct", expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/200003", "R v Child Example", "Parramatta Children's Ct", expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button8", "Button13", "Button15", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
         ),
@@ -536,7 +547,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=coroner_crime,
             docs={"transcript", "other"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/200004", "Inquest into Example", "Lidcombe Coroner's Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/200004", "Inquest into Example", "Lidcombe Coroner's Ct", DETAILS["transcript_dates"], DETAILS["other"], expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button6", "Button14", "Button16", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
         ),
@@ -545,7 +556,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=local_civil,
             docs={"sealed_copy_judgment", "certified_copy_reasons", "civil_pleading", "civil_other_filed"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/300001", "Acme Pty Ltd v Beta Pty Ltd", "Local Ct", DETAILS["civil_pleading"], DETAILS["civil_other_filed"], expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/300001", "Acme Pty Ltd v Beta Pty Ltd", "Local Ct", DETAILS["civil_pleading"], DETAILS["civil_other_filed"], expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button10", "Button17", "Button18", "Button20", "Button21", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
         ),
@@ -554,7 +565,7 @@ def build_cases() -> list[PdfCase]:
             template=NON_PARTY_TEMPLATE,
             matter=district_civil,
             docs={"sealed_copy_judgment", "certified_copy_reasons", "civil_pleading", "civil_other_filed"},
-            expected_text=(PROFILE.applicant_name, EXPECTED_SIGNATURE, "2026/300002", "Gamma Pty Ltd v Delta Pty Ltd", "Sydney District Ct Civil", DETAILS["civil_pleading"], DETAILS["civil_other_filed"], expected_short_date()),
+            expected_text=(*NON_PARTY_PROFILE_TEXT, "2026/300002", "Gamma Pty Ltd v Delta Pty Ltd", "Sydney District Ct Civil", DETAILS["civil_pleading"], DETAILS["civil_other_filed"], expected_short_date()),
             forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
             expected_checked_fields=("Button1", "Button4", "Button17", "Button18", "Button20", "Button21", "Button37", "Button39", "Button40", "Button41", "Button42", "Button43", "Button44", "Button45", "Button46", "Button47"),
             expected_manual_overlays=("non_party_district_civil",),
