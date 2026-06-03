@@ -96,7 +96,7 @@ python3 scripts/build_installer.py
 
 `scripts/validate_extension_pdf_generation.py` runs the real Manifest V3 background-worker PDF code in a Node harness and applies the same field/text checks to extension-generated PDFs.
 
-`scripts/check_loaded_extension_version.js` checks Chrome profile metadata for loaded unpacked NSW Courts+ copies and verifies their on-disk manifest version matches `extension/manifest.json`.
+`scripts/check_loaded_extension_version.js` checks Chrome profile metadata for loaded unpacked NSW Courts+ copies and verifies both the on-disk manifest version and Chrome's stored service-worker version match `extension/manifest.json`. If the disk version matches but the stored worker is old, reload the unpacked extension in `chrome://extensions`.
 
 ## Notes
 

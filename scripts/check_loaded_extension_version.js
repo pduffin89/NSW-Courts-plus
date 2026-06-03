@@ -76,9 +76,13 @@ if (matches.length === 0) {
 
 let failed = false;
 for (const match of matches) {
-  const ok = match.diskVersion === sourceVersion;
+  const workerVersion = match.storedVersion || "unknown";
+  const ok = match.diskVersion === sourceVersion && workerVersion === sourceVersion;
   const status = ok ? "PASS" : "FAIL";
-  console.log(`${status} ${match.profile}/${match.id} disk=${match.diskVersion || "missing"} source=${sourceVersion} stored_worker=${match.storedVersion || "unknown"} path=${match.path}`);
+  console.log(`${status} ${match.profile}/${match.id} disk=${match.diskVersion || "missing"} source=${sourceVersion} stored_worker=${workerVersion} path=${match.path}`);
+  if (match.diskVersion === sourceVersion && workerVersion !== sourceVersion) {
+    console.log(`  - Reload the unpacked extension in chrome://extensions so Chrome starts service worker ${sourceVersion}.`);
+  }
   if (!ok) {
     failed = true;
   }
