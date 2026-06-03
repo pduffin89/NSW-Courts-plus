@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from pypdf import PdfReader
+from pypdf.generic import ContentStream
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -66,6 +67,33 @@ class PdfCase:
     values_kind: str = "non_party"
 
 
+def template_checkbox_rects(path: Path) -> dict[str, tuple[int, tuple[float, float, float, float]]]:
+    reader = PdfReader(str(path))
+    rects: dict[str, tuple[int, tuple[float, float, float, float]]] = {}
+    for page_index, page in enumerate(reader.pages):
+        for ref in page.get("/Annots") or []:
+            widget = ref.get_object()
+            parent = widget.get("/Parent")
+            parent_obj = parent.get_object() if parent else None
+            field_type = widget.get("/FT") or (parent_obj and parent_obj.get("/FT"))
+            name = widget.get("/T") or (parent_obj and parent_obj.get("/T"))
+            if str(field_type) != "/Btn" or name is None:
+                continue
+            raw_rect = widget.get("/Rect")
+            if not raw_rect or len(raw_rect) < 4:
+                continue
+            x0, y0, x1, y1 = [float(value) for value in raw_rect]
+            rects[str(name)] = (page_index, (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)))
+    return rects
+
+
+MEDIA_CHECKBOX_RECTS = template_checkbox_rects(MEDIA_TEMPLATE)
+NON_PARTY_CHECKBOX_RECTS = template_checkbox_rects(NON_PARTY_TEMPLATE)
+MANUAL_OVERLAY_RECTS: dict[str, tuple[int, tuple[float, float, float, float]]] = {
+    "non_party_district_civil": (0, (241.125, 608.2188, 249.0, 614.9688)),
+}
+
+
 def normalize_text(value: str) -> str:
     return " ".join((value or "").split())
 
@@ -87,6 +115,80 @@ def field_count(path: Path) -> int:
 def count_x_text_ops(path: Path) -> int:
     text = "\n".join(page.extract_text() or "" for page in PdfReader(str(path)).pages)
     return sum(1 for token in text.replace("\r", "\n").split() if token == "X")
+
+
+def rendered_x_positions(path: Path) -> list[tuple[int, float, float]]:
+    reader = PdfReader(str(path))
+    positions: list[tuple[int, float, float]] = []
+    for page_index, page in enumerate(reader.pages):
+        contents = page.get_contents()
+        if contents is None:
+            continue
+        stream = ContentStream(contents, reader)
+        current_text_matrix: tuple[float, float] | None = None
+        for operands, operator in stream.operations:
+            if operator == b"Tm" and len(operands) >= 6:
+                try:
+                    current_text_matrix = (float(operands[4]), float(operands[5]))
+                except (TypeError, ValueError):
+                    current_text_matrix = None
+            elif operator in (b"Tj", b"'", b'"') and len(operands) > 0 and str(operands[0]) == "X":
+                if current_text_matrix is not None:
+                    positions.append((page_index, current_text_matrix[0], current_text_matrix[1]))
+            elif operator == b"TJ" and current_text_matrix is not None:
+                if any(str(item) == "X" for item in operands[0]):
+                    positions.append((page_index, current_text_matrix[0], current_text_matrix[1]))
+    return positions
+
+
+def rect_for_overlay(
+    name: str,
+    checkbox_rects: dict[str, tuple[int, tuple[float, float, float, float]]],
+) -> tuple[int, tuple[float, float, float, float]] | None:
+    if name in checkbox_rects:
+        return checkbox_rects[name]
+    return MANUAL_OVERLAY_RECTS.get(name)
+
+
+def position_in_rect(position: tuple[int, float, float], rect_ref: tuple[int, tuple[float, float, float, float]]) -> bool:
+    page_index, x, y = position
+    rect_page, (left, bottom, right, top) = rect_ref
+    pad = 2.5
+    return (
+        page_index == rect_page
+        and left - pad <= x <= right + pad
+        and bottom - pad <= y <= top + pad
+    )
+
+
+def missing_expected_x_positions(
+    expected_names: set[str],
+    positions: list[tuple[int, float, float]],
+    checkbox_rects: dict[str, tuple[int, tuple[float, float, float, float]]],
+) -> list[str]:
+    missing = []
+    for name in sorted(expected_names):
+        rect_ref = rect_for_overlay(name, checkbox_rects)
+        if rect_ref is None:
+            missing.append(name)
+            continue
+        if not any(position_in_rect(position, rect_ref) for position in positions):
+            missing.append(name)
+    return missing
+
+
+def unexpected_x_positions(
+    allowed_names: set[str],
+    positions: list[tuple[int, float, float]],
+    checkbox_rects: dict[str, tuple[int, tuple[float, float, float, float]]],
+) -> list[str]:
+    unexpected = []
+    for name, rect_ref in sorted(checkbox_rects.items()):
+        if name in allowed_names:
+            continue
+        if any(position_in_rect(position, rect_ref) for position in positions):
+            unexpected.append(name)
+    return unexpected
 
 
 def expected_short_date() -> str:
@@ -249,8 +351,10 @@ def values_for(case: PdfCase) -> dict[str, Any]:
 
 def verify_case(case: PdfCase) -> dict[str, Any]:
     values = values_for(case)
+    checkbox_rects = MEDIA_CHECKBOX_RECTS if case.values_kind == "media" else NON_PARTY_CHECKBOX_RECTS
     expected_checked = set(case.expected_checked_fields)
     expected_manual = set(case.expected_manual_overlays)
+    expected_overlay_names = expected_checked | expected_manual
 
     actual_checked = {name for name in expected_checked if values.get(name)}
     missing_value_checks = sorted(expected_checked - actual_checked)
@@ -272,7 +376,10 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
     fields = field_count(output)
     annots = count_annots(output)
     x_ops = count_x_text_ops(output)
-    expected_min_x = len(case.expected_checked_fields) + len(case.expected_manual_overlays)
+    x_positions = rendered_x_positions(output)
+    expected_min_x = len(expected_overlay_names)
+    missing_x_positions = missing_expected_x_positions(expected_overlay_names, x_positions, checkbox_rects)
+    unexpected_x_fields = unexpected_x_positions(expected_overlay_names, x_positions, checkbox_rects)
 
     failures = []
     if missing_value_checks:
@@ -291,6 +398,10 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
         failures.append(f"PDF still has {annots} annotations")
     if x_ops < expected_min_x:
         failures.append(f"visual X count {x_ops} below expected minimum {expected_min_x}")
+    if missing_x_positions:
+        failures.append(f"missing visual X at expected fields: {', '.join(missing_x_positions)}")
+    if unexpected_x_fields:
+        failures.append(f"unexpected visual X at unchecked fields: {', '.join(unexpected_x_fields)}")
 
     return {
         "case": case.name,
@@ -299,6 +410,7 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
         "annots": annots,
         "x_ops": x_ops,
         "expected_min_x": expected_min_x,
+        "x_positions": x_positions,
         "manual_overlays": list(manual),
         "ok": not failures,
         "failures": failures,

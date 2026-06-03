@@ -88,7 +88,7 @@ python3 scripts/verify_pdf_matrix.py
 python3 scripts/build_installer.py
 ```
 
-`scripts/verify_pdf_matrix.py` generates representative Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs under `.tmp/pdf-matrix/`. It checks expected text, stale template text absence, visual tick overlays, zero live form fields, and zero annotations.
+`scripts/verify_pdf_matrix.py` generates representative Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs under `.tmp/pdf-matrix/`. It checks expected text, stale template text absence, visual tick overlays at the exact source checkbox rectangles, no visual ticks at unchecked checkbox rectangles, zero live form fields, and zero annotations.
 
 ## Notes
 
