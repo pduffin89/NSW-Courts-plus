@@ -864,6 +864,15 @@ function removeNonPartyCheckboxWidgets(pdfDoc, pdfLib) {
   });
 }
 
+function stripPageAnnotations(pdfDoc, pdfLib) {
+  const annotsKey = pdfLib.PDFName.of("Annots");
+  pdfDoc.getPages().forEach((page) => {
+    if (page.node && typeof page.node.delete === "function") {
+      page.node.delete(annotsKey);
+    }
+  });
+}
+
 function normalizeAcroFormFieldsFromPageWidgets(pdfDoc, pdfLib) {
   const subtypeKey = pdfLib.PDFName.of("Subtype");
   const widgetSubtype = pdfLib.PDFName.of("Widget");
@@ -1112,9 +1121,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     drawSignatureOverlays(pdfDoc, pdfLib, form, effectiveValues, handwritingFont);
   }
 
-  if (templateRelativePath === FORM_TEMPLATE_NON_PARTY) {
-    await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, effectiveValues);
-  }
+  await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, effectiveValues);
   await drawManualCheckOverlays(pdfDoc, pdfLib, effectiveValues[MANUAL_CHECK_OVERLAY_KEY]);
 
   if (typeof form.flatten !== "function") {
@@ -1126,6 +1133,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
     const message = error && error.message ? error.message : String(error || "unknown error");
     throw new Error(`Unable to flatten generated PDF: ${message}`);
   }
+  stripPageAnnotations(pdfDoc, pdfLib);
 
   return new Uint8Array(await pdfDoc.save({ useObjectStreams: false, updateFieldAppearances: false }));
 }
