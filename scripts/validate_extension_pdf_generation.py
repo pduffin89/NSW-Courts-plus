@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,142 +17,15 @@ sys.path.insert(0, str(ROOT))
 from scripts.verify_pdf_matrix import (  # noqa: E402
     MEDIA_CHECKBOX_RECTS,
     NON_PARTY_CHECKBOX_RECTS,
+    build_cases,
     count_annots,
     count_x_text_ops,
-    expected_long_date,
-    expected_short_date,
     field_count,
     missing_expected_x_positions,
     pdf_text,
     rendered_x_positions,
     unexpected_x_positions,
 )
-
-
-EXPECTED = {
-    "extension_supreme_bail_all": {
-        "text": [
-            "Perry Duffin",
-            "P.Duffin",
-            "The Sydney Morning Herald",
-            "0466 208 099",
-            "perry.duffin@example.com",
-            "2026/100001",
-            "R",
-            "Alexandra Example",
-            expected_long_date(),
-            "significant public interest in accredited media",
-            "CCTV stills tendered in open court",
-        ],
-        "checked": ["Check Box39", "Check Box40", "Check Box41", "Check Box63", "Check Box64", "Check Box65"],
-        "rects": MEDIA_CHECKBOX_RECTS,
-    },
-    "extension_supreme_general_all": {
-        "text": [
-            "Perry Duffin",
-            "P.Duffin",
-            "The Sydney Morning Herald",
-            "0466 208 099",
-            "perry.duffin@example.com",
-            "2026/100001",
-            "R",
-            "Alexandra Example",
-            expected_long_date(),
-            "1-2 June 2026",
-            "Exhibit A and Exhibit B",
-            "Statement of agreed facts",
-        ],
-        "checked": [
-            "Check Box50",
-            "Check Box51",
-            "Check Box52",
-            "Check Box53",
-            "Check Box54",
-            "Check Box63",
-            "Check Box64",
-            "Check Box65",
-        ],
-        "rects": MEDIA_CHECKBOX_RECTS,
-    },
-    "extension_local_crime_all": {
-        "text": [
-            "Perry Duffin",
-            "P.Duffin",
-            "Journalist",
-            "The Sydney Morning Herald",
-            "perry.duffin@example.com",
-            "0466 208 099",
-            "2026/200001",
-            "R v Benjamin Crime",
-            "Downing Centre Local Ct",
-            expected_short_date(),
-            "1-2 June 2026",
-            "Statement of agreed facts",
-            "Current proceedings, media access requested for reporting.",
-        ],
-        "forbidden": ["John Smith", "{GENERATED SIGNATURE}", "13/2/2026"],
-        "checked": [
-            "Button1",
-            "Button4",
-            "Button6",
-            "Button11",
-            "Button12",
-            "Button13",
-            "Button14",
-            "Button15",
-            "Button16",
-            "Button37",
-            "Button39",
-            "Button40",
-            "Button41",
-            "Button42",
-            "Button43",
-            "Button44",
-            "Button45",
-            "Button46",
-            "Button47",
-        ],
-        "rects": NON_PARTY_CHECKBOX_RECTS,
-    },
-    "extension_district_civil_all": {
-        "text": [
-            "Perry Duffin",
-            "P.Duffin",
-            "Journalist",
-            "The Sydney Morning Herald",
-            "perry.duffin@example.com",
-            "0466 208 099",
-            "2026/300002",
-            "Gamma Pty Ltd v Delta Pty Ltd",
-            "Sydney District Ct Civil",
-            expected_short_date(),
-            "Statement of claim filed 4 June 2026",
-            "Notice of motion filed 4 June 2026",
-            "Current proceedings, media access requested for reporting.",
-        ],
-        "forbidden": ["John Smith", "{GENERATED SIGNATURE}", "13/2/2026"],
-        "checked": [
-            "Button1",
-            "Button4",
-            "Button17",
-            "Button18",
-            "Button20",
-            "Button21",
-            "Button37",
-            "Button39",
-            "Button40",
-            "Button41",
-            "Button42",
-            "Button43",
-            "Button44",
-            "Button45",
-            "Button46",
-            "Button47",
-            "non_party_district_civil",
-        ],
-        "rects": NON_PARTY_CHECKBOX_RECTS,
-    },
-}
 
 
 def run_node_generator() -> None:
@@ -163,14 +37,14 @@ def run_node_generator() -> None:
         raise SystemExit(result.returncode)
 
 
-def verify_pdf(case_name: str, spec: dict[str, object]) -> dict[str, object]:
-    path = OUT_DIR / f"{case_name}.pdf"
+def verify_pdf(case) -> dict[str, object]:
+    path = OUT_DIR / f"extension_{case.name}.pdf"
     text = pdf_text(path)
-    checked = set(spec["checked"])
-    rects = spec["rects"]
+    checked = set(case.expected_checked_fields) | set(case.expected_manual_overlays)
+    rects = MEDIA_CHECKBOX_RECTS if case.values_kind == "media" else NON_PARTY_CHECKBOX_RECTS
     x_positions = rendered_x_positions(path)
-    missing_text = [item for item in spec.get("text", []) if item not in text]
-    forbidden_text = [item for item in spec.get("forbidden", []) if item in text]
+    missing_text = [item for item in case.expected_text if item and item not in text]
+    forbidden_text = [item for item in case.forbidden_text if item and item in text]
     missing_x = missing_expected_x_positions(checked, x_positions, rects)
     unexpected_x = unexpected_x_positions(checked, x_positions, rects)
     fields = field_count(path)
@@ -192,11 +66,12 @@ def verify_pdf(case_name: str, spec: dict[str, object]) -> dict[str, object]:
     if x_ops < len(checked):
         failures.append(f"visual X count {x_ops} below expected minimum {len(checked)}")
     return {
-        "case": case_name,
+        "case": f"extension_{case.name}",
         "output": str(path),
         "fields": fields,
         "annots": annots,
         "x_ops": x_ops,
+        "expected_min_x": len(checked),
         "ok": not failures,
         "failures": failures,
     }
@@ -204,15 +79,28 @@ def verify_pdf(case_name: str, spec: dict[str, object]) -> dict[str, object]:
 
 def main() -> int:
     run_node_generator()
-    results = [verify_pdf(case_name, spec) for case_name, spec in EXPECTED.items()]
+    results = [verify_pdf(case) for case in build_cases()]
     summary_path = OUT_DIR / "summary.json"
     summary_path.write_text(json.dumps(results, indent=2) + "\n")
     failed = [result for result in results if not result["ok"]]
-    for result in results:
-      status = "PASS" if result["ok"] else "FAIL"
-      print(f"{status} {result['case']} fields={result['fields']} annots={result['annots']} x_ops={result['x_ops']}")
-      for failure in result["failures"]:
-          print(f"  - {failure}")
+    if failed or len(results) <= 50:
+        for result in results:
+            status = "PASS" if result["ok"] else "FAIL"
+            print(f"{status} {result['case']} fields={result['fields']} annots={result['annots']} x_ops={result['x_ops']}")
+            for failure in result["failures"]:
+                print(f"  - {failure}")
+    else:
+        groups = Counter(result["case"].replace("extension_", "", 1).split("_", 3)[0] for result in results)
+        exhaustive_groups = Counter(
+            "_".join(result["case"].replace("extension_", "", 1).split("_")[:3])
+            for result in results
+            if result["case"].startswith("extension_exhaustive_")
+        )
+        representative_count = sum(count for group, count in groups.items() if group != "exhaustive")
+        print(f"PASS {len(results)} extension PDF matrix cases")
+        print(f"representative_cases={representative_count}")
+        for group, count in sorted(exhaustive_groups.items()):
+            print(f"{group}={count}")
     print(f"summary={summary_path}")
     return 1 if failed else 0
 
