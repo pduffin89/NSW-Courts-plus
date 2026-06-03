@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +36,8 @@ MEDIA_TEMPLATE = ROOT / "extension/forms/access_application_2026.pdf"
 NON_PARTY_TEMPLATE = ROOT / "extension/forms/application_non_party_access.pdf"
 OUT_DIR = ROOT / ".tmp/pdf-matrix"
 
+logging.getLogger("pypdf").setLevel(logging.ERROR)
+
 PROFILE = Profile(
     applicant_name="Perry Duffin",
     organisation="The Sydney Morning Herald",
@@ -52,6 +57,61 @@ DETAILS = {
 }
 
 MEDIA_REASON_PHRASE = "significant public interest in accredited media"
+SUPREME_BAIL_DOCS = ("crown_bundle", "submissions", "selected_images")
+SUPREME_GENERAL_DOCS = ("originating_process", "transcript", "exhibits", "notice_of_appeal", "other")
+NON_PARTY_CRIME_DOCS = (
+    "indictment_can",
+    "witness_statements",
+    "police_fact_sheet",
+    "transcript",
+    "record_conviction_or_order",
+    "other",
+)
+NON_PARTY_CIVIL_DOCS = (
+    "sealed_copy_judgment",
+    "certified_copy_reasons",
+    "civil_pleading",
+    "civil_other_filed",
+)
+
+SUPREME_BAIL_FIELD_MAP = {
+    "crown_bundle": "Check Box39",
+    "submissions": "Check Box40",
+    "selected_images": "Check Box41",
+}
+SUPREME_GENERAL_FIELD_MAP = {
+    "originating_process": "Check Box50",
+    "transcript": "Check Box51",
+    "exhibits": "Check Box52",
+    "notice_of_appeal": "Check Box53",
+    "other": "Check Box54",
+}
+NON_PARTY_DOC_FIELD_MAP = {
+    "indictment_can": "Button11",
+    "witness_statements": "Button12",
+    "police_fact_sheet": "Button13",
+    "transcript": "Button14",
+    "record_conviction_or_order": "Button15",
+    "other": "Button16",
+    "sealed_copy_judgment": "Button17",
+    "certified_copy_reasons": "Button18",
+    "civil_pleading": "Button20",
+    "civil_other_filed": "Button21",
+}
+NON_PARTY_BASE_FIELDS = (
+    "Button1",
+    "Button4",
+    "Button37",
+    "Button39",
+    "Button40",
+    "Button41",
+    "Button42",
+    "Button43",
+    "Button44",
+    "Button45",
+    "Button46",
+    "Button47",
+)
 
 
 @dataclass(frozen=True)
@@ -201,6 +261,164 @@ def expected_long_date() -> str:
     return f"{now.day} {now.strftime('%B %Y')}"
 
 
+def subset_name(docs: set[str]) -> str:
+    if not docs:
+        return "none"
+    return "_".join(sorted(docs))
+
+
+def powerset(items: tuple[str, ...]) -> list[set[str]]:
+    results: list[set[str]] = []
+    for size in range(len(items) + 1):
+        for combo in combinations(items, size):
+            results.append(set(combo))
+    return results
+
+
+def supreme_expected_fields(docs: set[str], field_map: dict[str, str]) -> tuple[str, ...]:
+    fields = {"Check Box63", "Check Box64", "Check Box65"}
+    fields.update(field_map[doc] for doc in docs)
+    return tuple(sorted(fields))
+
+
+def non_party_expected_fields(jurisdiction_field: str | None, docs: set[str]) -> tuple[str, ...]:
+    fields = set(NON_PARTY_BASE_FIELDS)
+    if jurisdiction_field and jurisdiction_field not in MANUAL_OVERLAY_RECTS:
+        fields.add(jurisdiction_field)
+    fields.update(NON_PARTY_DOC_FIELD_MAP[doc] for doc in docs)
+    return tuple(sorted(fields))
+
+
+def detail_text_for_docs(docs: set[str]) -> tuple[str, ...]:
+    expected = []
+    if "transcript" in docs:
+        expected.append(DETAILS["transcript_dates"])
+    if "exhibits" in docs:
+        expected.append(DETAILS["exhibits"])
+    if "selected_images" in docs:
+        expected.append(DETAILS["selected_images"])
+    if "other" in docs:
+        expected.append(DETAILS["other"])
+    if "civil_pleading" in docs:
+        expected.append(DETAILS["civil_pleading"])
+    if "civil_other_filed" in docs:
+        expected.append(DETAILS["civil_other_filed"])
+    return tuple(expected)
+
+
+def build_exhaustive_cases(
+    media_matter: Matter,
+    local_crime: Matter,
+    district_crime: Matter,
+    children_crime: Matter,
+    coroner_crime: Matter,
+    local_civil: Matter,
+    district_civil: Matter,
+) -> list[PdfCase]:
+    media_base = (
+        PROFILE.applicant_name,
+        PROFILE.organisation,
+        "2026/100001",
+        "R",
+        "Alexandra Example",
+        expected_long_date(),
+        MEDIA_REASON_PHRASE,
+    )
+    cases: list[PdfCase] = []
+
+    for docs in powerset(SUPREME_BAIL_DOCS):
+        cases.append(
+            PdfCase(
+                name=f"exhaustive_supreme_bail_{subset_name(docs)}",
+                template=MEDIA_TEMPLATE,
+                matter=media_matter,
+                docs=docs,
+                expected_text=media_base + detail_text_for_docs(docs),
+                expected_checked_fields=supreme_expected_fields(docs, SUPREME_BAIL_FIELD_MAP),
+                values_kind="media",
+            )
+        )
+
+    for docs in powerset(SUPREME_GENERAL_DOCS):
+        cases.append(
+            PdfCase(
+                name=f"exhaustive_supreme_general_{subset_name(docs)}",
+                template=MEDIA_TEMPLATE,
+                matter=media_matter,
+                docs=docs,
+                expected_text=media_base + detail_text_for_docs(docs),
+                expected_checked_fields=supreme_expected_fields(docs, SUPREME_GENERAL_FIELD_MAP),
+                values_kind="media",
+            )
+        )
+
+    crime_specs = (
+        ("local_crime", local_crime, "Button6", "R v Benjamin Crime", "Downing Centre Local Ct"),
+        ("district_crime", district_crime, "Button7", "R v Charlotte District", "Sydney District Ct"),
+        ("children_crime", children_crime, "Button8", "R v Child Example", "Parramatta Children's Ct"),
+        ("coroner_crime", coroner_crime, "Button6", "Inquest into Example", "Lidcombe Coroner's Ct"),
+    )
+    for label, matter, jurisdiction_field, case_title, court_text in crime_specs:
+        for docs in powerset(NON_PARTY_CRIME_DOCS):
+            cases.append(
+                PdfCase(
+                    name=f"exhaustive_{label}_{subset_name(docs)}",
+                    template=NON_PARTY_TEMPLATE,
+                    matter=matter,
+                    docs=docs,
+                    expected_text=(
+                        PROFILE.applicant_name,
+                        "P.Duffin",
+                        matter.case_number,
+                        case_title,
+                        court_text,
+                        DETAILS["additional_details"],
+                        expected_short_date(),
+                    )
+                    + detail_text_for_docs(docs),
+                    forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
+                    expected_checked_fields=non_party_expected_fields(jurisdiction_field, docs),
+                )
+            )
+
+    civil_specs = (
+        ("local_civil", local_civil, "Button10", (), "Acme Pty Ltd v Beta Pty Ltd", "Local Ct"),
+        (
+            "district_civil",
+            district_civil,
+            "non_party_district_civil",
+            ("non_party_district_civil",),
+            "Gamma Pty Ltd v Delta Pty Ltd",
+            "Sydney District Ct Civil",
+        ),
+    )
+    for label, matter, jurisdiction_field, manual_overlays, case_title, court_text in civil_specs:
+        for docs in powerset(NON_PARTY_CIVIL_DOCS):
+            cases.append(
+                PdfCase(
+                    name=f"exhaustive_{label}_{subset_name(docs)}",
+                    template=NON_PARTY_TEMPLATE,
+                    matter=matter,
+                    docs=docs,
+                    expected_text=(
+                        PROFILE.applicant_name,
+                        "P.Duffin",
+                        matter.case_number,
+                        case_title,
+                        court_text,
+                        DETAILS["additional_details"],
+                        expected_short_date(),
+                    )
+                    + detail_text_for_docs(docs),
+                    forbidden_text=("John Smith", "{GENERATED SIGNATURE}", "13/2/2026"),
+                    expected_checked_fields=non_party_expected_fields(jurisdiction_field, docs),
+                    expected_manual_overlays=manual_overlays,
+                )
+            )
+
+    return cases
+
+
 def build_cases() -> list[PdfCase]:
     media_matter = Matter(
         case_number="2026/100001",
@@ -340,6 +558,17 @@ def build_cases() -> list[PdfCase]:
             expected_manual_overlays=("non_party_district_civil",),
         ),
     ]
+    cases.extend(
+        build_exhaustive_cases(
+            media_matter,
+            local_crime,
+            district_crime,
+            children_crime,
+            coroner_crime,
+            local_civil,
+            district_civil,
+        )
+    )
     return cases
 
 
@@ -427,11 +656,24 @@ def main() -> int:
     summary_path.write_text(json.dumps(results, indent=2) + "\n")
 
     failed = [result for result in results if not result["ok"]]
-    for result in results:
-        status = "PASS" if result["ok"] else "FAIL"
-        print(f"{status} {result['case']} fields={result['fields']} annots={result['annots']} x_ops={result['x_ops']}")
-        for failure in result["failures"]:
-            print(f"  - {failure}")
+    if failed or len(results) <= 50:
+        for result in results:
+            status = "PASS" if result["ok"] else "FAIL"
+            print(f"{status} {result['case']} fields={result['fields']} annots={result['annots']} x_ops={result['x_ops']}")
+            for failure in result["failures"]:
+                print(f"  - {failure}")
+    else:
+        groups = Counter(result["case"].split("_", 3)[0] for result in results)
+        exhaustive_groups = Counter(
+            "_".join(result["case"].split("_")[:3])
+            for result in results
+            if result["case"].startswith("exhaustive_")
+        )
+        representative_count = sum(count for group, count in groups.items() if group != "exhaustive")
+        print(f"PASS {len(results)} PDF matrix cases")
+        print(f"representative_cases={representative_count}")
+        for group, count in sorted(exhaustive_groups.items()):
+            print(f"{group}={count}")
     print(f"summary={summary_path}")
     return 1 if failed else 0
 

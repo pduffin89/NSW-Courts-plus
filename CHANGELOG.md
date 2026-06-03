@@ -8,6 +8,7 @@
   - Aligned the legacy service path with the extension path for generated signatures (`P.Duffin` style) and Supreme media public-interest wording.
   - Added `scripts/verify_pdf_matrix.py` to generate and inspect Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs.
   - The verifier checks expected names, case text, court text, signatures, dates, stale template text absence, visual tick count, zero live form fields, and zero annotations.
+  - Expanded the verifier to exhaustively test all 336 representative/requested-document subset cases, including exact source-rectangle tick placement and absence of ticks on unchecked fields.
 - Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
   - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
