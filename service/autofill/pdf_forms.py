@@ -33,8 +33,25 @@ def _strip_signature_prefix(value: str) -> str:
     return re.sub(r"^/s/\s*", "", clean, flags=re.IGNORECASE)
 
 
+def _title_case_token(value: str) -> str:
+    text = _clean_spaces(value)
+    if not text:
+        return ""
+    return text[0].upper() + text[1:].lower()
+
+
 def signature_from_name(name: str) -> str:
-    return _strip_signature_prefix(name)
+    text = _strip_signature_prefix(name)
+    if not text:
+        return ""
+    parts = [part for part in text.split() if part]
+    if not parts:
+        return ""
+    first = parts[0][0].upper()
+    last = _title_case_token(parts[-1])
+    if not first or not last:
+        return text
+    return f"{first}.{last}"
 
 
 def _effective_signature_text(profile: Profile) -> str:
@@ -155,6 +172,14 @@ NON_PARTY_FIELD_FONT_SIZES: dict[str, float] = {
     "Text51": 11.0,
 }
 
+MANUAL_CHECK_OVERLAY_KEY = "__manual_check_overlays"
+MANUAL_CHECK_OVERLAYS: dict[str, tuple[int, tuple[float, float, float, float]]] = {
+    # The source PDF prints "District Court Civil" but exposes no AcroForm
+    # widget for that checkbox. These coordinates mirror the District Crime
+    # checkbox column on the Civil jurisdiction row.
+    "non_party_district_civil": (0, (241.125, 608.2188, 249.0, 614.9688)),
+}
+
 
 def split_parties(matter: Matter) -> tuple[str, str]:
     plaintiff = matter.plaintiff.strip()
@@ -251,6 +276,7 @@ def fill_pdf(
     checked_boxes = _checked_checkbox_fields(normalized_values, checkbox_states)
     if checked_boxes:
         _overlay_checked_boxes(writer, checked_boxes)
+    _overlay_manual_checks(writer, normalized_values.get(MANUAL_CHECK_OVERLAY_KEY))
     _strip_form_interactivity(writer)
 
     with output_path.open("wb") as handle:
@@ -340,6 +366,41 @@ def _overlay_checked_boxes(writer: PdfWriter, checked_fields: set[str]) -> None:
         for left, bottom, right, top in marks:
             box_w = max(0.0, right - left)
             box_h = max(0.0, top - bottom)
+            size = max(7.0, min(11.0, min(box_w, box_h) * 0.8))
+            c.setFont("Helvetica-Bold", size)
+            c.drawString(left + 1.0, bottom + max(0.6, (box_h - size) / 2), "X")
+        c.save()
+        packet.seek(0)
+
+        overlay_reader = PdfReader(packet)
+        page.merge_page(overlay_reader.pages[0])
+
+
+def _overlay_manual_checks(writer: PdfWriter, overlay_keys: Any) -> None:
+    if not isinstance(overlay_keys, list):
+        return
+
+    marks_by_page: dict[int, list[tuple[float, float, float, float]]] = {}
+    for key in overlay_keys:
+        overlay = MANUAL_CHECK_OVERLAYS.get(str(key))
+        if not overlay:
+            continue
+        page_index, rect = overlay
+        marks_by_page.setdefault(page_index, []).append(rect)
+
+    for page_index, marks in marks_by_page.items():
+        if page_index < 0 or page_index >= len(writer.pages) or not marks:
+            continue
+        page = writer.pages[page_index]
+        width = float(page.mediabox.width)
+        height = float(page.mediabox.height)
+        packet = BytesIO()
+        c = canvas.Canvas(packet, pagesize=(width, height))
+        for x0, y0, x1, y1 in marks:
+            left = min(float(x0), float(x1))
+            bottom = min(float(y0), float(y1))
+            box_w = abs(float(x1) - float(x0))
+            box_h = abs(float(y1) - float(y0))
             size = max(7.0, min(11.0, min(box_w, box_h) * 0.8))
             c.setFont("Helvetica-Bold", size)
             c.drawString(left + 1.0, bottom + max(0.6, (box_h - size) / 2), "X")
@@ -489,7 +550,10 @@ def media_2026_values(
         "Applicant Signature": signature_text,
         "Dated": long_date,
         "I submit that access to records on the court file should be granted because": (
-            "Public interest reporting by accredited media."
+            "There is significant public interest in accredited media having access to documents deployed "
+            "in open court in order to fairly and accurately report on matters before the court - in "
+            "accordance with the principles of open justice and with full acknowledgement of restrictions "
+            "on publication including suppression, non-publication and statutory prohibitions."
         ),
         "Transcript dates": details.get("transcript_dates", ""),
         "Exhibits": details.get("exhibits", ""),
@@ -510,6 +574,8 @@ def _non_party_jurisdiction_field(court_text: str, jurisdiction_text: str = "") 
     if "children" in text:
         return "Button8"
     if "district" in text:
+        if "civil" in text or "civil" in jurisdiction:
+            return "non_party_district_civil"
         return "Button7"
     if "local" in text or "coroner" in text:
         if "civil" in text or "civil" in jurisdiction:
@@ -607,7 +673,10 @@ def non_party_values(
 
     jurisdiction_field = _non_party_jurisdiction_field(matter.court, matter.jurisdiction)
     if jurisdiction_field:
-        values[jurisdiction_field] = True
+        if jurisdiction_field in MANUAL_CHECK_OVERLAYS:
+            values[MANUAL_CHECK_OVERLAY_KEY] = [jurisdiction_field]
+        else:
+            values[jurisdiction_field] = True
 
     for field_name in NON_PARTY_ACK_FIELDS:
         values[field_name] = True

@@ -17,6 +17,16 @@ const NON_PARTY_FIELD_FONT_SIZES = {
   Text48: 11,
   Text51: 11
 };
+const MANUAL_CHECK_OVERLAY_KEY = "__manual_check_overlays";
+const MANUAL_CHECK_OVERLAYS = {
+  non_party_district_civil: {
+    pageIndex: 0,
+    // The source PDF prints "District Court Civil" but exposes no AcroForm
+    // widget for that checkbox. These coordinates mirror the District Crime
+    // checkbox column on the Civil jurisdiction row.
+    rect: [241.125, 608.2188, 249.0, 614.9688]
+  }
+};
 const MEDIA_DOC_TO_FIELD = {
   crown_bundle: "Check Box39",
   submissions: "Check Box40",
@@ -568,7 +578,10 @@ function nonPartyJurisdictionField(courtText, jurisdictionText = "") {
   const text = cleanSpaces(courtText).toLowerCase();
   const jurisdiction = cleanSpaces(jurisdictionText).toLowerCase();
   if (text.includes("children")) return "Button8";
-  if (text.includes("district")) return "Button7";
+  if (text.includes("district")) {
+    if (text.includes("civil") || jurisdiction.includes("civil")) return "non_party_district_civil";
+    return "Button7";
+  }
   if (text.includes("local") || text.includes("coroner")) {
     if (text.includes("civil") || jurisdiction.includes("civil")) return "Button10";
     return "Button6";
@@ -706,7 +719,13 @@ function nonPartyValues(profile, matter, requestedDocs, details) {
     cleanSpaces(`${matter.court || ""} ${matter.court_location || ""}`),
     matter.jurisdiction
   );
-  if (jurisdictionField) values[jurisdictionField] = true;
+  if (jurisdictionField) {
+    if (MANUAL_CHECK_OVERLAYS[jurisdictionField]) {
+      values[MANUAL_CHECK_OVERLAY_KEY] = [jurisdictionField];
+    } else {
+      values[jurisdictionField] = true;
+    }
+  }
   NON_PARTY_ACK_FIELDS.forEach((fieldName) => {
     values[fieldName] = true;
   });
@@ -917,6 +936,41 @@ async function drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, values) {
   });
 }
 
+async function drawManualCheckOverlays(pdfDoc, pdfLib, overlayKeys) {
+  const keys = Array.isArray(overlayKeys) ? overlayKeys : [];
+  if (!keys.length) return;
+
+  let markerFont = null;
+  try {
+    markerFont = await pdfDoc.embedFont(pdfLib.StandardFonts.HelveticaBold);
+  } catch (_error) {
+    markerFont = null;
+  }
+  if (!markerFont) return;
+
+  const pages = pdfDoc.getPages();
+  keys.forEach((key) => {
+    const overlay = MANUAL_CHECK_OVERLAYS[key];
+    if (!overlay || !Array.isArray(overlay.rect)) return;
+    const page = pages[overlay.pageIndex];
+    if (!page) return;
+    const [x0, y0, x1, y1] = overlay.rect.map(Number);
+    const left = Math.min(x0, x1);
+    const bottom = Math.min(y0, y1);
+    const width = Math.abs(x1 - x0);
+    const height = Math.abs(y1 - y0);
+    if (!Number.isFinite(left) || !Number.isFinite(bottom) || width <= 0 || height <= 0) return;
+    const size = Math.max(7, Math.min(11, Math.min(width, height) * 0.8));
+    page.drawText("X", {
+      x: left + 1,
+      y: bottom + Math.max(0.6, (height - size) / 2),
+      size,
+      font: markerFont,
+      color: pdfLib.rgb(0, 0, 0)
+    });
+  });
+}
+
 async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}) {
   const pdfLib = await ensurePdfLibLoaded();
   const templateBytes = await loadRuntimeBytes(templateRelativePath);
@@ -1061,6 +1115,7 @@ async function fillPdfTemplate(templateRelativePath, values, fieldFontSizes = {}
   if (templateRelativePath === FORM_TEMPLATE_NON_PARTY) {
     await drawCheckedBoxOverlays(pdfDoc, pdfLib, fieldMap, effectiveValues);
   }
+  await drawManualCheckOverlays(pdfDoc, pdfLib, effectiveValues[MANUAL_CHECK_OVERLAY_KEY]);
 
   if (typeof form.flatten !== "function") {
     throw new Error("PDF engine does not support form flattening.");

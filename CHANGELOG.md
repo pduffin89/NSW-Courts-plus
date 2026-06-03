@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- 0.3.20 PDF matrix hardening:
+  - Fixed District Court Civil non-party generation so it no longer ticks the District Court Crime checkbox.
+  - Added a manual visual tick overlay for the printed District Court Civil jurisdiction checkbox, because the bundled non-party PDF template exposes no AcroForm widget for that checkbox.
+  - Aligned the legacy service path with the extension path for generated signatures (`P.Duffin` style) and Supreme media public-interest wording.
+  - Added `scripts/verify_pdf_matrix.py` to generate and inspect Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs.
+  - The verifier checks expected names, case text, court text, signatures, dates, stale template text absence, visual tick count, zero live form fields, and zero annotations.
 - Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
   - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.

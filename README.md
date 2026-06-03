@@ -76,6 +76,20 @@ Installer entry points in the zip:
 - macOS: `install.command`
 - Windows (PowerShell): `install.ps1`
 
+## PDF Verification
+
+Run the PDF matrix before shipping changes that affect form fields, court routing, document selections, signatures, or dates:
+
+```bash
+node --check extension/background.js
+node --check extension/content.js
+python3 scripts/validate_news_party_parser.py
+python3 scripts/verify_pdf_matrix.py
+python3 scripts/build_installer.py
+```
+
+`scripts/verify_pdf_matrix.py` generates representative Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs under `.tmp/pdf-matrix/`. It checks expected text, stale template text absence, visual tick overlays, zero live form fields, and zero annotations.
+
 ## Notes
 
 - Generation is fully local inside the extension worker (no background service required).
@@ -88,6 +102,7 @@ Installer entry points in the zip:
     - apply only selected fields to on
     - overlay visual `X` for checked boxes
     - flatten and strip form interactivity before save
+  - District Court Civil uses a manual visual tick overlay because the source non-party PDF prints a District Court Civil checkbox but exposes no AcroForm widget for that checkbox.
   - Reference skill: `skills/nsw-court-pdf-determinism/SKILL.md`
 - ABN lookup integration uses ABR web service + ABR details/history pages for expanded view data.
 - Caselaw lookup tries AustLII search URLs (including `excerpt=1`) and falls back to NSW Caselaw when AustLII blocks automated fetches.
