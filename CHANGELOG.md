@@ -9,6 +9,10 @@
   - Added `scripts/verify_pdf_matrix.py` to generate and inspect Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs.
   - The verifier checks expected names, case text, court text, signatures, dates, stale template text absence, visual tick count, zero live form fields, and zero annotations.
   - Expanded the verifier to exhaustively test all 336 representative/requested-document subset cases, including exact source-rectangle tick placement and absence of ticks on unchecked fields.
+- 0.3.21 court-list parsing verification:
+  - Extracted NSW court-list matter parsing into `extension/matter_parser.js` so row-to-PDF inputs can be tested directly.
+  - Added `scripts/validate_matter_parser.js` with fixtures for Supreme, District, Local, Children's, Coroner, civil, criminal, 12-digit fallback, and context-heading court inference rows.
+  - The extension now loads `matter_parser.js` before `content.js`; manifest version bumped to `0.3.21`.
 - Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
   - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.

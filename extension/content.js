@@ -89,6 +89,16 @@
     throw new Error("Party parser unavailable. Reload the extension.");
   }
 
+  function matterParser() {
+    if (
+      window.NswMatterParser &&
+      typeof window.NswMatterParser.parseMatterFromRow === "function"
+    ) {
+      return window.NswMatterParser;
+    }
+    throw new Error("Matter parser unavailable. Reload the extension.");
+  }
+
   function isCivilMatter(matter) {
     return /civil/i.test(cleanText(matter && matter.jurisdiction));
   }
@@ -1136,54 +1146,7 @@
   }
 
   function parseMatterFromRow(row) {
-    const cells = Array.from(row.querySelectorAll("td"));
-    if (cells.length >= 10) {
-      const caseCell = cleanText(cells[2].innerText || cells[2].textContent || "");
-      const caseMatch = caseCell.match(CASE_NUMBER_RE);
-      if (!caseMatch) return null;
-      const caseNumber = caseMatch[0];
-      const matterName = cleanText(cells[3].innerText || cells[3].textContent || "");
-      const jurisdictionCell = cleanText(cells[4].innerText || cells[4].textContent || "");
-      const courtCell = cleanText(cells[5].innerText || cells[5].textContent || "");
-      const listingTypeCell = cleanText(cells[6].innerText || cells[6].textContent || "");
-      const locationCell = cleanText(cells[8].innerText || cells[8].textContent || "");
-      const listingDate = cleanText(
-        `${cleanText(cells[0].innerText || cells[0].textContent || "")} ${cleanText(cells[1].innerText || cells[1].textContent || "")}`
-      );
-      const rowText = cleanText(row.innerText || row.textContent || "");
-
-      let plaintiff = "";
-      let defendant = "";
-      const split = matterName.split(/\bv\b/i);
-      if (split.length >= 2) {
-        plaintiff = cleanText(split[0]);
-        defendant = cleanText(split.slice(1).join("v"));
-      }
-
-      return {
-        ...defaultMatter,
-        case_number: caseNumber,
-        matter_name: matterName || caseNumber,
-        court: resolveCourtFromRow(row, [courtCell, jurisdictionCell, locationCell, rowText, matterName]),
-        jurisdiction: jurisdictionCell,
-        court_location: locationCell,
-        listing_type: listingTypeCell,
-        listing_date: listingDate,
-        plaintiff,
-        defendant
-      };
-    }
-
-    const text = cleanText(row.innerText || row.textContent || "");
-    const caseMatch = text.match(CASE_NUMBER_RE);
-    if (!caseMatch) return null;
-    const caseNumber = caseMatch[0];
-    return {
-      ...defaultMatter,
-      case_number: caseNumber,
-      matter_name: caseNumber,
-      court: resolveCourtFromRow(row, [text])
-    };
+    return matterParser().parseMatterFromRow(row, defaultMatter);
   }
 
   function collectRows() {

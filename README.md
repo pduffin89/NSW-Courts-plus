@@ -83,6 +83,8 @@ Run the PDF matrix before shipping changes that affect form fields, court routin
 ```bash
 node --check extension/background.js
 node --check extension/content.js
+node --check extension/matter_parser.js
+node scripts/validate_matter_parser.js
 python3 scripts/validate_news_party_parser.py
 python3 scripts/verify_pdf_matrix.py
 python3 scripts/build_installer.py
