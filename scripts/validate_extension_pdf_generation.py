@@ -30,6 +30,7 @@ EXPECTED = {
     "extension_supreme_bail_all": {
         "text": [
             "Perry Duffin",
+            "P.Duffin",
             "The Sydney Morning Herald",
             "2026/100001",
             "R",
@@ -43,6 +44,7 @@ EXPECTED = {
     "extension_supreme_general_all": {
         "text": [
             "Perry Duffin",
+            "P.Duffin",
             "The Sydney Morning Herald",
             "2026/100001",
             "R",
@@ -66,6 +68,7 @@ EXPECTED = {
     "extension_local_crime_all": {
         "text": [
             "Perry Duffin",
+            "P.Duffin",
             "2026/200001",
             "R v Benjamin Crime",
             "Downing Centre Local Ct",
@@ -100,6 +103,7 @@ EXPECTED = {
     "extension_district_civil_all": {
         "text": [
             "Perry Duffin",
+            "P.Duffin",
             "2026/300002",
             "Gamma Pty Ltd v Delta Pty Ltd",
             "Sydney District Ct Civil",
