@@ -20,6 +20,7 @@
 - 0.3.23 routed PDF verification:
   - Expanded the background-worker harness to all 336 representative/requested-document subset cases, matching the service PDF matrix.
   - Verified the extension `/generate` route uses the same default requested documents as the service when the payload omits selections.
+  - Verified the extension `/generate` route coerces non-Supreme media requests into non-party access without producing a stray media form.
   - Added a service route validator for generated PDFs plus audit-log `requested_documents` and effective application routing.
 - Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
   - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.

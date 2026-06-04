@@ -29,9 +29,13 @@ from scripts.verify_pdf_matrix import (  # noqa: E402
 
 
 def routed_generate_specs() -> list[dict[str, object]]:
-    outputs = sorted(OUT_DIR.glob("*_2026_400001_R_v_Empty_Requested_Docs_media_access_2026.pdf"))
-    if len(outputs) != 1:
-        return [
+    route_results_path = OUT_DIR / "route-results.json"
+    route_results = json.loads(route_results_path.read_text(encoding="utf-8")) if route_results_path.exists() else {}
+    specs: list[dict[str, object]] = []
+
+    supreme_outputs = sorted(OUT_DIR.glob("*_2026_400001_R_v_Empty_Requested_Docs_media_access_2026.pdf"))
+    if len(supreme_outputs) != 1:
+        specs.append(
             {
                 "case": "extension_generate_supreme_default_docs",
                 "output": str(OUT_DIR / "<missing routed generate output>"),
@@ -40,13 +44,13 @@ def routed_generate_specs() -> list[dict[str, object]]:
                 "x_ops": 0,
                 "expected_min_x": 0,
                 "ok": False,
-                "failures": [f"expected exactly one routed generate output, found {len(outputs)}"],
+                "failures": [f"expected exactly one routed Supreme generate output, found {len(supreme_outputs)}"],
             }
-        ]
-    return [
-        {
+        )
+    else:
+        specs.append({
             "case": "extension_generate_supreme_default_docs",
-            "path": outputs[0],
+            "path": supreme_outputs[0],
             "text": (
                 "Perry Duffin",
                 "P.Duffin",
@@ -62,8 +66,69 @@ def routed_generate_specs() -> list[dict[str, object]]:
             "checked": {"Check Box50", "Check Box51", "Check Box52", "Check Box63", "Check Box64", "Check Box65"},
             "rects": MEDIA_CHECKBOX_RECTS,
             "forbidden_checked": {"Check Box39", "Check Box40", "Check Box41", "Check Box53", "Check Box54"},
-        }
-    ]
+            "applications_effective": route_results.get("supremeDefaultDocs", {}).get("applications_effective"),
+            "expected_applications_effective": {"media_access_2026": True, "non_party_access": False},
+            "generated_count": len(route_results.get("supremeDefaultDocs", {}).get("generated_files", [])),
+            "expected_generated_count": 1,
+        })
+
+    local_outputs = sorted(OUT_DIR.glob("*_2026_400002_R_v_Local_Media_Coerced_non_party_access.pdf"))
+    stray_local_media_outputs = sorted(OUT_DIR.glob("*_2026_400002_R_v_Local_Media_Coerced_media_access_2026.pdf"))
+    if len(local_outputs) != 1 or stray_local_media_outputs:
+        specs.append(
+            {
+                "case": "extension_generate_local_media_coerced",
+                "output": str(OUT_DIR / "<missing routed local output>"),
+                "fields": 0,
+                "annots": 0,
+                "x_ops": 0,
+                "expected_min_x": 0,
+                "ok": False,
+                "failures": [
+                    f"expected one routed Local non-party output and zero media outputs, found non_party={len(local_outputs)} media={len(stray_local_media_outputs)}"
+                ],
+            }
+        )
+    else:
+        specs.append({
+            "case": "extension_generate_local_media_coerced",
+            "path": local_outputs[0],
+            "text": (
+                "Perry Duffin",
+                "P.Duffin",
+                "Journalist",
+                "The Sydney Morning Herald",
+                "0466 208 099",
+                "perry.duffin@example.com",
+                "2026/400002",
+                "R v Local Media Coerced",
+                "Downing Centre Local Ct",
+                "Current proceedings, media access requested for reporting.",
+            ),
+            "checked": {
+                "Button1",
+                "Button4",
+                "Button6",
+                "Button13",
+                "Button37",
+                "Button39",
+                "Button40",
+                "Button41",
+                "Button42",
+                "Button43",
+                "Button44",
+                "Button45",
+                "Button46",
+                "Button47",
+            },
+            "rects": NON_PARTY_CHECKBOX_RECTS,
+            "forbidden_checked": {"Button11", "Button12", "Button14", "Button15", "Button16"},
+            "applications_effective": route_results.get("localMediaCoerced", {}).get("applications_effective"),
+            "expected_applications_effective": {"media_access_2026": False, "non_party_access": True},
+            "generated_count": len(route_results.get("localMediaCoerced", {}).get("generated_files", [])),
+            "expected_generated_count": 1,
+        })
+    return specs
 
 
 def run_node_generator() -> None:
@@ -139,6 +204,14 @@ def verify_routed_generate(spec: dict[str, object]) -> dict[str, object]:
         failures.append(f"unexpected visual X at unchecked fields: {', '.join(unexpected_x)}")
     if forbidden_checked:
         failures.append(f"default route ticked non-default documents: {', '.join(forbidden_checked)}")
+    if spec.get("applications_effective") != spec.get("expected_applications_effective"):
+        failures.append(
+            f"applications_effective mismatch: got {spec.get('applications_effective')} expected {spec.get('expected_applications_effective')}"
+        )
+    if spec.get("generated_count") != spec.get("expected_generated_count"):
+        failures.append(
+            f"generated file count mismatch: got {spec.get('generated_count')} expected {spec.get('expected_generated_count')}"
+        )
     if fields != 0:
         failures.append(f"PDF still has {fields} form fields")
     if annots != 0:

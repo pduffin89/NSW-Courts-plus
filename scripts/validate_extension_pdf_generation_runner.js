@@ -321,7 +321,9 @@ async function main() {
     );
   }
 
-  await context.generateLocally({
+  const routeResults = {};
+
+  routeResults.supremeDefaultDocs = await context.generateLocally({
     matter: {
       case_number: "2026/400001",
       matter_name: "R v Empty Requested Docs",
@@ -339,6 +341,27 @@ async function main() {
     requested_documents: [],
     document_details: DETAILS,
   });
+
+  routeResults.localMediaCoerced = await context.generateLocally({
+    matter: {
+      case_number: "2026/400002",
+      matter_name: "R v Local Media Coerced",
+      court: "Local Court",
+      jurisdiction: "Criminal",
+      court_location: "Downing Centre Local Court",
+      plaintiff: "R",
+      defendant: "Local Media Coerced",
+    },
+    profile: PROFILE,
+    applications: {
+      media_access_2026: true,
+      non_party_access: false,
+    },
+    requested_documents: ["police_fact_sheet"],
+    document_details: DETAILS,
+  });
+
+  fs.writeFileSync(path.join(OUT_DIR, "route-results.json"), `${JSON.stringify(routeResults, null, 2)}\n`);
 }
 
 main().catch((error) => {
