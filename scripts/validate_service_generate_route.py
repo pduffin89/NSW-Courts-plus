@@ -20,10 +20,12 @@ from service.autofill.models import GenerateRequest, Matter, Profile  # noqa: E4
 from scripts.verify_pdf_matrix import (  # noqa: E402
     MEDIA_CHECKBOX_RECTS,
     NON_PARTY_CHECKBOX_RECTS,
+    acroform_field_count,
     count_annots,
     count_x_text_ops,
     field_count,
     missing_expected_x_positions,
+    page_count,
     pdf_text,
     rendered_x_positions,
     unexpected_x_positions,
@@ -77,7 +79,9 @@ def assert_pdf(path: Path, expected_text: tuple[str, ...], checked: set[str], re
     missing_x = missing_expected_x_positions(checked, x_positions, rects)
     unexpected_x = unexpected_x_positions(checked, x_positions, rects)
     fields = field_count(path)
+    acroform_fields = acroform_field_count(path)
     annots = count_annots(path)
+    pages = page_count(path)
     x_ops = count_x_text_ops(path)
     if missing_text:
         failures.append(f"{path.name}: missing text: {', '.join(missing_text)}")
@@ -87,8 +91,13 @@ def assert_pdf(path: Path, expected_text: tuple[str, ...], checked: set[str], re
         failures.append(f"{path.name}: unexpected visual X at unchecked fields: {', '.join(unexpected_x)}")
     if fields != 0:
         failures.append(f"{path.name}: PDF still has {fields} form fields")
+    if acroform_fields != 0:
+        failures.append(f"{path.name}: PDF catalog still has {acroform_fields} AcroForm field references")
     if annots != 0:
         failures.append(f"{path.name}: PDF still has {annots} annotations")
+    expected_pages = 3 if rects is MEDIA_CHECKBOX_RECTS else 2
+    if pages != expected_pages:
+        failures.append(f"{path.name}: PDF page count {pages} does not match expected routed page count {expected_pages}")
     if x_ops < len(checked):
         failures.append(f"{path.name}: visual X count {x_ops} below expected minimum {len(checked)}")
     return failures

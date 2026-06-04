@@ -17,11 +17,13 @@ sys.path.insert(0, str(ROOT))
 from scripts.verify_pdf_matrix import (  # noqa: E402
     MEDIA_CHECKBOX_RECTS,
     NON_PARTY_CHECKBOX_RECTS,
+    acroform_field_count,
     build_cases,
     count_annots,
     count_x_text_ops,
     field_count,
     missing_expected_x_positions,
+    page_count,
     pdf_text,
     rendered_x_positions,
     unexpected_x_positions,
@@ -65,6 +67,7 @@ def routed_generate_specs() -> list[dict[str, object]]:
             ),
             "checked": {"Check Box50", "Check Box51", "Check Box52", "Check Box63", "Check Box64", "Check Box65"},
             "rects": MEDIA_CHECKBOX_RECTS,
+            "expected_pages": page_count(ROOT / "extension/forms/access_application_2026.pdf"),
             "forbidden_checked": {"Check Box39", "Check Box40", "Check Box41", "Check Box53", "Check Box54"},
             "applications_effective": route_results.get("supremeDefaultDocs", {}).get("applications_effective"),
             "expected_applications_effective": {"media_access_2026": True, "non_party_access": False},
@@ -122,6 +125,7 @@ def routed_generate_specs() -> list[dict[str, object]]:
                 "Button47",
             },
             "rects": NON_PARTY_CHECKBOX_RECTS,
+            "expected_pages": page_count(ROOT / "extension/forms/application_non_party_access.pdf"),
             "forbidden_checked": {"Button11", "Button12", "Button14", "Button15", "Button16"},
             "applications_effective": route_results.get("localMediaCoerced", {}).get("applications_effective"),
             "expected_applications_effective": {"media_access_2026": False, "non_party_access": True},
@@ -151,7 +155,10 @@ def verify_pdf(case) -> dict[str, object]:
     missing_x = missing_expected_x_positions(checked, x_positions, rects)
     unexpected_x = unexpected_x_positions(checked, x_positions, rects)
     fields = field_count(path)
+    acroform_fields = acroform_field_count(path)
     annots = count_annots(path)
+    pages = page_count(path)
+    expected_pages = page_count(case.template)
     x_ops = count_x_text_ops(path)
     failures = []
     if missing_text:
@@ -164,15 +171,22 @@ def verify_pdf(case) -> dict[str, object]:
         failures.append(f"unexpected visual X at unchecked fields: {', '.join(unexpected_x)}")
     if fields != 0:
         failures.append(f"PDF still has {fields} form fields")
+    if acroform_fields != 0:
+        failures.append(f"PDF catalog still has {acroform_fields} AcroForm field references")
     if annots != 0:
         failures.append(f"PDF still has {annots} annotations")
+    if pages != expected_pages:
+        failures.append(f"PDF page count {pages} does not match template page count {expected_pages}")
     if x_ops < len(checked):
         failures.append(f"visual X count {x_ops} below expected minimum {len(checked)}")
     return {
         "case": f"extension_{case.name}",
         "output": str(path),
         "fields": fields,
+        "acroform_fields": acroform_fields,
         "annots": annots,
+        "pages": pages,
+        "expected_pages": expected_pages,
         "x_ops": x_ops,
         "expected_min_x": len(checked),
         "ok": not failures,
@@ -193,7 +207,10 @@ def verify_routed_generate(spec: dict[str, object]) -> dict[str, object]:
     unexpected_x = unexpected_x_positions(checked, x_positions, rects)
     forbidden_checked = sorted(set(unexpected_x) & set(spec.get("forbidden_checked", set())))
     fields = field_count(path)
+    acroform_fields = acroform_field_count(path)
     annots = count_annots(path)
+    pages = page_count(path)
+    expected_pages = int(spec["expected_pages"])
     x_ops = count_x_text_ops(path)
     failures = []
     if missing_text:
@@ -214,13 +231,20 @@ def verify_routed_generate(spec: dict[str, object]) -> dict[str, object]:
         )
     if fields != 0:
         failures.append(f"PDF still has {fields} form fields")
+    if acroform_fields != 0:
+        failures.append(f"PDF catalog still has {acroform_fields} AcroForm field references")
     if annots != 0:
         failures.append(f"PDF still has {annots} annotations")
+    if pages != expected_pages:
+        failures.append(f"PDF page count {pages} does not match expected routed page count {expected_pages}")
     return {
         "case": spec["case"],
         "output": str(path),
         "fields": fields,
+        "acroform_fields": acroform_fields,
         "annots": annots,
+        "pages": pages,
+        "expected_pages": expected_pages,
         "x_ops": x_ops,
         "expected_min_x": len(checked),
         "ok": not failures,

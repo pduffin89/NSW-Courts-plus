@@ -184,8 +184,21 @@ def count_annots(path: Path) -> int:
     return sum(len(page.get("/Annots") or []) for page in reader.pages)
 
 
+def page_count(path: Path) -> int:
+    return len(PdfReader(str(path)).pages)
+
+
 def field_count(path: Path) -> int:
     return len(PdfReader(str(path)).get_fields() or {})
+
+
+def acroform_field_count(path: Path) -> int:
+    reader = PdfReader(str(path))
+    acroform_ref = reader.trailer["/Root"].get("/AcroForm")
+    if not acroform_ref:
+        return 0
+    acroform = acroform_ref.get_object() if hasattr(acroform_ref, "get_object") else acroform_ref
+    return len(acroform.get("/Fields") or [])
 
 
 def count_x_text_ops(path: Path) -> int:
@@ -616,7 +629,10 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
     missing_text = [item for item in case.expected_text if item and item not in text]
     forbidden_text = [item for item in case.forbidden_text if item and item in text]
     fields = field_count(output)
+    acroform_fields = acroform_field_count(output)
     annots = count_annots(output)
+    pages = page_count(output)
+    expected_pages = page_count(case.template)
     x_ops = count_x_text_ops(output)
     x_positions = rendered_x_positions(output)
     expected_min_x = len(expected_overlay_names)
@@ -636,8 +652,12 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
         failures.append(f"forbidden stale text present: {', '.join(forbidden_text)}")
     if fields != 0:
         failures.append(f"PDF still has {fields} form fields")
+    if acroform_fields != 0:
+        failures.append(f"PDF catalog still has {acroform_fields} AcroForm field references")
     if annots != 0:
         failures.append(f"PDF still has {annots} annotations")
+    if pages != expected_pages:
+        failures.append(f"PDF page count {pages} does not match template page count {expected_pages}")
     if x_ops < expected_min_x:
         failures.append(f"visual X count {x_ops} below expected minimum {expected_min_x}")
     if missing_x_positions:
@@ -649,7 +669,10 @@ def verify_case(case: PdfCase) -> dict[str, Any]:
         "case": case.name,
         "output": str(output),
         "fields": fields,
+        "acroform_fields": acroform_fields,
         "annots": annots,
+        "pages": pages,
+        "expected_pages": expected_pages,
         "x_ops": x_ops,
         "expected_min_x": expected_min_x,
         "x_positions": x_positions,
