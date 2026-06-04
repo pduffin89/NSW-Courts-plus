@@ -89,6 +89,7 @@ python3 scripts/validate_content_document_options.py
 python3 scripts/validate_news_party_parser.py
 python3 scripts/verify_pdf_matrix.py
 python3 scripts/validate_extension_pdf_generation.py
+python3 scripts/validate_pdf_ab_checkbox_diff.py
 python3 scripts/validate_service_generate_route.py
 node scripts/check_loaded_extension_version.js
 python3 scripts/build_installer.py
@@ -99,6 +100,8 @@ python3 scripts/build_installer.py
 `scripts/validate_content_document_options.py` checks the content-script requested-document UI options against the same PDF-supported document keys used by the matrix.
 
 `scripts/validate_extension_pdf_generation.py` runs the real Manifest V3 background-worker PDF code in a Node harness, applies the same 336-case field/text/date/signature/checkbox matrix to extension-generated PDFs, and also verifies routed `/generate` default-document and Local Court media-to-non-party behavior.
+
+`scripts/validate_pdf_ab_checkbox_diff.py` explicitly checks the Local Court Criminal A/B case where adding `police_fact_sheet` must add exactly one rendered X and no other checkbox changes in both service and extension outputs.
 
 `scripts/validate_service_generate_route.py` runs the service-level generation path with Gmail mocked out and verifies generated PDFs, structural flattening, audit-log `requested_documents`, and effective application routing.
 

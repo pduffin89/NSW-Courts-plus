@@ -24,6 +24,7 @@
   - Added a service route validator for generated PDFs plus audit-log `requested_documents` and effective application routing.
   - Hardened PDF validators to assert template-matching page counts and zero catalog AcroForm field references, not just zero extracted fields and page annotations.
   - Added a content-script document option validator so every PDF-supported requested-document key is exposed by the UI and no unsupported key is advertised.
+  - Added an explicit A/B checkbox-diff validator proving `police_fact_sheet` adds exactly one rendered Local Court Criminal tick in both service and extension outputs.
 - Added new project skill: `skills/nsw-court-pdf-determinism/SKILL.md`
   - Documents the confirmed checkbox/text root causes and permanent deterministic PDF output rules.
   - Includes a verification protocol for A/B checkbox checks plus flatten/no-annotation validation.
