@@ -17,6 +17,7 @@ const NON_PARTY_FIELD_FONT_SIZES = {
   Text48: 11,
   Text51: 11
 };
+const DEFAULT_REQUESTED_DOCS = ["originating_process", "transcript", "exhibits"];
 const MANUAL_CHECK_OVERLAY_KEY = "__manual_check_overlays";
 const MANUAL_CHECK_OVERLAYS = {
   non_party_district_civil: {
@@ -1207,7 +1208,8 @@ async function generateLocally(body) {
   const requestedDocsRaw = Array.isArray(body && body.requested_documents)
     ? body.requested_documents
     : [];
-  let requestedDocs = new Set(requestedDocsRaw.map((item) => cleanSpaces(item)).filter(Boolean));
+  const requestedDocsClean = requestedDocsRaw.map((item) => cleanSpaces(item)).filter(Boolean);
+  let requestedDocs = new Set(requestedDocsClean.length ? requestedDocsClean : DEFAULT_REQUESTED_DOCS);
   const details = body && body.document_details && typeof body.document_details === "object"
     ? body.document_details
     : {};

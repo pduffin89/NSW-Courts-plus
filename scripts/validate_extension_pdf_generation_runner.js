@@ -53,6 +53,8 @@ function makeContext() {
     clearTimeout,
     TextEncoder,
     TextDecoder,
+    URLSearchParams,
+    btoa: (value) => Buffer.from(String(value), "binary").toString("base64"),
   };
   context.globalThis = context;
   context.chrome = {
@@ -76,7 +78,14 @@ function makeContext() {
       },
     },
     downloads: {
-      download(_options, callback) { callback(1); },
+      download(options, callback) {
+        if (options && options.url && String(options.url).startsWith("data:application/pdf;base64,")) {
+          const bytes = Buffer.from(String(options.url).split(",", 2)[1], "base64");
+          const filename = path.basename(options.filename || `download-${Date.now()}.pdf`);
+          fs.writeFileSync(path.join(OUT_DIR, filename), bytes);
+        }
+        callback(1);
+      },
     },
   };
   context.importScripts = (...files) => {
@@ -311,6 +320,25 @@ async function main() {
       testCase.kind === "media" ? {} : NON_PARTY_FIELD_FONT_SIZES
     );
   }
+
+  await context.generateLocally({
+    matter: {
+      case_number: "2026/400001",
+      matter_name: "R v Empty Requested Docs",
+      court: "Supreme Court",
+      jurisdiction: "Criminal",
+      court_location: "Sydney Supreme Court",
+      plaintiff: "R",
+      defendant: "Empty Requested Docs",
+    },
+    profile: PROFILE,
+    applications: {
+      media_access_2026: true,
+      non_party_access: false,
+    },
+    requested_documents: [],
+    document_details: DETAILS,
+  });
 }
 
 main().catch((error) => {

@@ -94,7 +94,7 @@ python3 scripts/build_installer.py
 
 `scripts/verify_pdf_matrix.py` generates representative Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs under `.tmp/pdf-matrix/`, then exhaustively tests every requested-document subset for those modes. It checks expected text, stale template text absence, visual tick overlays at the exact source checkbox rectangles, no visual ticks at unchecked checkbox rectangles, zero live form fields, and zero annotations.
 
-`scripts/validate_extension_pdf_generation.py` runs the real Manifest V3 background-worker PDF code in a Node harness and applies the same 336-case field/text/date/signature/checkbox matrix to extension-generated PDFs.
+`scripts/validate_extension_pdf_generation.py` runs the real Manifest V3 background-worker PDF code in a Node harness, applies the same 336-case field/text/date/signature/checkbox matrix to extension-generated PDFs, and also verifies routed `/generate` default-document behavior.
 
 `scripts/check_loaded_extension_version.js` checks Chrome profile metadata for loaded unpacked NSW Courts+ copies and verifies both the on-disk manifest version and Chrome's stored service-worker version match `extension/manifest.json`. If the disk version matches but the stored worker is old, reload the unpacked extension in `chrome://extensions`.
 

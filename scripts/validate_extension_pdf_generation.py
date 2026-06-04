@@ -28,6 +28,44 @@ from scripts.verify_pdf_matrix import (  # noqa: E402
 )
 
 
+def routed_generate_specs() -> list[dict[str, object]]:
+    outputs = sorted(OUT_DIR.glob("*_2026_400001_R_v_Empty_Requested_Docs_media_access_2026.pdf"))
+    if len(outputs) != 1:
+        return [
+            {
+                "case": "extension_generate_supreme_default_docs",
+                "output": str(OUT_DIR / "<missing routed generate output>"),
+                "fields": 0,
+                "annots": 0,
+                "x_ops": 0,
+                "expected_min_x": 0,
+                "ok": False,
+                "failures": [f"expected exactly one routed generate output, found {len(outputs)}"],
+            }
+        ]
+    return [
+        {
+            "case": "extension_generate_supreme_default_docs",
+            "path": outputs[0],
+            "text": (
+                "Perry Duffin",
+                "P.Duffin",
+                "The Sydney Morning Herald",
+                "0466 208 099",
+                "perry.duffin@example.com",
+                "2026/400001",
+                "R",
+                "Empty Requested Docs",
+                "1-2 June 2026",
+                "Exhibit A and Exhibit B",
+            ),
+            "checked": {"Check Box50", "Check Box51", "Check Box52", "Check Box63", "Check Box64", "Check Box65"},
+            "rects": MEDIA_CHECKBOX_RECTS,
+            "forbidden_checked": {"Check Box39", "Check Box40", "Check Box41", "Check Box53", "Check Box54"},
+        }
+    ]
+
+
 def run_node_generator() -> None:
     script = ROOT / "scripts/validate_extension_pdf_generation_runner.js"
     result = subprocess.run(["node", str(script)], cwd=ROOT, text=True, capture_output=True)
@@ -77,9 +115,50 @@ def verify_pdf(case) -> dict[str, object]:
     }
 
 
+def verify_routed_generate(spec: dict[str, object]) -> dict[str, object]:
+    if "failures" in spec:
+        return spec
+    path = spec["path"]
+    text = pdf_text(path)
+    checked = set(spec["checked"])
+    rects = spec["rects"]
+    x_positions = rendered_x_positions(path)
+    missing_text = [item for item in spec["text"] if item and item not in text]
+    missing_x = missing_expected_x_positions(checked, x_positions, rects)
+    unexpected_x = unexpected_x_positions(checked, x_positions, rects)
+    forbidden_checked = sorted(set(unexpected_x) & set(spec.get("forbidden_checked", set())))
+    fields = field_count(path)
+    annots = count_annots(path)
+    x_ops = count_x_text_ops(path)
+    failures = []
+    if missing_text:
+        failures.append(f"missing text: {', '.join(missing_text)}")
+    if missing_x:
+        failures.append(f"missing visual X at expected fields: {', '.join(missing_x)}")
+    if unexpected_x:
+        failures.append(f"unexpected visual X at unchecked fields: {', '.join(unexpected_x)}")
+    if forbidden_checked:
+        failures.append(f"default route ticked non-default documents: {', '.join(forbidden_checked)}")
+    if fields != 0:
+        failures.append(f"PDF still has {fields} form fields")
+    if annots != 0:
+        failures.append(f"PDF still has {annots} annotations")
+    return {
+        "case": spec["case"],
+        "output": str(path),
+        "fields": fields,
+        "annots": annots,
+        "x_ops": x_ops,
+        "expected_min_x": len(checked),
+        "ok": not failures,
+        "failures": failures,
+    }
+
+
 def main() -> int:
     run_node_generator()
     results = [verify_pdf(case) for case in build_cases()]
+    results.extend(verify_routed_generate(spec) for spec in routed_generate_specs())
     summary_path = OUT_DIR / "summary.json"
     summary_path.write_text(json.dumps(results, indent=2) + "\n")
     failed = [result for result in results if not result["ok"]]
