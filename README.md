@@ -85,6 +85,7 @@ node --check extension/background.js
 node --check extension/content.js
 node --check extension/matter_parser.js
 node scripts/validate_matter_parser.js
+python3 scripts/validate_content_document_options.py
 python3 scripts/validate_news_party_parser.py
 python3 scripts/verify_pdf_matrix.py
 python3 scripts/validate_extension_pdf_generation.py
@@ -94,6 +95,8 @@ python3 scripts/build_installer.py
 ```
 
 `scripts/verify_pdf_matrix.py` generates representative Supreme bail, Supreme general, Local/District/Children/Coroner crime, Local civil, and District civil PDFs under `.tmp/pdf-matrix/`, then exhaustively tests every requested-document subset for those modes. It checks expected text, stale template text absence, visual tick overlays at the exact source checkbox rectangles, no visual ticks at unchecked checkbox rectangles, zero live form fields, zero catalog AcroForm field references, zero annotations, and template-matching page counts.
+
+`scripts/validate_content_document_options.py` checks the content-script requested-document UI options against the same PDF-supported document keys used by the matrix.
 
 `scripts/validate_extension_pdf_generation.py` runs the real Manifest V3 background-worker PDF code in a Node harness, applies the same 336-case field/text/date/signature/checkbox matrix to extension-generated PDFs, and also verifies routed `/generate` default-document and Local Court media-to-non-party behavior.
 
