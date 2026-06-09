@@ -10,6 +10,7 @@ const readinessPath = join(artifactsDir, 'release-readiness.json');
 const manualEvidencePath = join(artifactsDir, 'manual-verification.json');
 const ciParityPath = join(artifactsDir, 'ci-artifact-parity.json');
 const liveSmokePath = join(artifactsDir, 'live-smoke.json');
+const standaloneLiveSmokeArtifactPath = join(artifactsDir, 'standalone-live-smoke-artifact.json');
 const operatorSmokePath = join(artifactsDir, 'operator-live-smoke.json');
 
 function readJson(path, fallback = null) {
@@ -66,6 +67,7 @@ const readiness = readJson(readinessPath);
 const manualEvidence = readJson(manualEvidencePath);
 const ciParityEvidence = readJson(ciParityPath);
 const liveSmokeEvidence = readJson(liveSmokePath);
+const standaloneLiveSmokeArtifactEvidence = readJson(standaloneLiveSmokeArtifactPath);
 const operatorSmokeEvidence = readJson(operatorSmokePath);
 const gitHead = runText('git', ['rev-parse', 'HEAD']);
 const gitStatus = runText('git', ['status', '--short']);
@@ -96,6 +98,10 @@ const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentia
   && liveSmokeEvidence.credentialedProviderSmoke?.status === 'pass'
   && liveSmokeEvidence.credentialedProviderSmoke?.authenticatedArgus === true
   && liveSmokeEvidence.credentialedProviderSmoke?.credentialedAbn === true
+) || Boolean(
+  standaloneLiveSmokeArtifactEvidence?.status === 'pass'
+  && standaloneLiveSmokeArtifactEvidence.headSha === gitHead
+  && standaloneLiveSmokeArtifactEvidence.liveSmoke?.credentialedProviderStatus === 'pass'
 );
 const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok || Boolean(
   operatorSmokeEvidence?.status === 'pass'
@@ -183,7 +189,7 @@ const checklist = [
   check(
     'Authenticated Argus and ABN credentialed provider smoke is proven',
     'total smoketest',
-    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, liveSmokeEvidence?.credentialedProviderSmoke?.status && `live-smoke:${liveSmokeEvidence.credentialedProviderSmoke.status}`, ...credentialedManual.evidence],
+    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, liveSmokeEvidence?.credentialedProviderSmoke?.status && `live-smoke:${liveSmokeEvidence.credentialedProviderSmoke.status}`, standaloneLiveSmokeArtifactEvidence?.liveSmoke?.credentialedProviderStatus && `standalone-live-smoke-artifact:${standaloneLiveSmokeArtifactEvidence.liveSmoke.credentialedProviderStatus}`, ...credentialedManual.evidence],
     liveCredentialedOk,
     liveCredentialedOk ? [] : ['ARGUS_DELTA_TOKEN and ABN_GUID/COURTLENS_ABN_GUID credentialed branches remain unverified']
   ),
@@ -221,6 +227,7 @@ const completion = {
     manualVerification: manualEvidencePath,
     ciArtifactParity: ciParityPath,
     liveSmoke: liveSmokePath,
+    standaloneLiveSmokeArtifact: standaloneLiveSmokeArtifactPath,
     operatorLiveSmoke: operatorSmokePath,
     output: outputPath,
   },
