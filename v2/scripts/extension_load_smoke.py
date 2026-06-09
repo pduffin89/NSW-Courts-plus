@@ -41,6 +41,9 @@ def main():
                 page.locator("[data-courtlens-open]").click()
                 text = page.locator("#argus-delta-courtlens-root").evaluate("el => el.shadowRoot.textContent")
                 assert "SMITH v ACME PTY LTD" in text
+                page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Documents').click()")
+                page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Generate PDFs').click()")
+                page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('_media_access_2026.pdf')", timeout=20_000)
 
                 case_page = context.new_page()
                 case_page.route(CASELAW_URL, lambda route: fulfill_fixture(route, "caselaw.html"))
@@ -52,7 +55,7 @@ def main():
                 assert "Mitchell v State of New South Wales" in case_text
             finally:
                 context.close()
-    print("Extension load smoke passed: unpacked dist extension ran content scripts on routed NSW URLs.")
+    print("Extension load smoke passed: unpacked dist extension ran content scripts and generated document attachments on routed NSW URLs.")
 
 
 if __name__ == "__main__":

@@ -21,6 +21,9 @@ def install_chrome_stub(page):
                 return { ok: true, data: { providerId: message.providerId, query: message.query, items: [], hasMore: false } };
               }
               if (message.type === 'COURTLENS_SAVE_SETTINGS') return { ok: true, data: { saved: true } };
+              if (message.type === 'COURTLENS_GENERATE_DOCUMENTS') {
+                return { ok: true, data: { attachments: [{ name: 'fixture_media_access_2026.pdf', mime: 'application/pdf', base64: 'JVBERi0=' }] } };
+              }
               return { ok: true, data: {} };
             }
           },
@@ -47,6 +50,9 @@ def smoke_courtlist(page, base_url):
     assert "SMITH v ACME PTY LTD" in matter_title
     assert "2025/00490454" in matter_title
     assert "Research" in matter_title
+    page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Documents').click()")
+    page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Generate PDFs').click()")
+    page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('fixture_media_access_2026.pdf')")
 
 
 def smoke_caselaw(page, base_url):
@@ -86,7 +92,7 @@ def main():
                 browser.close()
     finally:
         server.shutdown()
-    print("Browser smoke passed: court-list and caselaw bundles mount Courtlens sidebar on fixtures.")
+    print("Browser smoke passed: bundles mount Courtlens sidebar and document generation UI on fixtures.")
 
 
 if __name__ == "__main__":
