@@ -15,10 +15,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: courtlens-v2-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: Verify Vite/React MV3 extension
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: v2
@@ -68,6 +76,7 @@ jobs:
   live-smoke:
     name: Live provider smoke (non-secret)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     defaults:
       run:
         working-directory: v2
