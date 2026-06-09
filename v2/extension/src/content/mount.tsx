@@ -8,7 +8,7 @@ import type { ProviderId } from '../core/searchRouter';
 let root: Root | null = null;
 let host: HTMLElement | null = null;
 
-export function openCourtlensSidebar(matter: MatterContext, entities: EntityCandidate[] = []): void {
+export function openCourtlensSidebar(matter: MatterContext, entities: EntityCandidate[] = [], documentText = ''): void {
   if (!host) {
     host = document.createElement('div');
     host.id = 'argus-delta-courtlens-root';
@@ -49,5 +49,10 @@ export function openCourtlensSidebar(matter: MatterContext, entities: EntityCand
     if (!response?.ok) throw new Error(response?.error || 'Gmail draft failed');
     return response.data;
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter, entities }} onSearch={onSearch} onLoadSettings={onLoadSettings} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
+  const onExtractEntities = async (text: string) => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_EXTRACT_ENTITIES', text });
+    if (!response?.ok) throw new Error(response?.error || 'Entity enhancement failed');
+    return response.data;
+  };
+  root?.render(<CourtlensSidebar initialContext={{ matter, entities, documentText }} onSearch={onSearch} onLoadSettings={onLoadSettings} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} onExtractEntities={onExtractEntities} />);
 }

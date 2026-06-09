@@ -11,6 +11,7 @@ interface SettingsDraft {
   applicantName?: string;
   applicantOrganisation?: string;
   applicantEmail?: string;
+  localNerEndpoint?: string;
 }
 
 interface GeneratedAttachment {
@@ -33,13 +34,14 @@ interface AbnHistoryView {
 }
 
 interface Props {
-  initialContext: { matter: MatterContext; entities?: EntityCandidate[] };
+  initialContext: { matter: MatterContext; entities?: EntityCandidate[]; documentText?: string };
   onSearch?: (input: { providerId: ProviderId; query: string; exact: boolean }) => Promise<ProviderResultPage>;
   onLoadSettings?: () => Promise<SettingsDraft>;
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
   onGenerateDocuments?: (input: { matter: MatterContext; requestedDocuments: string[]; applicant: { name: string; organisation: string; email: string } }) => Promise<{ attachments: GeneratedAttachment[] }>;
   onAbnHistory?: (abn: string) => Promise<AbnHistoryView>;
   onOpenGmailDraft?: (email: { to: string; subject: string; body: string }) => Promise<{ tabId?: number }>;
+  onExtractEntities?: (text: string) => Promise<EntityCandidate[]>;
 }
 
 const tabs = ['Overview', 'Research', 'Documents', 'Settings'] as const;
@@ -53,7 +55,7 @@ function panelId(tab: Tab): string {
   return `cl-panel-${tab.toLowerCase()}`;
 }
 
-export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onSaveSettings, onGenerateDocuments, onAbnHistory, onOpenGmailDraft }: Props) {
+export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onSaveSettings, onGenerateDocuments, onAbnHistory, onOpenGmailDraft, onExtractEntities }: Props) {
   const [active, setActive] = useState<Tab>('Overview');
   const [exact, setExact] = useState(true);
   const [result, setResult] = useState<ProviderResultPage | null>(null);
@@ -61,17 +63,18 @@ export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onS
   const [settings, setSettings] = useState<SettingsDraft>({});
   const [attachments, setAttachments] = useState<GeneratedAttachment[]>([]);
   const [abnDetails, setAbnDetails] = useState<Record<string, AbnHistoryView>>({});
+  const [enhancedEntities, setEnhancedEntities] = useState<EntityCandidate[]>([]);
   const matter = initialContext.matter;
   const candidates = useMemo(() => {
     const fromMatter = parseNewsSearchCandidates({ matterTitle: matter.matterTitle, jurisdiction: matter.jurisdiction });
     const seen = new Set<string>();
-    return [...(initialContext.entities || []), ...fromMatter].filter((candidate) => {
+    return [...enhancedEntities, ...(initialContext.entities || []), ...fromMatter].filter((candidate) => {
       const key = candidate.name.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [initialContext.entities, matter.matterTitle, matter.jurisdiction]);
+  }, [enhancedEntities, initialContext.entities, matter.matterTitle, matter.jurisdiction]);
   const primary = candidates[0]?.name || matter.plaintiff || matter.matterTitle;
   const payload = buildDocumentApplicationPayload({
     matter,
@@ -107,6 +110,18 @@ export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onS
         : Promise.resolve({ providerId, query: primary, items: [], hasMore: false }));
       setResult(page);
       setStatus(page.items.length ? `${page.items.length} result(s)` : 'No results returned');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function enhanceEntities() {
+    if (!initialContext.documentText) return;
+    setStatus('Enhancing entities…');
+    try {
+      const entities = await onExtractEntities?.(initialContext.documentText);
+      setEnhancedEntities(entities || []);
+      setStatus(entities?.length ? `${entities.length} enhanced entit(ies)` : 'No enhanced entities returned');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     }
@@ -194,6 +209,7 @@ export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onS
           </div>
           <div className="cl-card">
             <h3>Detected entities</h3>
+            {initialContext.documentText && <button className="cl-link-button" onClick={enhanceEntities}>Enhance entities</button>}
             <div className="cl-chip-row">{candidates.map((candidate) => <span className="cl-chip" key={candidate.id}>{candidate.name}</span>)}</div>
           </div>
         </section>
@@ -249,6 +265,7 @@ export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onS
           <label>Applicant name<input aria-label="Applicant name" autoComplete="name" value={settings.applicantName || ''} onChange={(event) => setSettings({ ...settings, applicantName: event.currentTarget.value })} /></label>
           <label>Applicant organisation<input aria-label="Applicant organisation" autoComplete="organization" value={settings.applicantOrganisation || ''} onChange={(event) => setSettings({ ...settings, applicantOrganisation: event.currentTarget.value })} /></label>
           <label>Applicant email<input aria-label="Applicant email" autoComplete="email" value={settings.applicantEmail || ''} onChange={(event) => setSettings({ ...settings, applicantEmail: event.currentTarget.value })} /></label>
+          <label>Local NER endpoint<input aria-label="Local NER endpoint" autoComplete="url" value={settings.localNerEndpoint || ''} onChange={(event) => setSettings({ ...settings, localNerEndpoint: event.currentTarget.value })} /></label>
           <button className="cl-provider" onClick={saveSettings}>Save settings</button>
         </section>
       </main>

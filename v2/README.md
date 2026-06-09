@@ -14,6 +14,7 @@ Argus Delta Courtlens is a Manifest V3 Chrome extension for NSW court-list and N
 - Court-list row parsing for case number, title, court, jurisdiction, listing type, date, venue, and parties.
 - NSW Caselaw metadata extraction for title, court, file number, decision date, judges, and citations.
 - Deterministic judgment entity extraction for people, companies, councils, government bodies, and judges, rendered in the sidebar overview.
+- Optional local NER/GLiNER-compatible enhancement endpoint for long judgment text.
 - Provider router for Argus Delta, Google News, ABN seam, Federal Court, and NSW Caselaw.
 - Argus Delta quote stripping, minimum query validation, bearer-token settings seam, nullable-result normalization, pagination metadata.
 - Document application payload generation with court-recipient routing.

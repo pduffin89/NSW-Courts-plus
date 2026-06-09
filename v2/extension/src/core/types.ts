@@ -34,7 +34,7 @@ export interface EntityCandidate {
   type: EntityType;
   group: string;
   confidence: number;
-  source: 'courtlist' | 'caselaw-title' | 'judgment-body' | 'metadata';
+  source: 'courtlist' | 'caselaw-title' | 'judgment-body' | 'metadata' | 'local-ner';
   context?: Partial<MatterContext>;
 }
 

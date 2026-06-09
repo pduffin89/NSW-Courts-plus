@@ -3,6 +3,7 @@ import { buildDocumentApplicationPayload } from '../documents/documentApplicatio
 import { generateApplicationPdfs } from '../documents/pdfGeneration';
 import { composeGmailUrl } from '../documents/gmailCompose';
 import { fetchAbnHistoryDetails } from '../providers/abnProvider';
+import { extractEntitiesWithLocalNer } from '../providers/localNerProvider';
 
 export interface CourtlensSettings {
   argusDeltaToken?: string;
@@ -11,6 +12,7 @@ export interface CourtlensSettings {
   applicantName?: string;
   applicantOrganisation?: string;
   applicantEmail?: string;
+  localNerEndpoint?: string;
 }
 
 interface Dependencies {
@@ -40,6 +42,11 @@ export function createMessageHandler(deps: Dependencies) {
       }
       if (message?.type === 'COURTLENS_GET_SETTINGS') {
         return { ok: true, data: ((await deps.get(SETTINGS_KEY)) || {}) as CourtlensSettings };
+      }
+      if (message?.type === 'COURTLENS_EXTRACT_ENTITIES') {
+        const settings = ((await deps.get(SETTINGS_KEY)) || {}) as CourtlensSettings;
+        const data = await extractEntitiesWithLocalNer({ endpoint: settings.localNerEndpoint || '', text: message.text || '', fetcher: deps.fetcher });
+        return { ok: true, data };
       }
       if (message?.type === 'COURTLENS_OPEN_GMAIL_DRAFT') {
         if (!deps.openTab) throw new Error('Tab opener is not configured.');

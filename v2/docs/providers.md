@@ -32,6 +32,15 @@ Courtlens providers normalize results to `ProviderResultPage`.
 - Local page metadata is primary on decision pages.
 - Search provider uses `https://www.caselaw.nsw.gov.au/search` and normalizes result anchors.
 
+## Local NER / GLiNER-compatible endpoint
+
+- Optional endpoint configured in Settings as `localNerEndpoint`.
+- Background route: `COURTLENS_EXTRACT_ENTITIES`.
+- Request shape: `POST { "text": "...judgment body..." }`.
+- Expected response shape: `{ "entities": [{ "text": "Jane Citizen", "label": "PERSON", "score": 0.96 }] }`.
+- Labels are normalized into Courtlens entity types such as `person`, `company`, `government`, `council`, `judge`, and `legal_representative`.
+- This supports a local GLiNER service without bundling a heavy ML model in the extension.
+
 ## Provider interface
 
 ```ts

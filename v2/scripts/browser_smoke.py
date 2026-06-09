@@ -25,6 +25,9 @@ def install_chrome_stub(page):
                 return { ok: true, data: { attachments: [{ name: 'fixture_media_access_2026.pdf', mime: 'application/pdf', base64: 'JVBERi0=' }] } };
               }
               if (message.type === 'COURTLENS_OPEN_GMAIL_DRAFT') return { ok: true, data: { tabId: 99 } };
+              if (message.type === 'COURTLENS_EXTRACT_ENTITIES') {
+                return { ok: true, data: [{ id: 'local-ner-person-jane-citizen', name: 'Jane Citizen', originalText: 'Jane Citizen', type: 'person', group: 'Person', confidence: 0.96, source: 'local-ner' }] };
+              }
               return { ok: true, data: {} };
             }
           },
@@ -68,6 +71,8 @@ def smoke_caselaw(page, base_url):
     assert "Mitchell v State of New South Wales" in text
     assert "2025/00490454" in text
     assert "Documents" in text
+    page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Enhance entities').click()")
+    page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('Jane Citizen')")
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
