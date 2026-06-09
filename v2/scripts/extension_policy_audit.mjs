@@ -5,7 +5,7 @@ const root = process.cwd();
 const dist = join(root, 'dist');
 const manifestPath = join(dist, 'manifest.json');
 
-const expectedPermissions = ['storage', 'tabs'];
+const expectedPermissions = ['storage'];
 const expectedContentSecurityPolicy = { extension_pages: "script-src 'self'; object-src 'none'" };
 const forbiddenManifestKeys = [
   'externally_connectable',

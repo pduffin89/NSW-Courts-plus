@@ -4,8 +4,7 @@
   "version": "0.1.0",
   "description": "Sidebar research and document workflow assistant for NSW court lists and NSW Caselaw.",
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "https://onlineregistry.lawlink.nsw.gov.au/*",
