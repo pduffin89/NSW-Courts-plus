@@ -5,12 +5,13 @@ This checklist is for the final human/operator release review before uploading `
 ## Release artifact
 
 - Upload artifact: `artifacts/argus-delta-courtlens.zip`
-- Evidence artifacts: `artifacts/delivery-audit.json` and `artifacts/release-readiness.json`
+- Evidence artifacts: `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS`
 - Final command: `npm run package:extension`
 - Pre-upload verifier: `npm run audit:release-readiness`
 - CI workflow: `Courtlens v2 CI`
 - The release ZIP is deterministic, source-map-free, `.DS_Store`-free, and secret-audited.
 - Before upload, confirm `delivery-audit.json.archive.sha256` matches the ZIP being uploaded.
+- Verify checksums with `cd artifacts && shasum -a 256 -c SHA256SUMS`.
 
 ## Permission justification
 
@@ -75,4 +76,4 @@ A store-facing privacy policy should include:
 4. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
 5. Confirm local and CI artifact SHA-256 values match.
 6. Upload `artifacts/argus-delta-courtlens.zip`.
-7. Keep `artifacts/delivery-audit.json` and `artifacts/release-readiness.json` with the release record.
+7. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
