@@ -13,7 +13,6 @@ const expectedHostPermissions = [
   'https://news.google.com/*',
   'https://onlineregistry.lawlink.nsw.gov.au/*',
   'https://search.judgments.fedcourt.gov.au/*',
-  'https://www.austlii.edu.au/*',
   'https://www.caselaw.nsw.gov.au/*',
 ];
 const expectedContentScripts = new Map([
