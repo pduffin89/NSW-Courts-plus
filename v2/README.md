@@ -58,6 +58,7 @@ npm run audit:package-determinism # Repeated package SHA-256 stability check
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry
+npm run smoke:release-extension # Extract and load the shipped zip as a real MV3 extension
 npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages
 npm run verify             # Fast local verification gate
 npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON

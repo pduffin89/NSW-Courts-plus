@@ -72,6 +72,7 @@ const gates = [
   runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
   runGate('package-verified-dist', 'node', ['scripts/package_extension.mjs']),
   runGate('package-determinism-audit', 'npm', ['run', 'audit:package-determinism']),
+  runGate('release-extension-smoke', 'npm', ['run', 'smoke:release-extension']),
   runGate('release-secret-audit', 'npm', ['run', 'audit:secrets']),
 ];
 
@@ -168,6 +169,11 @@ const criteria = [
     requirement: 'Release archive packaging is byte-deterministic for the same build output',
     evidence: ['npm run audit:package-determinism', 'scripts/package_determinism.mjs'],
     status: gates.find((gate) => gate.label === 'package-determinism-audit')?.ok ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Extracted release archive loads as the real Chrome extension and passes routed NSW workflow smoke',
+    evidence: ['npm run smoke:release-extension', 'scripts/release_extension_smoke.py', 'artifacts/argus-delta-courtlens.zip'],
+    status: gates.find((gate) => gate.label === 'release-extension-smoke')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Built dist and release archive pass secret-leak audit',

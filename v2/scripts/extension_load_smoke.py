@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from playwright.sync_api import sync_playwright, expect
@@ -19,17 +20,18 @@ def fulfill_fixture(route, fixture_name):
     )
 
 
-def main():
-    if not (DIST / "manifest.json").exists():
-        raise SystemExit("dist/manifest.json missing; run npm run build first")
+def run_extension_load_smoke(extension_dir: Path, label: str):
+    extension_dir = extension_dir.resolve()
+    if not (extension_dir / "manifest.json").exists():
+        raise SystemExit(f"{extension_dir}/manifest.json missing; run npm run build/package first")
     with TemporaryDirectory() as user_data_dir:
         with sync_playwright() as p:
             context = p.chromium.launch_persistent_context(
                 user_data_dir,
                 headless=False,
                 args=[
-                    f"--disable-extensions-except={DIST}",
-                    f"--load-extension={DIST}",
+                    f"--disable-extensions-except={extension_dir}",
+                    f"--load-extension={extension_dir}",
                 ],
             )
             try:
@@ -57,7 +59,15 @@ def main():
                 assert "Byron Shire Council" in case_text
             finally:
                 context.close()
-    print("Extension load smoke passed: unpacked dist extension ran content scripts and generated document attachments on routed NSW URLs.")
+    print(f"Extension load smoke passed: {label} ran content scripts and generated document attachments on routed NSW URLs.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Load an unpacked Courtlens extension in Chromium and verify routed NSW workflows.")
+    parser.add_argument("--extension-dir", type=Path, default=DIST, help="Unpacked extension directory to load. Defaults to dist/.")
+    parser.add_argument("--label", default="unpacked dist extension", help="Human-readable extension label for smoke output.")
+    args = parser.parse_args()
+    run_extension_load_smoke(args.extension_dir, args.label)
 
 
 if __name__ == "__main__":

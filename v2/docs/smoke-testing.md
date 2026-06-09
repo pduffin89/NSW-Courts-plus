@@ -20,7 +20,7 @@ npm run package:extension
 npm run audit:delivery
 ```
 
-These commands run unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, deterministic-package verification, and release secret-leak audit. They write `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging is deterministic, uses fixed ZIP timestamps and sorted entries, and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+These commands run unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, deterministic-package verification, extracted-release Chrome extension smoke, and release secret-leak audit. They write `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging is deterministic, uses fixed ZIP timestamps and sorted entries, and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
 
 ## Extension policy and secret audits
 
@@ -56,9 +56,11 @@ npm run audit:secrets
 npm run build
 python3 scripts/browser_smoke.py
 python3 scripts/extension_load_smoke.py
+node scripts/package_extension.mjs
+npm run smoke:release-extension
 ```
 
-Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` and uses Playwright route fulfillment for NSW URLs.
+Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` by default and uses Playwright route fulfillment for NSW URLs. `smoke:release-extension` extracts `artifacts/argus-delta-courtlens.zip`, loads the extracted payload as a real MV3 extension, and reruns the same routed NSW court-list/caselaw workflow smoke against the artifact that is actually shipped.
 
 ## Live provider smoke
 
