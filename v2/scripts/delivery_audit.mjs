@@ -97,8 +97,8 @@ const criteria = [
     status: archiveReleaseClean ? 'pass' : 'fail',
   },
   {
-    requirement: 'Manual smoke on live NSW Online Registry and NSW Caselaw in operator Chrome profile',
-    evidence: ['docs/smoke-testing.md#manual-chrome-smoke'],
+    requirement: 'Operator-assisted smoke on live NSW Online Registry and NSW Caselaw in a headed Chrome profile',
+    evidence: ['npm run smoke:operator', 'scripts/operator_live_smoke.py', 'docs/smoke-testing.md#operator-assisted-live-chrome-smoke'],
     status: 'manual-operator-required',
   },
 ];

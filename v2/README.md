@@ -53,7 +53,8 @@ Never hardcode tokens or GUIDs. The build and smoke tests include a basic hardco
 npm test        # Vitest parser/provider/sidebar/content tests
 npm run build   # TypeScript + Vite production build
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
-npm run smoke:live  # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
+npm run smoke:live      # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
+npm run smoke:operator  # Headed operator-assisted smoke on live NSW pages
 npm run verify             # Full local verification gate
 npm run package:extension  # Verify, then create release-clean artifacts/argus-delta-courtlens.zip
 npm run audit:delivery     # Run gates, package dist, and write artifacts/delivery-audit.json

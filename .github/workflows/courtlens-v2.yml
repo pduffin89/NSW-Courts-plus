@@ -51,6 +51,8 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Run delivery audit, smoke, and packaging
+        env:
+          ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run audit:delivery
 
       - name: Upload extension archive and audit evidence
@@ -84,4 +86,6 @@ jobs:
         run: npm ci
 
       - name: Run live smoke
+        env:
+          ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}
         run: npm run smoke:live

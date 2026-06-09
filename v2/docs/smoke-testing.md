@@ -65,14 +65,41 @@ With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 - authenticated search returns `200` without printing the token.
 - short-query validation returns `400`.
 
-## Manual Chrome smoke
+## Operator-assisted live Chrome smoke
 
-After `npm run verify`:
+After `npm run verify`, run the headed operator smoke:
+
+```bash
+npm run smoke:operator
+```
+
+The script loads the real unpacked `dist/` extension in Chromium, opens the live NSW Online Registry and NSW Caselaw URLs, pauses for any human login/navigation, then verifies actual DOM injection and sidebar behavior.
+
+Useful variants:
+
+```bash
+npm run smoke:operator -- --profile-dir artifacts/operator-chrome-profile
+npm run smoke:operator -- --courtlist-url 'https://onlineregistry.lawlink.nsw.gov.au/content/court-lists' --caselaw-url 'https://www.caselaw.nsw.gov.au/decision/...'
+npm run smoke:operator -- --skip-documents
+ARGUS_DELTA_TOKEN='...' npm run smoke:operator
+```
+
+The operator smoke checks:
+
+1. `dist/` loads as an unpacked MV3 extension.
+2. A live NSW court-list page gets `[data-courtlens-open]` row buttons after the operator reaches a matter list.
+3. Clicking `Courtlens` opens the Shadow DOM sidebar with Overview, Research, and Documents tabs.
+4. Unless `--skip-documents` is used, the Documents tab generates the bundled PDF attachments.
+5. A live NSW Caselaw page gets the floating `[data-courtlens-caselaw-launcher]` button.
+6. Clicking the Caselaw launcher opens the sidebar with Overview, Research, and Settings tabs.
+7. If `ARGUS_DELTA_TOKEN` is set, the script verifies the token value is not visible in checked page/sidebar text.
+
+Manual-only fallback checklist, if Playwright cannot drive the operator browser:
 
 1. Load unpacked `dist/` in `chrome://extensions`.
 2. Visit a NSW court-list page and confirm row buttons appear.
 3. Click `Courtlens` and confirm the sidebar opens with Overview data.
-4. Visit a NSW Caselaw decision page and confirm the floating launcher appears.
+4. Visit a NSW Caselaw decision/search page and confirm the floating launcher appears.
 5. Open Settings and save an Argus Delta token locally.
 6. Run an Argus Delta search for a query of at least two characters.
 7. Confirm empty/error/result states render without exposing the token.
