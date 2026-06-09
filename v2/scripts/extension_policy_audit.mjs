@@ -6,6 +6,15 @@ const dist = join(root, 'dist');
 const manifestPath = join(dist, 'manifest.json');
 
 const expectedPermissions = ['storage', 'tabs'];
+const expectedContentSecurityPolicy = { extension_pages: "script-src 'self'; object-src 'none'" };
+const forbiddenManifestKeys = [
+  'externally_connectable',
+  'optional_permissions',
+  'optional_host_permissions',
+  'oauth2',
+  'key',
+  'update_url',
+];
 const expectedHostPermissions = [
   'https://abr.business.gov.au/*',
   'https://be-api.argusdelta.com/*',
@@ -68,7 +77,13 @@ if (manifest.manifest_version !== 3) fail(`manifest_version must be 3, got ${man
 if (manifest.name !== 'Argus Delta Courtlens') fail(`unexpected extension name ${manifest.name}`);
 if (manifest.background?.service_worker !== 'background.js') fail('background service worker must be background.js');
 if (manifest.background?.type !== 'module') fail('background service worker must be type=module');
-if (manifest.content_security_policy?.extension_pages?.includes('unsafe-eval')) fail('extension_pages CSP contains unsafe-eval');
+for (const key of forbiddenManifestKeys) {
+  if (key in manifest) fail(`${key} must not be declared for this least-privilege release`);
+}
+if (JSON.stringify(manifest.content_security_policy || {}) !== JSON.stringify(expectedContentSecurityPolicy)) {
+  fail(`content_security_policy mismatch. expected ${JSON.stringify(expectedContentSecurityPolicy)}, got ${JSON.stringify(manifest.content_security_policy || {})}`);
+}
+if (manifest.content_security_policy.extension_pages.includes('unsafe-eval')) fail('extension_pages CSP contains unsafe-eval');
 if (JSON.stringify(manifest.icons || {}) !== JSON.stringify(expectedIcons)) fail(`icons mismatch. expected ${JSON.stringify(expectedIcons)}, got ${JSON.stringify(manifest.icons || {})}`);
 if (JSON.stringify(manifest.action?.default_icon || {}) !== JSON.stringify(expectedIcons)) fail('action.default_icon must match top-level icons');
 for (const [size, relativePath] of Object.entries(expectedIcons)) {
@@ -113,4 +128,4 @@ for (const file of jsFiles) {
   }
 }
 
-console.log(`Extension policy audit passed: MV3 manifest, icons, exact permissions, no web-accessible resources, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);
+console.log(`Extension policy audit passed: MV3 manifest, strict CSP, icons, exact permissions, no optional/external surfaces, no web-accessible resources, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);

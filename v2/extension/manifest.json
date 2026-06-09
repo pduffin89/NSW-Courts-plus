@@ -16,6 +16,9 @@
     "https://be-api.argusdelta.com/*",
     "https://mail.google.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"
