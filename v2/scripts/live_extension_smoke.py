@@ -8,6 +8,7 @@ scripts/operator_live_smoke.py.
 """
 
 import os
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 CASELAW_URL = os.environ.get("CASELAW_LIVE_URL", "https://www.caselaw.nsw.gov.au/search?query=Smith&page=1")
 COURTLIST_URL = os.environ.get("ONLINEREGISTRY_LIVE_URL", "https://onlineregistry.lawlink.nsw.gov.au/content/court-lists")
+MAX_ATTEMPTS = int(os.environ.get("COURTLENS_LIVE_EXTENSION_ATTEMPTS", "3"))
 
 
 def shadow_text(page) -> str:
@@ -44,51 +46,81 @@ def assert_shadow_tabs(page, labels: tuple[str, ...], label_for_error: str) -> N
             raise AssertionError(f"Expected {label_for_error} sidebar to include {expected!r}; saw {text[:500]!r}")
 
 
-def verify_caselaw(context) -> None:
+def with_live_retry(label: str, callback) -> None:
+    last_error = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            callback()
+            if attempt > 1:
+                print(f"Live extension smoke: {label} passed on attempt {attempt}/{MAX_ATTEMPTS}")
+            return
+        except Exception as error:  # noqa: BLE001 - smoke test reports final exception with retry context.
+            last_error = error
+            if attempt == MAX_ATTEMPTS:
+                break
+            wait_seconds = attempt * 2
+            print(f"Live extension smoke: {label} attempt {attempt}/{MAX_ATTEMPTS} failed ({error}); retrying in {wait_seconds}s")
+            time.sleep(wait_seconds)
+    raise AssertionError(f"{label} failed after {MAX_ATTEMPTS} attempt(s): {last_error}") from last_error
+
+
+def verify_caselaw_once(context) -> None:
     page = context.new_page()
-    response = page.goto(CASELAW_URL, wait_until="domcontentloaded", timeout=30_000)
-    if response is None:
-        raise AssertionError("NSW Caselaw live page did not return a response")
-    if response.status >= 400:
-        raise AssertionError(f"NSW Caselaw live page returned HTTP {response.status}")
-    expect(page.locator("[data-courtlens-caselaw-launcher]")).to_have_count(1, timeout=15_000)
-    page.locator("[data-courtlens-caselaw-launcher]").click()
-    page.wait_for_selector("#argus-delta-courtlens-root", state="attached", timeout=10_000)
-    page.wait_for_function(
-        "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('Overview')",
-        timeout=10_000,
-    )
-    assert_shadow_tabs(page, ("Overview", "Research", "Documents", "Settings"), "live Caselaw")
-    page.close()
+    try:
+        response = page.goto(CASELAW_URL, wait_until="domcontentloaded", timeout=30_000)
+        if response is None:
+            raise AssertionError("NSW Caselaw live page did not return a response")
+        if response.status >= 400:
+            raise AssertionError(f"NSW Caselaw live page returned HTTP {response.status}")
+        expect(page.locator("[data-courtlens-caselaw-launcher]")).to_have_count(1, timeout=15_000)
+        page.locator("[data-courtlens-caselaw-launcher]").click()
+        page.wait_for_selector("#argus-delta-courtlens-root", state="attached", timeout=10_000)
+        page.wait_for_function(
+            "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('Overview')",
+            timeout=10_000,
+        )
+        assert_shadow_tabs(page, ("Overview", "Research", "Documents", "Settings"), "live Caselaw")
+    finally:
+        page.close()
     print(f"Live extension smoke: Courtlens mounted on public NSW Caselaw URL {CASELAW_URL}")
 
 
-def verify_courtlist(context) -> None:
+def verify_courtlist_once(context) -> None:
     page = context.new_page()
-    response = page.goto(COURTLIST_URL, wait_until="networkidle", timeout=45_000)
-    if response is None:
-        raise AssertionError("NSW Online Registry live page did not return a response")
-    if response.status >= 400:
-        raise AssertionError(f"NSW Online Registry live page returned HTTP {response.status}")
-    expect(page.locator("[data-courtlens-open]").first).to_be_visible(timeout=20_000)
-    count = page.locator("[data-courtlens-open]").count()
-    if count < 1:
-        raise AssertionError("Expected at least one Courtlens row button on live NSW Online Registry")
-    page.locator("[data-courtlens-open]").first.click()
-    page.wait_for_selector("#argus-delta-courtlens-root", state="attached", timeout=10_000)
-    page.wait_for_function(
-        "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('Overview')",
-        timeout=10_000,
-    )
-    assert_shadow_tabs(page, ("Overview", "Research", "Documents", "Settings"), "live court-list")
-    click_shadow_button(page, "Documents")
-    click_shadow_button(page, "Generate PDFs")
-    page.wait_for_function(
-        "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('_media_access_2026.pdf')",
-        timeout=20_000,
-    )
-    page.close()
+    try:
+        response = page.goto(COURTLIST_URL, wait_until="networkidle", timeout=45_000)
+        if response is None:
+            raise AssertionError("NSW Online Registry live page did not return a response")
+        if response.status >= 400:
+            raise AssertionError(f"NSW Online Registry live page returned HTTP {response.status}")
+        expect(page.locator("[data-courtlens-open]").first).to_be_visible(timeout=20_000)
+        count = page.locator("[data-courtlens-open]").count()
+        if count < 1:
+            raise AssertionError("Expected at least one Courtlens row button on live NSW Online Registry")
+        page.locator("[data-courtlens-open]").first.click()
+        page.wait_for_selector("#argus-delta-courtlens-root", state="attached", timeout=10_000)
+        page.wait_for_function(
+            "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('Overview')",
+            timeout=10_000,
+        )
+        assert_shadow_tabs(page, ("Overview", "Research", "Documents", "Settings"), "live court-list")
+        click_shadow_button(page, "Documents")
+        click_shadow_button(page, "Generate PDFs")
+        page.wait_for_function(
+            "document.querySelector('#argus-delta-courtlens-root')?.shadowRoot?.textContent?.includes('_media_access_2026.pdf')",
+            timeout=20_000,
+        )
+    finally:
+        page.close()
     print(f"Live extension smoke: Courtlens mounted on public NSW Online Registry URL {COURTLIST_URL} with {count} row button(s)")
+
+
+def verify_caselaw(context) -> None:
+    with_live_retry("NSW Caselaw", lambda: verify_caselaw_once(context))
+
+
+def verify_courtlist(context) -> None:
+    with_live_retry("NSW Online Registry", lambda: verify_courtlist_once(context))
 
 
 def main() -> None:
