@@ -109,6 +109,130 @@ const distChecks = [
   'dist/vendor/fontkit.umd.min.js',
 ].map((relativePath) => ({ relativePath, exists: existsSync(join(root, relativePath)) }));
 
+function fileExists(relativePath) {
+  return existsSync(join(root, relativePath));
+}
+
+function fileContains(relativePath, needles) {
+  if (!fileExists(relativePath)) return false;
+  const text = readFileSync(join(root, relativePath), 'utf8');
+  return needles.every((needle) => text.includes(needle));
+}
+
+function gateOk(label) {
+  return Boolean(gates.find((gate) => gate.label === label)?.ok);
+}
+
+function feature(requirement, evidence, checks) {
+  const failedChecks = checks.filter((check) => !check.ok).map((check) => check.name);
+  return {
+    requirement,
+    evidence,
+    checks,
+    status: failedChecks.length ? 'fail' : 'pass',
+    failedChecks,
+  };
+}
+
+const featureMatrix = [
+  feature('New full Vite/React/TypeScript MV3 Chrome extension project', [
+    'package.json', 'vite.config.ts', 'tsconfig.json', 'extension/manifest.json', 'extension/src/sidebar/CourtlensSidebar.tsx'
+  ], [
+    { name: 'package declares Vite/React/TypeScript dependencies', ok: fileContains('package.json', ['"vite"', '"react"', '"typescript"']) },
+    { name: 'MV3 manifest source exists and declares manifest_version 3', ok: fileContains('extension/manifest.json', ['"manifest_version": 3', 'Argus Delta Courtlens']) },
+    { name: 'React sidebar source exists', ok: fileExists('extension/src/sidebar/CourtlensSidebar.tsx') },
+    { name: 'production dist bundles exist', ok: distChecks.slice(0, 4).every((check) => check.exists) },
+  ]),
+  feature('NSW Online Registry court-list sidebar workflow', [
+    'extension/src/content/courtlist.tsx', 'extension/src/parsers/nswCourtlistParser.ts', 'fixtures/courtlist.html', 'scripts/extension_load_smoke.py'
+  ], [
+    { name: 'court-list content script exists', ok: fileExists('extension/src/content/courtlist.tsx') },
+    { name: 'court-list parser exists', ok: fileExists('extension/src/parsers/nswCourtlistParser.ts') },
+    { name: 'court-list fixture exists', ok: fileExists('fixtures/courtlist.html') },
+    { name: 'real extension smoke exercises Online Registry URL', ok: fileContains('scripts/extension_load_smoke.py', ['COURTLIST_URL', 'SMITH v ACME PTY LTD']) },
+  ]),
+  feature('NSW Caselaw sidebar workflow with judgment-body entities', [
+    'extension/src/content/caselaw.tsx', 'extension/src/parsers/nswCaselawParser.ts', 'extension/src/parsers/judgmentEntityParser.ts', 'tests/unit/caselaw-entities-ui.test.tsx'
+  ], [
+    { name: 'caselaw content script exists', ok: fileExists('extension/src/content/caselaw.tsx') },
+    { name: 'caselaw parser exists', ok: fileExists('extension/src/parsers/nswCaselawParser.ts') },
+    { name: 'judgment entity parser exists', ok: fileExists('extension/src/parsers/judgmentEntityParser.ts') },
+    { name: 'caselaw entity UI regression test exists', ok: fileExists('tests/unit/caselaw-entities-ui.test.tsx') },
+    { name: 'real extension smoke exercises Caselaw URL', ok: fileContains('scripts/extension_load_smoke.py', ['CASELAW_URL', 'Mitchell v State of New South Wales']) },
+  ]),
+  feature('Entity and party extraction including optional local NER/GLiNER-compatible seam', [
+    'extension/src/parsers/partyParser.ts', 'extension/src/parsers/judgmentEntityParser.ts', 'extension/src/providers/localNerProvider.ts', 'tests/unit/local-ner.test.tsx'
+  ], [
+    { name: 'party parser exists', ok: fileExists('extension/src/parsers/partyParser.ts') },
+    { name: 'judgment entity parser exists', ok: fileExists('extension/src/parsers/judgmentEntityParser.ts') },
+    { name: 'local NER provider seam exists', ok: fileExists('extension/src/providers/localNerProvider.ts') },
+    { name: 'local NER message route exists', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_EXTRACT_ENTITIES']) },
+    { name: 'local NER tests exist', ok: fileExists('tests/unit/local-ner.test.tsx') },
+  ]),
+  feature('Research provider search: Argus Delta, News, ABN, Federal Court, NSW Caselaw', [
+    'extension/src/core/searchRouter.ts', 'extension/src/providers/argusDeltaProvider.ts', 'extension/src/providers/newsProvider.ts', 'extension/src/providers/abnProvider.ts', 'extension/src/providers/htmlSearchProvider.ts', 'scripts/extension_load_smoke.py'
+  ], [
+    { name: 'search router lists all providers', ok: fileContains('extension/src/core/searchRouter.ts', ['argus-delta', 'news', 'abn', 'federal-court', 'nsw-caselaw']) },
+    { name: 'all provider modules exist', ok: ['argusDeltaProvider.ts', 'newsProvider.ts', 'abnProvider.ts', 'htmlSearchProvider.ts'].every((name) => fileExists(`extension/src/providers/${name}`)) },
+    { name: 'real extension smoke exercises all provider buttons', ok: fileContains('scripts/extension_load_smoke.py', ['Search Argus Delta', 'Search news', 'Search federal-court', 'Search nsw-caselaw', 'Search abn']) },
+    { name: 'live smoke covers public provider endpoints', ok: fileContains('scripts/live_smoke.mjs', ['Google News RSS', 'NSW Caselaw search', 'Federal Court endpoint', 'ABN current details page', 'ABN history details page']) },
+  ]),
+  feature('ABN current/history expansion workflow', [
+    'extension/src/providers/abnProvider.ts', 'extension/src/background/messageHandler.ts', 'tests/unit/abn-history.test.ts', 'tests/unit/abn-history-ui.test.tsx'
+  ], [
+    { name: 'ABN current/history functions exist', ok: fileContains('extension/src/providers/abnProvider.ts', ['buildAbnCurrentPageUrl', 'buildAbnHistoryPageUrl', 'fetchAbnHistoryDetails']) },
+    { name: 'background exposes ABN history route', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_ABN_HISTORY_DETAILS']) },
+    { name: 'sidebar has Show ABN history action', ok: fileContains('extension/src/sidebar/CourtlensSidebar.tsx', ['Show ABN history']) },
+    { name: 'ABN history tests exist', ok: fileExists('tests/unit/abn-history.test.ts') && fileExists('tests/unit/abn-history-ui.test.tsx') },
+    { name: 'real extension smoke verifies ABN history', ok: fileContains('scripts/extension_load_smoke.py', ['ABN history loaded', 'Active from 01 Jan 2020']) },
+  ]),
+  feature('Document application payload and deterministic PDF generation', [
+    'extension/src/documents/documentApplication.ts', 'extension/src/documents/pdfGeneration.ts', 'extension/public/forms/*.pdf', 'tests/unit/pdf-determinism.test.ts'
+  ], [
+    { name: 'document payload module exists', ok: fileExists('extension/src/documents/documentApplication.ts') },
+    { name: 'PDF generation module exists', ok: fileExists('extension/src/documents/pdfGeneration.ts') },
+    { name: 'real PDF templates exist', ok: fileExists('extension/public/forms/access_application_2026.pdf') && fileExists('extension/public/forms/application_non_party_access.pdf') },
+    { name: 'background exposes PDF generation route', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_GENERATE_DOCUMENTS']) },
+    { name: 'PDF determinism test exists', ok: fileExists('tests/unit/pdf-determinism.test.ts') },
+    { name: 'real extension smoke verifies document generation', ok: fileContains('scripts/extension_load_smoke.py', ['Generate PDFs', '_media_access_2026.pdf']) },
+  ]),
+  feature('Gmail compose handoff', [
+    'extension/src/documents/gmailCompose.ts', 'tests/unit/gmail-compose.test.ts', 'tests/unit/gmail-compose-ui.test.tsx'
+  ], [
+    { name: 'Gmail compose module exists', ok: fileExists('extension/src/documents/gmailCompose.ts') },
+    { name: 'background exposes Gmail route', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_OPEN_GMAIL_DRAFT']) },
+    { name: 'sidebar exposes Gmail action', ok: fileContains('extension/src/sidebar/CourtlensSidebar.tsx', ['Open Gmail draft']) },
+    { name: 'Gmail tests exist', ok: fileExists('tests/unit/gmail-compose.test.ts') && fileExists('tests/unit/gmail-compose-ui.test.tsx') },
+  ]),
+  feature('Settings/profile/secrets handling', [
+    'extension/src/background/messageHandler.ts', 'extension/src/sidebar/CourtlensSidebar.tsx', 'scripts/secret_audit.mjs', 'tests/unit/settings-ui.test.tsx'
+  ], [
+    { name: 'settings save/get routes exist', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_SAVE_SETTINGS', 'COURTLENS_GET_SETTINGS']) },
+    { name: 'settings UI has token/ABN/applicant fields', ok: fileContains('extension/src/sidebar/CourtlensSidebar.tsx', ['Argus Delta token', 'ABN GUID', 'Applicant email']) },
+    { name: 'secret audit script exists', ok: fileExists('scripts/secret_audit.mjs') },
+    { name: 'settings UI test exists', ok: fileExists('tests/unit/settings-ui.test.tsx') },
+    { name: 'real extension smoke verifies settings save/mask/persist', ok: fileContains('scripts/extension_load_smoke.py', ['Settings save/mask/persist', 'courtlens-smoke-token-do-not-leak', 'chrome.storage.local']) },
+  ]),
+  feature('Total smoke, CI, release packaging, provenance, and release cleanliness', [
+    'scripts/smoke.mjs', 'scripts/live_smoke.mjs', 'scripts/live_extension_smoke.py', 'scripts/release_extension_smoke.py', 'scripts/package_extension.mjs', 'scripts/package_determinism.mjs', '.github/workflows/courtlens-v2.yml'
+  ], [
+    { name: 'all smoke scripts exist', ok: ['smoke.mjs', 'live_smoke.mjs', 'live_extension_smoke.py', 'release_extension_smoke.py', 'operator_live_smoke.py'].every((name) => fileExists(`scripts/${name}`)) },
+    { name: 'packaging and determinism scripts exist', ok: fileExists('scripts/package_extension.mjs') && fileExists('scripts/package_determinism.mjs') },
+    { name: 'CI workflow exists at repository root', ok: existsSync(join(root, '..', '.github/workflows/courtlens-v2.yml')) },
+    { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },
+    { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
+  ]),
+  feature('User-facing documentation and operator handoff', [
+    'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md'
+  ], [
+    { name: 'README exists', ok: fileExists('README.md') },
+    { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md'].every((name) => fileExists(`docs/${name}`)) },
+    { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator']) },
+    { name: 'README lists final delivery gate', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery']) },
+  ]),
+];
+const featureMatrixOk = featureMatrix.every((item) => item.status === 'pass');
+
 const criteria = [
   {
     requirement: 'Full Vite/React/TypeScript production build',
@@ -181,6 +305,11 @@ const criteria = [
     status: gates.find((gate) => gate.label === 'release-secret-audit')?.ok ? 'pass' : 'fail',
   },
   {
+    requirement: 'Prompt-to-artifact feature matrix covers every named Courtlens deliverable',
+    evidence: ['delivery-audit.json.featureMatrix', 'source files', 'tests', 'smoke scripts', 'release artifact'],
+    status: featureMatrixOk ? 'pass' : 'fail',
+  },
+  {
     requirement: 'Operator-assisted smoke for authenticated or targeted live NSW workflows in a headed Chrome profile',
     evidence: ['npm run smoke:operator', 'scripts/operator_live_smoke.py', 'docs/smoke-testing.md#operator-assisted-live-chrome-smoke'],
     status: 'manual-operator-required',
@@ -208,6 +337,7 @@ const audit = {
   dependencySpecs,
   nonExactDependencySpecs,
   distChecks,
+  featureMatrix,
   criteria,
   externalOrManualGates: criteria.filter((item) => item.status.includes('external') || item.status.includes('manual')),
 };
@@ -216,7 +346,7 @@ mkdirSync(artifactsDir, { recursive: true });
 writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`, 'utf8');
 console.log(`\nDelivery audit written to ${auditPath}`);
 
-if (!automatedOk || !dependencySpecsPinned || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists)) {
+if (!automatedOk || !dependencySpecsPinned || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists) || !featureMatrixOk) {
   process.exit(1);
 }
 
