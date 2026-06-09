@@ -136,8 +136,17 @@ try {
 
   const ciAudit = readJson(join(tmp, 'delivery-audit.json'));
   const ciReadiness = readJson(join(tmp, 'release-readiness.json'));
+  const localLiveSmoke = readJson(join(root, 'artifacts', 'live-smoke.json'));
+  const ciLiveSmoke = readJson(join(tmp, 'live-smoke.json'));
   if (ciAudit?.git?.headSha !== runInfo.headSha) fail(`CI audit head ${ciAudit?.git?.headSha} does not match run head ${runInfo.headSha}`);
   if (ciReadiness?.gitHead !== runInfo.headSha) fail(`CI readiness head ${ciReadiness?.gitHead} does not match run head ${runInfo.headSha}`);
+  if (ciLiveSmoke?.gitHead !== runInfo.headSha) fail(`CI live-smoke head ${ciLiveSmoke?.gitHead} does not match run head ${runInfo.headSha}`);
+  if (localLiveSmoke?.gitHead !== localHead) fail(`local live-smoke head ${localLiveSmoke?.gitHead} does not match local audit head ${localHead}`);
+  if (ciLiveSmoke?.status !== 'pass') fail(`CI live-smoke status ${ciLiveSmoke?.status} is not pass`);
+  if (localLiveSmoke?.status !== 'pass') fail(`local live-smoke status ${localLiveSmoke?.status} is not pass`);
+  if (localLiveSmoke?.credentialedProviderSmoke?.status === 'pass' && ciLiveSmoke?.credentialedProviderSmoke?.status !== 'pass') {
+    fail('local live-smoke has credentialed provider pass but CI live-smoke does not; configure CI secrets or rerun without local-only credentials');
+  }
   if (!ciAudit?.automatedOk) fail('CI delivery audit automatedOk is not true');
   if (!ciReadiness?.ok) fail('CI release readiness ok is not true');
 
@@ -183,6 +192,12 @@ try {
     localHeadSha: localHead,
     archiveSha256: localZipSha,
     ciArchiveSha256: ciZipSha,
+    liveSmoke: {
+      localCredentialedProviderStatus: localLiveSmoke?.credentialedProviderSmoke?.status,
+      ciCredentialedProviderStatus: ciLiveSmoke?.credentialedProviderSmoke?.status,
+      localCredentialsPresent: localLiveSmoke?.credentialsPresent,
+      ciCredentialsPresent: ciLiveSmoke?.credentialsPresent,
+    },
     screenshotComparisons,
   };
   mkdirSync(join(root, 'artifacts'), { recursive: true });
@@ -190,6 +205,7 @@ try {
 
   console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
   console.log(`argus-delta-courtlens.zip sha256 ${localZipSha}`);
+  console.log(`live-smoke credentialed provider status local=${localLiveSmoke?.credentialedProviderSmoke?.status}; CI=${ciLiveSmoke?.credentialedProviderSmoke?.status}`);
   for (const comparison of screenshotComparisons) console.log(`${comparison.screenshot} local sha256 ${comparison.localSha}; CI sha256 ${comparison.ciSha}; dimensions ${comparison.localDimensions.width}x${comparison.localDimensions.height}`);
   console.log(`local evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${localHead} and archive ${localZipSha}`);
   console.log(`CI evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${runInfo.headSha} and archive ${ciZipSha}`);
