@@ -20,6 +20,12 @@ const expectedContentScripts = new Map([
   ['courtlist.js', ['https://onlineregistry.lawlink.nsw.gov.au/content/court-lists*']],
   ['caselaw.js', ['https://www.caselaw.nsw.gov.au/decision/*', 'https://www.caselaw.nsw.gov.au/search*']],
 ]);
+const expectedIcons = {
+  16: 'icons/icon-16.png',
+  32: 'icons/icon-32.png',
+  48: 'icons/icon-48.png',
+  128: 'icons/icon-128.png',
+};
 const forbiddenUrlPatterns = ['<all_urls>', 'http://*/*', 'https://*/*', '*://*/*'];
 const forbiddenBundlePatterns = [
   { label: 'eval()', pattern: /\beval\s*\(/ },
@@ -64,6 +70,18 @@ if (manifest.name !== 'Argus Delta Courtlens') fail(`unexpected extension name $
 if (manifest.background?.service_worker !== 'background.js') fail('background service worker must be background.js');
 if (manifest.background?.type !== 'module') fail('background service worker must be type=module');
 if (manifest.content_security_policy?.extension_pages?.includes('unsafe-eval')) fail('extension_pages CSP contains unsafe-eval');
+if (JSON.stringify(manifest.icons || {}) !== JSON.stringify(expectedIcons)) fail(`icons mismatch. expected ${JSON.stringify(expectedIcons)}, got ${JSON.stringify(manifest.icons || {})}`);
+if (JSON.stringify(manifest.action?.default_icon || {}) !== JSON.stringify(expectedIcons)) fail('action.default_icon must match top-level icons');
+for (const [size, relativePath] of Object.entries(expectedIcons)) {
+  const iconPath = join(dist, relativePath);
+  if (!existsSync(iconPath)) fail(`missing icon ${relativePath}`);
+  const icon = readFileSync(iconPath);
+  const pngSignature = '89504e470d0a1a0a';
+  if (icon.subarray(0, 8).toString('hex') !== pngSignature) fail(`${relativePath} is not a PNG file`);
+  const width = icon.readUInt32BE(16);
+  const height = icon.readUInt32BE(20);
+  if (width !== Number(size) || height !== Number(size)) fail(`${relativePath} dimensions expected ${size}x${size}, got ${width}x${height}`);
+}
 
 assertExactSet('permissions', manifest.permissions, expectedPermissions);
 assertExactSet('host_permissions', manifest.host_permissions, expectedHostPermissions);
@@ -95,4 +113,4 @@ for (const file of jsFiles) {
   }
 }
 
-console.log(`Extension policy audit passed: MV3 manifest, exact permissions, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);
+console.log(`Extension policy audit passed: MV3 manifest, icons, exact permissions, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);

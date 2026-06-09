@@ -107,6 +107,10 @@ const distChecks = [
   'dist/forms/application_non_party_access.pdf',
   'dist/vendor/pdf-lib.min.js',
   'dist/vendor/fontkit.umd.min.js',
+  'dist/icons/icon-16.png',
+  'dist/icons/icon-32.png',
+  'dist/icons/icon-48.png',
+  'dist/icons/icon-128.png',
 ].map((relativePath) => ({ relativePath, exists: existsSync(join(root, relativePath)) }));
 
 function fileExists(relativePath) {
@@ -140,8 +144,9 @@ const featureMatrix = [
   ], [
     { name: 'package declares Vite/React/TypeScript dependencies', ok: fileContains('package.json', ['"vite"', '"react"', '"typescript"']) },
     { name: 'MV3 manifest source exists and declares manifest_version 3', ok: fileContains('extension/manifest.json', ['"manifest_version": 3', 'Argus Delta Courtlens']) },
+    { name: 'manifest declares store-ready icons and action default icons', ok: fileContains('extension/public/manifest.json', ['"icons"', 'icons/icon-128.png', '"default_icon"']) },
     { name: 'React sidebar source exists', ok: fileExists('extension/src/sidebar/CourtlensSidebar.tsx') },
-    { name: 'production dist bundles exist', ok: distChecks.slice(0, 4).every((check) => check.exists) },
+    { name: 'production dist bundles and icons exist', ok: distChecks.slice(0, 4).every((check) => check.exists) && distChecks.filter((check) => check.relativePath.startsWith('dist/icons/')).every((check) => check.exists) },
   ]),
   feature('NSW Online Registry court-list sidebar workflow', [
     'extension/src/content/courtlist.tsx', 'extension/src/parsers/nswCourtlistParser.ts', 'fixtures/courtlist.html', 'scripts/extension_load_smoke.py'
@@ -221,6 +226,7 @@ const featureMatrix = [
     { name: 'packaging and determinism scripts exist', ok: fileExists('scripts/package_extension.mjs') && fileExists('scripts/package_determinism.mjs') },
     { name: 'CI workflow exists at repository root', ok: existsSync(join(root, '..', '.github/workflows/courtlens-v2.yml')) },
     { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },
+    { name: 'release zip includes all icon sizes', ok: ['icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'].every((entry) => archiveEntries.includes(entry)) },
     { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
   ]),
   feature('User-facing documentation and operator handoff', [

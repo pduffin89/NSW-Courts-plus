@@ -3,7 +3,12 @@
   "name": "Argus Delta Courtlens",
   "version": "0.1.0",
   "description": "Sidebar research and document workflow assistant for NSW court lists and NSW Caselaw.",
-  "permissions": ["storage", "downloads", "scripting", "tabs"],
+  "permissions": [
+    "storage",
+    "downloads",
+    "scripting",
+    "tabs"
+  ],
   "host_permissions": [
     "https://onlineregistry.lawlink.nsw.gov.au/*",
     "https://www.caselaw.nsw.gov.au/*",
@@ -20,23 +25,51 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://onlineregistry.lawlink.nsw.gov.au/content/court-lists*"],
-      "js": ["courtlist.js"],
+      "matches": [
+        "https://onlineregistry.lawlink.nsw.gov.au/content/court-lists*"
+      ],
+      "js": [
+        "courtlist.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.caselaw.nsw.gov.au/decision/*", "https://www.caselaw.nsw.gov.au/search*"],
-      "js": ["caselaw.js"],
+      "matches": [
+        "https://www.caselaw.nsw.gov.au/decision/*",
+        "https://www.caselaw.nsw.gov.au/search*"
+      ],
+      "js": [
+        "caselaw.js"
+      ],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["forms/*.pdf", "vendor/*.js", "assets/*.css"],
-      "matches": ["https://onlineregistry.lawlink.nsw.gov.au/*", "https://www.caselaw.nsw.gov.au/*"]
+      "resources": [
+        "forms/*.pdf",
+        "vendor/*.js",
+        "assets/*.css"
+      ],
+      "matches": [
+        "https://onlineregistry.lawlink.nsw.gov.au/*",
+        "https://www.caselaw.nsw.gov.au/*"
+      ]
     }
   ],
   "action": {
-    "default_title": "Argus Delta Courtlens"
+    "default_title": "Argus Delta Courtlens",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   }
 }
