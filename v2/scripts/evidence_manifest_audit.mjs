@@ -19,6 +19,7 @@ const optionalEntries = new Set([
   'live-smoke.json',
   'operator-live-smoke.json',
   'ci-artifact-parity.json',
+  'standalone-live-smoke-artifact.json',
   'completion-audit.json',
   'manual-verification.json',
 ]);
@@ -42,6 +43,7 @@ function artifactHead(name, payload) {
   if (name === 'release-readiness.json') return payload?.gitHead || null;
   if (name === 'completion-audit.json') return payload?.git?.headSha || null;
   if (name === 'ci-artifact-parity.json') return payload?.headSha || null;
+  if (name === 'standalone-live-smoke-artifact.json') return payload?.headSha || null;
   if (name === 'live-smoke.json') return payload?.gitHead || null;
   if (name === 'operator-live-smoke.json') return payload?.gitHead || null;
   if (name === 'manual-verification.json') return payload?.gitHead || payload?.headSha || null;

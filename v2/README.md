@@ -60,6 +60,7 @@ npm run audit:release-readiness # Pre-upload audit/ZIP/manifest/provenance cross
 npm run audit:evidence-manifest # Verify SHA256SUMS and optional evidence provenance match current HEAD
 npm run write:checksums # Write artifacts/SHA256SUMS for release evidence
 npm run verify:ci-artifact-parity -- --run-id <run-id> # Compare local release artifacts to CI and write artifacts/ci-artifact-parity.json
+npm run verify:live-smoke-artifact -- --run-id <run-id> # Verify standalone CI live-smoke artifact evidence
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live           # Live provider checks; writes artifacts/live-smoke.json; credentialed branches run when secrets are set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry

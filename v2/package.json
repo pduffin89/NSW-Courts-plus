@@ -16,6 +16,7 @@
     "audit:completion": "node scripts/completion_audit.mjs",
     "write:checksums": "node scripts/write_checksums.mjs",
     "verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs",
+    "verify:live-smoke-artifact": "node scripts/verify_live_smoke_artifact.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
