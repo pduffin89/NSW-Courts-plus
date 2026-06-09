@@ -24,6 +24,16 @@ This runs:
 - content script matches include NSW Caselaw decision pages.
 - background bundle does not contain obvious hardcoded token strings.
 - court-list bundle contains the Courtlens launcher text.
+- Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages and confirms the sidebar mounts in a Shadow DOM.
+
+## Browser fixture smoke
+
+```bash
+npm run build
+python3 scripts/browser_smoke.py
+```
+
+Fixtures live in `fixtures/` and are served through a local ephemeral HTTP server so Vite module chunks load like real browser resources.
 
 ## Manual Chrome smoke
 

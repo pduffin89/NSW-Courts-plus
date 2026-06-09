@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const root = process.cwd();
@@ -38,4 +39,12 @@ if (background.includes('Bearer secret') || background.includes('argusDeltaToken
 const courtlist = readFileSync(join(root, 'dist/courtlist.js'), 'utf8');
 if (!courtlist.includes('Courtlens')) throw new Error('Courtlist launcher missing from bundle');
 
-console.log('Smoke passed: manifest, bundles, assets, docs, and secret guard verified.');
+const browserSmoke = spawnSync('python3', ['scripts/browser_smoke.py'], { cwd: root, encoding: 'utf8' });
+if (browserSmoke.status !== 0) {
+  process.stdout.write(browserSmoke.stdout || '');
+  process.stderr.write(browserSmoke.stderr || '');
+  throw new Error(`Browser smoke failed with exit ${browserSmoke.status}`);
+}
+process.stdout.write(browserSmoke.stdout || '');
+
+console.log('Smoke passed: manifest, bundles, assets, docs, secret guard, and browser fixture smoke verified.');
