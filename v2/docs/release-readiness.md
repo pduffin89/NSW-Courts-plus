@@ -6,7 +6,7 @@ This checklist is for the final human/operator release review before uploading `
 
 - Upload artifact: `artifacts/argus-delta-courtlens.zip`
 - Evidence artifacts: `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, `artifacts/ci-artifact-parity.json`, `artifacts/completion-audit.json`, and `artifacts/SHA256SUMS`
-- Final command: `npm run package:extension`
+- Final command: `npm run package:extension` (delivery audit, release readiness, checksum writing, and evidence manifest audit)
 - Pre-upload verifier: `npm run audit:release-readiness`
 - Goal-completion verifier: `npm run audit:completion`
 - CI workflow: `Courtlens v2 CI`
@@ -71,7 +71,7 @@ A store-facing privacy policy should include:
 
 ## Final upload checklist
 
-1. Run `npm run package:extension` from `v2/`.
+1. Run `npm run package:extension` from `v2/`; this includes `npm run audit:evidence-manifest` after writing `SHA256SUMS`.
 2. Confirm every automated gate in `artifacts/delivery-audit.json` is passing.
 3. Confirm only expected external/manual gates remain, and use `docs/manual-verification.md` to record evidence for any gate you clear. Successful credentialed/operator smokes also write machine-readable evidence artifacts:
    - optional authenticated Argus live search if `ARGUS_DELTA_TOKEN` was not provided;

@@ -22,7 +22,7 @@
     "smoke:release-extension": "python3 scripts/release_extension_smoke.py",
     "smoke:operator": "python3 scripts/operator_live_smoke.py",
     "capture:screenshots": "python3 scripts/capture_release_screenshots.py",
-    "package:extension": "npm run audit:delivery && npm run audit:release-readiness && npm run write:checksums",
+    "package:extension": "npm run audit:delivery && npm run audit:release-readiness && npm run write:checksums && npm run audit:evidence-manifest",
     "verify": "npm test && npm run build && npm run smoke",
     "audit:delivery": "node scripts/delivery_audit.mjs"
   },

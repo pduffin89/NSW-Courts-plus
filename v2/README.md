@@ -67,7 +67,7 @@ npm run smoke:release-extension # Extract and load the shipped zip as a real MV3
 npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages; writes artifacts/operator-live-smoke.json on pass
 npm run capture:screenshots  # Generate non-sensitive release/store screenshot evidence
 npm run verify             # Fast local verification gate
-npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON
+npm run package:extension  # Full delivery audit, release-clean zip, evidence JSON, checksums, and evidence-manifest audit
 npm run audit:delivery     # Same final delivery gate used by package:extension
 npm run audit:completion   # Goal-completion audit; fails until credentialed/manual gates are evidenced
 ```
