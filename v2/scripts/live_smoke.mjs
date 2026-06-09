@@ -57,6 +57,31 @@ const federal = await fetch('https://search.judgments.fedcourt.gov.au/s/search.h
 if (![200, 403].includes(federal.status)) throw new Error(`Federal Court live smoke expected 200 or environment 403, got ${federal.status}`);
 console.log(`Live smoke: Federal Court endpoint reachable (${federal.status})`);
 
+const abn = '51824753556';
+const abnCurrent = await expectStatus(
+  'ABN current details page',
+  `https://abr.business.gov.au/ABN/View?id=${abn}`,
+  { headers: { Accept: 'text/html' } },
+  200
+);
+const abnCurrentText = await abnCurrent.text();
+if (!abnCurrentText.includes('Entity name:') || !abnCurrentText.includes('AUSTRALIAN TAXATION OFFICE')) {
+  throw new Error('ABN current details page did not include expected public ATO entity markers');
+}
+console.log('Live smoke: ABN current details page ok');
+
+const abnHistory = await expectStatus(
+  'ABN history details page',
+  `https://abr.business.gov.au/AbnHistory/View?id=${abn}`,
+  { headers: { Accept: 'text/html' } },
+  200
+);
+const abnHistoryText = await abnHistory.text();
+if (!abnHistoryText.includes('Entity name') || !abnHistoryText.includes('AUSTRALIAN TAXATION OFFICE')) {
+  throw new Error('ABN history details page did not include expected public ATO entity markers');
+}
+console.log('Live smoke: ABN history details page ok');
+
 if (!token) {
   console.log('Live smoke: ARGUS_DELTA_TOKEN not set; authenticated Argus search skipped.');
   process.exit(0);

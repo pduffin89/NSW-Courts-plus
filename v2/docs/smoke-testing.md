@@ -74,6 +74,8 @@ Without a token, live smoke verifies:
 - Google News RSS returns RSS content.
 - NSW Caselaw search returns HTML content.
 - Federal Court search endpoint is reachable; this environment currently returns `403`, which is accepted and reported because the remote service blocks some automated clients.
+- ABN Lookup current details page for a stable public ATO ABN returns expected entity markers.
+- ABN Lookup history details page for the same public ABN returns expected entity markers.
 
 With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 
