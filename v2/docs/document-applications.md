@@ -40,3 +40,4 @@ The implementation preserves the key guardrails available in this Vite build:
 - deterministic generated PDF names
 - checkbox fields are unchecked unless selected or required acknowledgements
 - generation is covered by tests against the real bundled templates
+- deterministic generation is covered by a matrix test that hashes repeated outputs and verifies selected document options remain isolated

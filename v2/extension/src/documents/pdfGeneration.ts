@@ -69,7 +69,12 @@ function baseValues(payload: DocumentApplicationPayload): Record<string, string 
 }
 
 async function fillTemplate(template: Uint8Array, values: Record<string, string | boolean>): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.load(template, { ignoreEncryption: true });
+  const pdfDoc = await PDFDocument.load(template, { ignoreEncryption: true, updateMetadata: false });
+  const fixedDate = new Date('2000-01-01T00:00:00.000Z');
+  pdfDoc.setCreationDate(fixedDate);
+  pdfDoc.setModificationDate(fixedDate);
+  pdfDoc.setProducer('Argus Delta Courtlens');
+  pdfDoc.setCreator('Argus Delta Courtlens');
   const form = pdfDoc.getForm();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -102,7 +107,7 @@ async function fillTemplate(template: Uint8Array, values: Record<string, string 
     // successfully filled PDF over a hard failure; deterministic matrix tests can
     // later target the exact overlay cleanup rules from NSW Courts+.
   }
-  return pdfDoc.save();
+  return pdfDoc.save({ useObjectStreams: false });
 }
 
 export async function generateApplicationPdfs(payload: DocumentApplicationPayload, options: GeneratePdfOptions): Promise<GeneratedPdfFile[]> {
