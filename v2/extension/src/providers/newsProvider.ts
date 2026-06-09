@@ -2,17 +2,34 @@ import type { ProviderResultPage } from '../core/types';
 import { cleanText, slug } from '../core/text';
 import { buildGoogleNewsRssUrl } from '../parsers/partyParser';
 
-function textFromXml(element: Element, selector: string): string {
-  return cleanText(element.querySelector(selector)?.textContent || '');
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"');
+}
+
+function stripTags(value: string): string {
+  return value.replace(/<[^>]*>/g, ' ');
+}
+
+function tagText(source: string, tag: string): string {
+  const match = source.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+  return cleanText(decodeXmlEntities(match?.[1] || ''));
 }
 
 export function parseGoogleNewsRss(query: string, rss: string): ProviderResultPage {
-  const doc = new DOMParser().parseFromString(rss, 'text/xml');
-  const items = Array.from(doc.querySelectorAll('item')).map((item) => {
-    const title = textFromXml(item, 'title');
-    const link = textFromXml(item, 'link');
-    const date = textFromXml(item, 'pubDate');
-    const snippet = textFromXml(item, 'description');
+  const itemMatches = Array.from(String(rss || '').matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)).slice(0, 20);
+  const items = itemMatches.map((match) => {
+    const item = match[1] || '';
+    const title = tagText(item, 'title');
+    const link = tagText(item, 'link');
+    const date = tagText(item, 'pubDate');
+    const snippet = cleanText(stripTags(decodeXmlEntities(tagText(item, 'description'))));
     return {
       id: `news-${slug(title)}-${slug(date)}`,
       title,
@@ -20,10 +37,10 @@ export function parseGoogleNewsRss(query: string, rss: string): ProviderResultPa
       url: link,
       source: 'Google News',
       date,
-      snippets: snippet ? [snippet.replace(/<[^>]+>/g, '')] : [],
+      snippets: snippet ? [snippet] : [],
       badges: ['News']
     };
-  });
+  }).filter((item) => item.title);
   return { providerId: 'news', query, items, hasMore: false };
 }
 

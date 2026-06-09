@@ -48,7 +48,7 @@ npm run audit:secrets
 - background bundle does not contain obvious hardcoded token strings.
 - court-list bundle contains the Courtlens launcher text.
 - Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages, confirms the sidebar mounts in a Shadow DOM, verifies local NER entity enhancement, verifies the document-generation UI renders generated attachments, and exercises the Gmail draft handoff callback.
-- Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, confirms manifest content scripts execute, verifies caselaw body entities render, and exercises real background PDF generation against bundled templates.
+- Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, confirms manifest content scripts execute, verifies a routed Research provider search through the real MV3 background, verifies caselaw body entities render, and exercises real background PDF generation against bundled templates.
 
 ## Browser fixture smoke
 

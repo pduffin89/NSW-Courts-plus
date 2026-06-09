@@ -1,21 +1,46 @@
 import type { ProviderResultPage } from '../core/types';
 import { cleanText, slug } from '../core/text';
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"');
+}
+
+function stripTags(value: string): string {
+  return value.replace(/<[^>]*>/g, ' ');
+}
+
+function attrValue(attrs: string, name: string): string {
+  const match = attrs.match(new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+  return decodeHtmlEntities(match?.[1] || match?.[2] || match?.[3] || '');
+}
+
 export function parseSearchHtml(providerId: string, source: string, query: string, html: string, baseUrl: string): ProviderResultPage {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  const anchors = Array.from(doc.querySelectorAll('a')).filter((a) => cleanText(a.textContent).length > 3).slice(0, 10);
+  const anchors = Array.from(String(html || '').matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi))
+    .map((match) => {
+      const attrs = match[1] || '';
+      const body = match[2] || '';
+      const title = cleanText(decodeHtmlEntities(stripTags(body)));
+      const href = attrValue(attrs, 'href');
+      return { title, href };
+    })
+    .filter((anchor) => anchor.title.length > 3)
+    .slice(0, 10);
+
   const items = anchors.map((anchor, index) => {
-    const title = cleanText(anchor.textContent);
-    const href = anchor.getAttribute('href') || '';
-    const url = href ? new URL(href, baseUrl).toString() : baseUrl;
-    const nearby = cleanText(anchor.parentElement?.textContent || anchor.nextElementSibling?.textContent || '');
+    const url = anchor.href ? new URL(anchor.href, baseUrl).toString() : baseUrl;
     return {
-      id: `${providerId}-${slug(title)}-${index}`,
-      title,
+      id: `${providerId}-${slug(anchor.title)}-${index}`,
+      title: anchor.title,
       subtitle: source,
       url,
       source,
-      snippets: nearby && nearby !== title ? [nearby] : [],
+      snippets: [],
       badges: [source]
     };
   });

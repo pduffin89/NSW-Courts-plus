@@ -10,6 +10,14 @@ FIXTURES = ROOT / "fixtures"
 
 COURTLIST_URL = "https://onlineregistry.lawlink.nsw.gov.au/content/court-lists/mock"
 CASELAW_URL = "https://www.caselaw.nsw.gov.au/decision/mock"
+NEWS_RSS = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Google News</title><item>
+<title>Courtlens Smoke News Result</title>
+<link>https://example.test/courtlens-smoke-news</link>
+<pubDate>Tue, 09 Jun 2026 00:00:00 GMT</pubDate>
+<description>Deterministic routed RSS item for extension research smoke.</description>
+</item></channel></rss>
+"""
 
 
 def fulfill_fixture(route, fixture_name):
@@ -18,6 +26,10 @@ def fulfill_fixture(route, fixture_name):
         content_type="text/html; charset=utf-8",
         body=(FIXTURES / fixture_name).read_text(encoding="utf-8"),
     )
+
+
+def fulfill_news(route):
+    route.fulfill(status=200, content_type="application/rss+xml; charset=utf-8", body=NEWS_RSS)
 
 
 def run_extension_load_smoke(extension_dir: Path, label: str):
@@ -35,6 +47,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 ],
             )
             try:
+                context.route("https://news.google.com/rss/search**", fulfill_news)
                 page = context.new_page()
                 page.route(COURTLIST_URL, lambda route: fulfill_fixture(route, "courtlist.html"))
                 page.goto(COURTLIST_URL)
@@ -43,6 +56,9 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 page.locator("[data-courtlens-open]").click()
                 text = page.locator("#argus-delta-courtlens-root").evaluate("el => el.shadowRoot.textContent")
                 assert "SMITH v ACME PTY LTD" in text
+                page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Research').click()")
+                page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Search news').click()")
+                page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('Courtlens Smoke News Result')", timeout=20_000)
                 page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Documents').click()")
                 page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Generate PDFs').click()")
                 page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('_media_access_2026.pdf')", timeout=20_000)
@@ -59,7 +75,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 assert "Byron Shire Council" in case_text
             finally:
                 context.close()
-    print(f"Extension load smoke passed: {label} ran content scripts and generated document attachments on routed NSW URLs.")
+    print(f"Extension load smoke passed: {label} ran content scripts, routed Research provider search, and generated document attachments on routed NSW URLs.")
 
 
 def main():

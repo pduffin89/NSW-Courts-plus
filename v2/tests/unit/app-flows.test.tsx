@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { routeSearch } from '../../extension/src/core/searchRouter';
 import { createMessageHandler } from '../../extension/src/background/messageHandler';
+import { parseGoogleNewsRss } from '../../extension/src/providers/newsProvider';
+import { parseSearchHtml } from '../../extension/src/providers/htmlSearchProvider';
 import { CourtlensSidebar } from '../../extension/src/sidebar/CourtlensSidebar';
 import { injectCourtlensButton } from '../../extension/src/content/courtlist';
 import { readCaselawPageContext } from '../../extension/src/content/caselaw';
@@ -38,6 +40,19 @@ describe('provider router', () => {
     const fed = await routeSearch({ providerId: 'federal-court', query: 'Smith', fetcher });
     expect(news.items[0].title).toBe('Case update');
     expect(fed.items[0].title).toBe('Smith v Acme');
+  });
+
+  it('parses provider result documents without DOMParser for MV3 worker safety', () => {
+    const originalDomParser = globalThis.DOMParser;
+    vi.stubGlobal('DOMParser', undefined);
+    try {
+      const news = parseGoogleNewsRss('Smith', '<rss><channel><item><title><![CDATA[Worker &amp; safe]]></title><link>https://news.example/a</link><pubDate>Tue, 09 Jun 2026 00:00:00 GMT</pubDate><description>Snippet &amp;amp; more</description></item></channel></rss>');
+      const html = parseSearchHtml('nsw-caselaw', 'NSW Caselaw', 'Smith', '<html><body><a href="/decision/1"><span>Smith &amp; Acme</span></a></body></html>', 'https://www.caselaw.nsw.gov.au/search?query=Smith&page=1');
+      expect(news.items[0].title).toBe('Worker & safe');
+      expect(html.items[0]).toMatchObject({ title: 'Smith & Acme', url: 'https://www.caselaw.nsw.gov.au/decision/1' });
+    } finally {
+      vi.stubGlobal('DOMParser', originalDomParser);
+    }
   });
 });
 
