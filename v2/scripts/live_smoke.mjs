@@ -9,6 +9,7 @@ const base = process.env.ARGUS_DELTA_BASE_URL || 'https://be-api.argusdelta.com'
 const token = process.env.ARGUS_DELTA_TOKEN || '';
 const abnGuid = process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID || '';
 const timeout = 15_000;
+const maxAttempts = 3;
 const checks = [];
 
 function record(name, status, details = {}) {
@@ -44,12 +45,32 @@ function writeEvidence() {
   writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
-async function expectStatus(label, url, init, expected) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(timeout), ...init });
-  if (response.status !== expected) {
-    throw new Error(`${label} expected HTTP ${expected}, got ${response.status}`);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function expectStatuses(label, url, init, expectedStatuses) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(timeout), ...init });
+      if (!expectedStatuses.includes(response.status)) {
+        throw new Error(`${label} expected HTTP ${expectedStatuses.join(' or ')}, got ${response.status}`);
+      }
+      if (attempt > 1) console.log(`Live smoke: ${label} passed on retry ${attempt}`);
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts) break;
+      console.log(`Live smoke: ${label} attempt ${attempt} failed (${error.name || 'Error'}: ${error.message}); retrying...`);
+      await sleep(750 * attempt);
+    }
   }
-  return response;
+  throw lastError;
+}
+
+async function expectStatus(label, url, init, expected) {
+  return expectStatuses(label, url, init, [expected]);
 }
 
 function summarizeItems(payload) {
@@ -96,11 +117,9 @@ if (!caselawText.toLowerCase().includes('html')) throw new Error('NSW Caselaw di
 record('nsw-caselaw-search', 'pass');
 console.log('Live smoke: NSW Caselaw search ok');
 
-const federal = await fetch('https://search.judgments.fedcourt.gov.au/s/search.html?query_sand=Smith&start_rank=1', {
-  signal: AbortSignal.timeout(timeout),
+const federal = await expectStatuses('Federal Court endpoint', 'https://search.judgments.fedcourt.gov.au/s/search.html?query_sand=Smith&start_rank=1', {
   headers: { Accept: 'text/html' }
-});
-if (![200, 403].includes(federal.status)) throw new Error(`Federal Court live smoke expected 200 or environment 403, got ${federal.status}`);
+}, [200, 403]);
 record('federal-court-endpoint', 'pass', { httpStatus: federal.status });
 console.log(`Live smoke: Federal Court endpoint reachable (${federal.status})`);
 
