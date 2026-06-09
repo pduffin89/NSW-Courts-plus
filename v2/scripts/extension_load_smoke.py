@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from tempfile import TemporaryDirectory
@@ -100,10 +99,7 @@ def shadow_wait_text(page, text, timeout=20_000):
 
 def shadow_fill_input(page, aria_label, value):
     field = page.locator(f'#argus-delta-courtlens-root input[aria-label="{aria_label}"]')
-    field.click()
-    page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")
-    page.keyboard.press("Backspace")
-    page.keyboard.type(value, delay=1)
+    field.fill(value)
     expect(field).to_have_value(value, timeout=5_000)
 
 
@@ -115,6 +111,8 @@ def exercise_settings_ui(context, page):
     print("Extension load smoke: exercising Settings save/mask/persist")
     smoke_token = "courtlens-smoke-token-do-not-leak"
     shadow_click(page, "Settings")
+    expect(page.locator('#argus-delta-courtlens-root input[aria-label="Argus Delta token"]')).to_be_visible(timeout=5_000)
+    page.wait_for_timeout(500)
     shadow_fill_input(page, "Argus Delta token", smoke_token)
     shadow_fill_input(page, "ABN GUID", "00000000-0000-4000-8000-000000000000")
     shadow_fill_input(page, "Applicant name", "Courtlens Smoke Applicant")
