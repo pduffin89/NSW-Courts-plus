@@ -12,13 +12,15 @@ This runs:
 2. `npm run build`
 3. `npm run smoke`
 
-For final release evidence, run the delivery audit:
+For final release evidence and packaging, run the delivery audit through either final gate command:
 
 ```bash
+npm run package:extension
+# or
 npm run audit:delivery
 ```
 
-This runs unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, and release secret-leak audit. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+These commands run unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, and release secret-leak audit. They write `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
 
 ## Extension policy and secret audits
 

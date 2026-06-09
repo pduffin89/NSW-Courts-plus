@@ -14,7 +14,7 @@
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
     "smoke:operator": "python3 scripts/operator_live_smoke.py",
-    "package:extension": "npm run verify && node scripts/package_extension.mjs",
+    "package:extension": "npm run audit:delivery",
     "verify": "npm test && npm run build && npm run smoke",
     "audit:delivery": "node scripts/delivery_audit.mjs"
   },

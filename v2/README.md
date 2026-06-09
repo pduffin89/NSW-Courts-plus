@@ -58,9 +58,9 @@ npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, an
 npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry
 npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages
-npm run verify             # Full local verification gate
-npm run package:extension  # Verify, then create release-clean artifacts/argus-delta-courtlens.zip
-npm run audit:delivery     # Run gates, package dist, and write artifacts/delivery-audit.json
+npm run verify             # Fast local verification gate
+npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON
+npm run audit:delivery     # Same final delivery gate used by package:extension
 ```
 
 ## Project layout
@@ -82,4 +82,4 @@ extension/
 
 ## Verification status
 
-The project is designed so `npm run verify` is the fast release gate and `npm run audit:delivery` is the final evidence gate. Do not claim a milestone is complete unless those commands pass and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
+The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` / `npm run audit:delivery` are the final evidence gates. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
