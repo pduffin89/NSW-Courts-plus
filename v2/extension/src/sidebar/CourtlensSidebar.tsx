@@ -19,11 +19,25 @@ interface GeneratedAttachment {
   base64: string;
 }
 
+interface AbnHistoryView {
+  abn: string;
+  current: {
+    entityName: string;
+    abnStatus: string;
+    entityType: string;
+    gst: string;
+    mainBusinessLocation: string;
+    abnLastUpdated: string;
+    recordExtracted: string;
+  };
+}
+
 interface Props {
   initialContext: { matter: MatterContext };
   onSearch?: (input: { providerId: ProviderId; query: string; exact: boolean }) => Promise<ProviderResultPage>;
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
   onGenerateDocuments?: (input: { matter: MatterContext; requestedDocuments: string[]; applicant: { name: string; organisation: string; email: string } }) => Promise<{ attachments: GeneratedAttachment[] }>;
+  onAbnHistory?: (abn: string) => Promise<AbnHistoryView>;
 }
 
 const tabs = ['Overview', 'Research', 'Documents', 'Settings'] as const;
@@ -37,13 +51,14 @@ function panelId(tab: Tab): string {
   return `cl-panel-${tab.toLowerCase()}`;
 }
 
-export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments }: Props) {
+export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments, onAbnHistory }: Props) {
   const [active, setActive] = useState<Tab>('Overview');
   const [exact, setExact] = useState(true);
   const [result, setResult] = useState<ProviderResultPage | null>(null);
   const [status, setStatus] = useState('Ready');
   const [settings, setSettings] = useState<SettingsDraft>({});
   const [attachments, setAttachments] = useState<GeneratedAttachment[]>([]);
+  const [abnDetails, setAbnDetails] = useState<Record<string, AbnHistoryView>>({});
   const matter = initialContext.matter;
   const candidates = useMemo(
     () => parseNewsSearchCandidates({ matterTitle: matter.matterTitle, jurisdiction: matter.jurisdiction }),
@@ -64,6 +79,17 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
         : Promise.resolve({ providerId, query: primary, items: [], hasMore: false }));
       setResult(page);
       setStatus(page.items.length ? `${page.items.length} result(s)` : 'No results returned');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function showAbnHistory(abn: string) {
+    setStatus('Loading ABN history…');
+    try {
+      const details = await onAbnHistory?.(abn);
+      if (details) setAbnDetails((current) => ({ ...current, [abn]: details }));
+      setStatus(details ? 'ABN history loaded' : 'ABN history unavailable');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     }
@@ -147,7 +173,18 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
             <div className="cl-card">
               <h3>{result.providerId}</h3>
               {result.items.length
-                ? result.items.map((item) => <article className="cl-result" key={item.id}><strong>{item.title}</strong><span>{item.subtitle}</span></article>)
+                ? result.items.map((item) => {
+                  const abn = String((item as { abn?: string }).abn || item.badges.find((badge) => /^\d{11}$/.test(badge)) || '');
+                  const details = abn ? abnDetails[abn] : null;
+                  return (
+                    <article className="cl-result" key={item.id}>
+                      <strong>{item.title}</strong>
+                      <span>{item.subtitle}</span>
+                      {result.providerId === 'abn' && abn && <button className="cl-link-button" onClick={() => showAbnHistory(abn)}>Show ABN history</button>}
+                      {details && <div className="cl-abn-details"><span>{details.current.abnStatus}</span><span>{details.current.entityType}</span><span>{details.current.gst}</span><span>Record extracted: {details.current.recordExtracted}</span></div>}
+                    </article>
+                  );
+                })
                 : <p>Clear empty state: no matching records.</p>}
             </div>
           )}

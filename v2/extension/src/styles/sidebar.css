@@ -21,6 +21,8 @@
 .cl-provider { background:#2b251c; color:#fff7e8; min-height:42px; }
 .cl-result { display:grid; gap:3px; padding:10px 0; border-top:1px solid rgba(108,83,40,.14); font: 500 13px/1.35 ui-sans-serif, system-ui; }
 .cl-result span { color:#706252; }
+.cl-link-button { justify-self:start; border:0; background:transparent; color:#7a5614; padding:0; font:800 12px/1 ui-sans-serif, system-ui; text-decoration:underline; cursor:pointer; }
+.cl-abn-details { display:grid; gap:4px; margin-top:4px; padding:8px; border-radius:10px; background:#f3ead9; color:#4a3c2c; }
 .cl-form, .cl-documents { display:grid; gap:10px; }
 .cl-form label { display:grid; gap:5px; font:700 12px/1 ui-sans-serif, system-ui; color:#4d4233; }
 .cl-form input { width:100%; box-sizing:border-box; border:1px solid rgba(108,83,40,.25); border-radius:12px; padding:10px 11px; background:#fffaf0; color:#211b14; font:600 13px/1 ui-sans-serif, system-ui; outline:none; }

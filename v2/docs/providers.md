@@ -20,6 +20,7 @@ Courtlens providers normalize results to `ProviderResultPage`.
 - Uses `https://abr.business.gov.au/json/MatchingNames.aspx` with configured `abnGuid`.
 - Parses ABR JSONP rows into normalized result cards.
 - Refuses live lookup without a GUID so secrets are not hardcoded.
+- Supports ABN current/history expansion through `COURTLENS_ABN_HISTORY_DETAILS`, scraping `ABN/View` and `AbnHistory/View` pages into current status and historical timeline fields.
 
 ## Federal Court
 

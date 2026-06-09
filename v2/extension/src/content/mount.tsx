@@ -34,5 +34,10 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     if (!response?.ok) throw new Error(response?.error || 'Document generation failed');
     return response.data;
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} />);
+  const onAbnHistory = async (abn: string) => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_ABN_HISTORY_DETAILS', abn });
+    if (!response?.ok) throw new Error(response?.error || 'ABN history failed');
+    return response.data;
+  };
+  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} />);
 }

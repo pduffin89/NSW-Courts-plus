@@ -1,6 +1,7 @@
 import { routeSearch, type ProviderId } from '../core/searchRouter';
 import { buildDocumentApplicationPayload } from '../documents/documentApplication';
 import { generateApplicationPdfs } from '../documents/pdfGeneration';
+import { fetchAbnHistoryDetails } from '../providers/abnProvider';
 
 export interface CourtlensSettings {
   argusDeltaToken?: string;
@@ -37,6 +38,10 @@ export function createMessageHandler(deps: Dependencies) {
       }
       if (message?.type === 'COURTLENS_GET_SETTINGS') {
         return { ok: true, data: ((await deps.get(SETTINGS_KEY)) || {}) as CourtlensSettings };
+      }
+      if (message?.type === 'COURTLENS_ABN_HISTORY_DETAILS') {
+        const data = await fetchAbnHistoryDetails(message.abn, deps.fetcher);
+        return { ok: true, data };
       }
       if (message?.type === 'COURTLENS_SEARCH') {
         const settings = ((await deps.get(SETTINGS_KEY)) || {}) as CourtlensSettings;
