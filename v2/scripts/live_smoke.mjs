@@ -1,5 +1,6 @@
 const base = process.env.ARGUS_DELTA_BASE_URL || 'https://be-api.argusdelta.com';
 const token = process.env.ARGUS_DELTA_TOKEN || '';
+const abnGuid = process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID || '';
 const timeout = 15_000;
 
 async function expectStatus(label, url, init, expected) {
@@ -81,6 +82,31 @@ if (!abnHistoryText.includes('Entity name') || !abnHistoryText.includes('AUSTRAL
   throw new Error('ABN history details page did not include expected public ATO entity markers');
 }
 console.log('Live smoke: ABN history details page ok');
+
+if (abnGuid) {
+  const abnSearchUrl = new URL('https://abr.business.gov.au/json/MatchingNames.aspx');
+  abnSearchUrl.searchParams.set('name', 'Australian Taxation Office');
+  abnSearchUrl.searchParams.set('maxResults', '5');
+  abnSearchUrl.searchParams.set('guid', abnGuid);
+  const abnSearch = await expectStatus(
+    'ABN name search',
+    abnSearchUrl.toString(),
+    { headers: { Accept: 'application/javascript, application/json, text/plain' } },
+    200
+  );
+  const abnSearchText = await abnSearch.text();
+  const start = abnSearchText.indexOf('(');
+  const end = abnSearchText.lastIndexOf(')');
+  const abnPayload = JSON.parse(start >= 0 && end > start ? abnSearchText.slice(start + 1, end) : abnSearchText);
+  if (abnPayload?.Message) throw new Error(`ABN name search returned message: ${abnPayload.Message}`);
+  const names = Array.isArray(abnPayload?.Names) ? abnPayload.Names : [];
+  if (!names.some((row) => String(row?.Abn || '') === abn && String(row?.Name || '').includes('AUSTRALIAN TAXATION OFFICE'))) {
+    throw new Error('ABN name search did not return expected public ATO record');
+  }
+  console.log('Live smoke: ABN name search ok');
+} else {
+  console.log('Live smoke: ABN_GUID/COURTLENS_ABN_GUID not set; ABN name search skipped.');
+}
 
 if (!token) {
   console.log('Live smoke: ARGUS_DELTA_TOKEN not set; authenticated Argus search skipped.');

@@ -68,9 +68,10 @@ Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ep
 ```bash
 npm run smoke:live
 ARGUS_DELTA_TOKEN='...' npm run smoke:live
+ABN_GUID='...' npm run smoke:live
 ```
 
-Without a token, live smoke verifies:
+Without private credentials, live smoke verifies:
 
 - `GET /health` returns `200` and `ok=true`.
 - unauthenticated court-list search returns `401` and `ok=false`.
@@ -79,6 +80,10 @@ Without a token, live smoke verifies:
 - Federal Court search endpoint is reachable; this environment currently returns `403`, which is accepted and reported because the remote service blocks some automated clients.
 - ABN Lookup current details page for a stable public ATO ABN returns expected entity markers.
 - ABN Lookup history details page for the same public ABN returns expected entity markers.
+
+With `ABN_GUID` or `COURTLENS_ABN_GUID`, it additionally verifies:
+
+- ABN Lookup name-search JSONP returns the stable public ATO record.
 
 With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 

@@ -186,7 +186,7 @@ const featureMatrix = [
     { name: 'search router lists all providers', ok: fileContains('extension/src/core/searchRouter.ts', ['argus-delta', 'news', 'abn', 'federal-court', 'nsw-caselaw']) },
     { name: 'all provider modules exist', ok: ['argusDeltaProvider.ts', 'newsProvider.ts', 'abnProvider.ts', 'htmlSearchProvider.ts'].every((name) => fileExists(`extension/src/providers/${name}`)) },
     { name: 'real extension smoke exercises all provider buttons', ok: fileContains('scripts/extension_load_smoke.py', ['Search Argus Delta', 'Search news', 'Search federal-court', 'Search nsw-caselaw', 'Search abn']) },
-    { name: 'live smoke covers public provider endpoints', ok: fileContains('scripts/live_smoke.mjs', ['Google News RSS', 'NSW Caselaw search', 'Federal Court endpoint', 'ABN current details page', 'ABN history details page']) },
+    { name: 'live smoke covers public provider endpoints and optional credentialed ABN name search', ok: fileContains('scripts/live_smoke.mjs', ['Google News RSS', 'NSW Caselaw search', 'Federal Court endpoint', 'ABN current details page', 'ABN history details page', 'ABN name search', 'ABN_GUID']) },
   ]),
   feature('ABN current/history expansion workflow', [
     'extension/src/providers/abnProvider.ts', 'extension/src/background/messageHandler.ts', 'tests/unit/abn-history.test.ts', 'tests/unit/abn-history-ui.test.tsx'
@@ -282,7 +282,11 @@ const criteria = [
   },
   {
     requirement: 'Live provider smoke for non-secret endpoints and optional authenticated Argus search',
-    evidence: ['npm run smoke:live', process.env.ARGUS_DELTA_TOKEN ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped'],
+    evidence: [
+      'npm run smoke:live',
+      process.env.ARGUS_DELTA_TOKEN ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped',
+      (process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID) ? 'ABN_GUID/COURTLENS_ABN_GUID present' : 'ABN_GUID/COURTLENS_ABN_GUID absent; ABN name-search branch skipped',
+    ],
     status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (process.env.ARGUS_DELTA_TOKEN ? 'pass' : 'partial-external-credential-needed') : 'fail',
   },
   {
