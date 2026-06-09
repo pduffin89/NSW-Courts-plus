@@ -18,7 +18,7 @@ For final release evidence, run the delivery audit:
 npm run audit:delivery
 ```
 
-This runs unit tests, the production build, browser/extension smoke, live provider smoke, and packaging from the verified `dist/` output. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, package metadata, release-archive contents, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+This runs unit tests, the production build, browser/extension smoke, live provider smoke, and packaging from the verified `dist/` output. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
 
 ## What smoke verifies
 

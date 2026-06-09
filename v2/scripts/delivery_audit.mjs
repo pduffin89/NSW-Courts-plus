@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -33,11 +34,32 @@ function runGate(label, command, args) {
   };
 }
 
+function sha256(buffer) {
+  return createHash('sha256').update(buffer).digest('hex');
+}
+
+function runText(command, args) {
+  const result = spawnSync(command, args, { cwd: root, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
 function listArchiveEntries(archive) {
   if (!existsSync(archive)) return [];
   const result = spawnSync('unzip', ['-Z1', archive], { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) return [];
   return result.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+function describeArchiveEntry(archive, entry) {
+  if (entry.endsWith('/')) return { path: entry, type: 'directory' };
+  const result = spawnSync('unzip', ['-p', archive, entry], { cwd: root, encoding: 'buffer', maxBuffer: 20 * 1024 * 1024 });
+  if (result.status !== 0) return { path: entry, type: 'file', readable: false };
+  return {
+    path: entry,
+    type: 'file',
+    sizeBytes: result.stdout.length,
+    sha256: sha256(result.stdout),
+  };
 }
 
 const gates = [
@@ -52,9 +74,16 @@ const gates = [
 const automatedOk = gates.every((gate) => gate.ok);
 const archiveExists = existsSync(archivePath);
 const archiveSizeBytes = archiveExists ? statSync(archivePath).size : 0;
+const archiveSha256 = archiveExists ? sha256(readFileSync(archivePath)) : null;
 const archiveEntries = listArchiveEntries(archivePath);
+const archiveEntryDetails = archiveEntries.map((entry) => describeArchiveEntry(archivePath, entry));
 const archiveForbiddenEntries = archiveEntries.filter((entry) => entry.endsWith('.map') || entry.endsWith('.DS_Store'));
 const archiveReleaseClean = archiveExists && archiveEntries.length > 0 && archiveForbiddenEntries.length === 0;
+const git = {
+  branch: runText('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
+  headSha: runText('git', ['rev-parse', 'HEAD']),
+  statusShort: runText('git', ['status', '--short']),
+};
 const distChecks = [
   'dist/manifest.json',
   'dist/background.js',
@@ -94,7 +123,7 @@ const criteria = [
   },
   {
     requirement: 'Packaged extension archive from verified dist',
-    evidence: ['node scripts/package_extension.mjs', 'artifacts/argus-delta-courtlens.zip'],
+    evidence: ['node scripts/package_extension.mjs', 'artifacts/argus-delta-courtlens.zip', archiveSha256 ? `sha256:${archiveSha256}` : 'sha256 unavailable'],
     status: gates.find((gate) => gate.label === 'package-verified-dist')?.ok && archiveExists && archiveSizeBytes > 0 ? 'pass' : 'fail',
   },
   {
@@ -113,15 +142,18 @@ const audit = {
   generatedAt: nowIso(),
   project: 'Argus Delta Courtlens v2',
   root,
+  git,
   automatedOk,
   archive: {
     path: archivePath,
     exists: archiveExists,
     sizeBytes: archiveSizeBytes,
+    sha256: archiveSha256,
     entryCount: archiveEntries.length,
     releaseClean: archiveReleaseClean,
     forbiddenEntries: archiveForbiddenEntries,
     entries: archiveEntries,
+    entryDetails: archiveEntryDetails,
   },
   gates,
   distChecks,
