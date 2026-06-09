@@ -70,6 +70,7 @@ jobs:
           path: |
             v2/artifacts/argus-delta-courtlens.zip
             v2/artifacts/delivery-audit.json
+            v2/artifacts/release-readiness.json
           if-no-files-found: error
           retention-days: 14
 

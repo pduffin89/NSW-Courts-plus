@@ -242,7 +242,7 @@ const featureMatrix = [
     { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md', 'release-readiness.md'].every((name) => fileExists(`docs/${name}`)) },
     { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator']) },
     { name: 'release readiness doc includes Web Store permission and upload checklist', ok: fileContains('docs/release-readiness.md', ['Permission justification', 'Data use disclosure draft', 'Final upload checklist', 'archive.sha256', 'npm run audit:release-readiness']) },
-    { name: 'release readiness verifier exists', ok: fileExists('scripts/release_readiness_audit.mjs') },
+    { name: 'release readiness verifier exists and writes evidence JSON', ok: fileContains('scripts/release_readiness_audit.mjs', ['release-readiness.json', 'writeFileSync']) },
     { name: 'README lists final delivery gates', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery', 'npm run audit:release-readiness']) },
   ]),
 ];

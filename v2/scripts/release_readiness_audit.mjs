@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 const root = process.cwd();
 const archivePath = join(root, 'artifacts', 'argus-delta-courtlens.zip');
 const auditPath = join(root, 'artifacts', 'delivery-audit.json');
+const readinessPath = join(root, 'artifacts', 'release-readiness.json');
 
 const expectedPermissions = ['storage'];
 const expectedHostPermissions = [
@@ -93,4 +94,30 @@ for (const forbiddenKey of ['optional_permissions', 'optional_host_permissions',
   if (forbiddenKey in manifest) fail(`manifest contains forbidden key ${forbiddenKey}`);
 }
 
-console.log(`Release readiness audit passed: HEAD ${head}, archive sha256 ${archiveSha}, ${entries.length} archive entries, expected external/manual gates only.`);
+const readiness = {
+  generatedAt: new Date().toISOString(),
+  ok: true,
+  gitHead: head,
+  archive: {
+    path: archivePath,
+    sha256: archiveSha,
+    entryCount: entries.length,
+  },
+  deliveryAudit: {
+    path: auditPath,
+    automatedOk: audit.automatedOk,
+    featureMatrixOk: audit.featureMatrix.every((item) => item.status === 'pass'),
+  },
+  manifest: {
+    permissions: manifest.permissions,
+    hostPermissions: manifest.host_permissions,
+    contentSecurityPolicy: manifest.content_security_policy,
+    webAccessibleResourceCount: (manifest.web_accessible_resources || []).length,
+  },
+  expectedExternalOrManualGates: (audit.criteria || [])
+    .filter((criterion) => criterion.status !== 'pass')
+    .map((criterion) => ({ requirement: criterion.requirement, status: criterion.status })),
+};
+writeFileSync(readinessPath, `${JSON.stringify(readiness, null, 2)}\n`, 'utf8');
+
+console.log(`Release readiness audit passed: HEAD ${head}, archive sha256 ${archiveSha}, ${entries.length} archive entries, expected external/manual gates only. Evidence written to ${readinessPath}.`);
