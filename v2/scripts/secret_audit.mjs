@@ -12,9 +12,12 @@ const sourceScanRoots = [
   'scripts',
   'tests',
   'docs',
+  '../.github/workflows/courtlens-v2.yml',
   'README.md',
   'CHANGELOG.md',
+  'LICENSE',
   'package.json',
+  'package-lock.json',
   'tsconfig.json',
   'vite.config.ts',
   'vitest.config.ts',
@@ -45,7 +48,7 @@ const secretPatterns = [
   { label: 'hardcoded ABN GUID setting', pattern: /abnGuid\s*[:=]\s*["'`][0-9a-fA-F-]{24,}["'`]/ },
 ];
 
-const textExtensions = new Set(['.js', '.mjs', '.ts', '.tsx', '.py', '.json', '.html', '.css', '.txt', '.md', '.map']);
+const textExtensions = new Set(['.js', '.mjs', '.ts', '.tsx', '.py', '.json', '.html', '.css', '.txt', '.md', '.map', '.yml', '.yaml']);
 
 function fail(message) {
   throw new Error(`Secret audit failed: ${message}`);
