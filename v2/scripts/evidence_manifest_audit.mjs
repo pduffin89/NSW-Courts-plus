@@ -82,12 +82,21 @@ for (const entry of requiredEntries) {
   if (!seen.has(entry)) fail(`required checksum entry missing: ${entry}`);
 }
 
+function assertManualVerificationAuditPasses() {
+  if (!seen.has('manual-verification-audit.json')) fail('manual-verification.json is listed without manual-verification-audit.json');
+  const audit = readJsonArtifact('manual-verification-audit.json');
+  if (audit?.status !== 'pass') fail(`manual-verification-audit.json status ${audit?.status || 'missing'} is not pass`);
+  if (audit?.headSha !== currentHead) fail(`manual-verification-audit.json records head ${audit?.headSha || 'missing'}, expected current HEAD ${currentHead}`);
+}
+
 for (const entry of seen.keys()) {
   if (requiredEntries.includes(entry)) continue;
   if (!optionalEntries.has(entry)) fail(`unexpected checksum entry: ${entry}`);
   const payload = readJsonArtifact(entry);
   const head = artifactHead(entry, payload);
   if (head !== currentHead) fail(`${entry} records head ${head || 'missing'}, expected current HEAD ${currentHead}`);
+  if (entry === 'manual-verification-audit.json' && payload?.status !== 'pass') fail(`manual-verification-audit.json status ${payload?.status || 'missing'} is not pass`);
+  if (entry === 'manual-verification.json') assertManualVerificationAuditPasses();
 }
 
 for (const entry of ['delivery-audit.json', 'release-readiness.json']) {

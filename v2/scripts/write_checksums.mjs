@@ -52,19 +52,34 @@ function optionalArtifactHead(name, payload) {
   return null;
 }
 
+function readOptionalJson(name) {
+  const path = join(artifactsDir, name);
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    console.log(`Skipping optional checksum artifact ${name}: not valid JSON`);
+    return null;
+  }
+}
+
+function manualVerificationAuditPasses(currentHead) {
+  const audit = readOptionalJson('manual-verification-audit.json');
+  return audit?.status === 'pass' && audit?.headSha === currentHead;
+}
+
 function includeOptionalArtifact(name, currentHead) {
   const path = join(artifactsDir, name);
   if (!existsSync(path)) return false;
-  let payload;
-  try {
-    payload = JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    console.log(`Skipping optional checksum artifact ${name}: not valid JSON`);
-    return false;
-  }
+  const payload = readOptionalJson(name);
+  if (!payload) return false;
   const artifactHead = optionalArtifactHead(name, payload);
   if (artifactHead !== currentHead) {
     console.log(`Skipping optional checksum artifact ${name}: head ${artifactHead || 'missing'} does not match current HEAD ${currentHead}`);
+    return false;
+  }
+  if ((name === 'manual-verification.json' || name === 'manual-verification-audit.json') && !manualVerificationAuditPasses(currentHead)) {
+    console.log(`Skipping optional checksum artifact ${name}: manual-verification-audit.json is missing, stale, or not pass`);
     return false;
   }
   return true;
