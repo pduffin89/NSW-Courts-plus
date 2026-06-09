@@ -95,7 +95,39 @@ def shadow_wait_text(page, text, timeout=20_000):
 
 
 def shadow_fill_input(page, aria_label, value):
-    page.locator(f'#argus-delta-courtlens-root input[aria-label="{aria_label}"]').fill(value)
+    field = page.locator(f'#argus-delta-courtlens-root input[aria-label="{aria_label}"]')
+    field.click()
+    page.keyboard.press("Meta+A")
+    page.keyboard.press("Control+A")
+    page.keyboard.press("Backspace")
+    page.keyboard.insert_text(value)
+
+
+def shadow_input_value(page, aria_label):
+    return page.locator(f'#argus-delta-courtlens-root input[aria-label="{aria_label}"]').input_value()
+
+
+def exercise_settings_ui(context, page):
+    print("Extension load smoke: exercising Settings save/mask/persist")
+    smoke_token = "courtlens-smoke-token-do-not-leak"
+    shadow_click(page, "Settings")
+    shadow_fill_input(page, "Argus Delta token", smoke_token)
+    shadow_fill_input(page, "ABN GUID", "00000000-0000-4000-8000-000000000000")
+    shadow_fill_input(page, "Applicant name", "Courtlens Smoke Applicant")
+    shadow_fill_input(page, "Applicant organisation", "Argus Delta Smoke Org")
+    shadow_fill_input(page, "Applicant email", "smoke@example.invalid")
+    page.wait_for_timeout(250)
+    assert shadow_input_value(page, "Argus Delta token") == smoke_token
+    assert shadow_input_value(page, "ABN GUID") == "00000000-0000-4000-8000-000000000000"
+    shadow_click(page, "Save settings")
+    shadow_wait_text(page, "Settings saved locally")
+    settings = get_extension_storage(context, "courtlensSettings")
+    assert settings["argusDeltaToken"] == smoke_token
+    assert settings["abnGuid"] == "00000000-0000-4000-8000-000000000000"
+    assert settings["applicantName"] == "Courtlens Smoke Applicant"
+    assert shadow_input_value(page, "Argus Delta token") == "••••••••"
+    assert shadow_input_value(page, "ABN GUID") == "••••••••"
+    assert smoke_token not in shadow_text(page)
 
 
 def exercise_research_providers(page):
@@ -117,9 +149,13 @@ def exercise_research_providers(page):
     shadow_wait_text(page, "Active from 01 Jan 2020")
 
 
-def seed_extension_storage(context, items):
+def extension_worker(context):
     workers = [worker for worker in context.service_workers if worker.url.startswith("chrome-extension://")]
-    worker = workers[0] if workers else context.wait_for_event("serviceworker", timeout=10_000)
+    return workers[0] if workers else context.wait_for_event("serviceworker", timeout=10_000)
+
+
+def seed_extension_storage(context, items):
+    worker = extension_worker(context)
     worker.evaluate(
         """(items) => new Promise((resolve, reject) => {
           chrome.storage.local.set(items, () => {
@@ -129,6 +165,19 @@ def seed_extension_storage(context, items):
           });
         })""",
         items,
+    )
+
+
+def get_extension_storage(context, key):
+    return extension_worker(context).evaluate(
+        """(key) => new Promise((resolve, reject) => {
+          chrome.storage.local.get(key, (items) => {
+            const error = chrome.runtime.lastError;
+            if (error) reject(new Error(error.message));
+            else resolve(items[key]);
+          });
+        })""",
+        key,
     )
 
 
@@ -158,7 +207,6 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
             )
             try:
                 install_provider_routes(context)
-                seed_extension_storage(context, {"courtlensSettings": {"abnGuid": "00000000-0000-4000-8000-000000000000"}})
                 page = context.new_page()
                 page.route(COURTLIST_URL, lambda route: fulfill_fixture(route, "courtlist.html"))
                 page.goto(COURTLIST_URL)
@@ -167,6 +215,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 page.locator("[data-courtlens-open]").click()
                 text = page.locator("#argus-delta-courtlens-root").evaluate("el => el.shadowRoot.textContent")
                 assert "SMITH v ACME PTY LTD" in text
+                exercise_settings_ui(context, page)
                 exercise_research_providers(page)
                 shadow_click(page, "Documents")
                 shadow_click(page, "Generate PDFs")
@@ -184,7 +233,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 assert "Byron Shire Council" in case_text
             finally:
                 context.close()
-    print(f"Extension load smoke passed: {label} ran content scripts, all routed Research providers, ABN history, and document generation on routed NSW URLs.")
+    print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, and document generation on routed NSW URLs.")
 
 
 def main():
