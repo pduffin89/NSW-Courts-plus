@@ -87,7 +87,7 @@ extension/
     styles/            # shadcn-like Courtlens CSS
 ```
 
-Release upload checklist and Chrome Web Store disclosure notes live in `docs/release-readiness.md`; store listing copy, permission justifications, and screenshot guidance live in `docs/web-store-listing.md`.
+Release upload checklist and Chrome Web Store disclosure notes live in `docs/release-readiness.md`; store listing copy, permission justifications, and screenshot guidance live in `docs/web-store-listing.md`; credentialed/manual gate evidence templates live in `docs/manual-verification.md`.
 
 ## Verification status
 

@@ -57,7 +57,7 @@ Courtlens stores user settings in Chrome local extension storage, including opti
 
 ## Privacy policy notes
 
-Store listing copy, permission explanations, privacy disclosure draft, and screenshot guidance live in `docs/web-store-listing.md`.
+Store listing copy, permission explanations, privacy disclosure draft, and screenshot guidance live in `docs/web-store-listing.md`. Credentialed/manual gate evidence templates live in `docs/manual-verification.md`.
 
 A store-facing privacy policy should include:
 
@@ -72,7 +72,7 @@ A store-facing privacy policy should include:
 
 1. Run `npm run package:extension` from `v2/`.
 2. Confirm every automated gate in `artifacts/delivery-audit.json` is passing.
-3. Confirm only expected external/manual gates remain:
+3. Confirm only expected external/manual gates remain, and use `docs/manual-verification.md` to record evidence for any gate you clear:
    - optional authenticated Argus live search if `ARGUS_DELTA_TOKEN` was not provided;
    - optional authenticated ABN name-search live smoke if `ABN_GUID` / `COURTLENS_ABN_GUID` was not provided;
    - operator-assisted authenticated/targeted NSW workflow if a login-specific target was requested.
@@ -82,4 +82,4 @@ A store-facing privacy policy should include:
 7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums, confirm the local release ZIP matches CI byte-for-byte, and confirm local/CI screenshot evidence is present, checksummed, and dimension-validated.
 8. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
 9. Upload `artifacts/argus-delta-courtlens.zip`.
-10. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/SHA256SUMS`, and `artifacts/screenshots/*.png` with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.
+10. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/SHA256SUMS`, `artifacts/screenshots/*.png`, and any completed manual-verification evidence with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.

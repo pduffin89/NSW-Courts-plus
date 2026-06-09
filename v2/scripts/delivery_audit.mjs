@@ -248,13 +248,14 @@ const featureMatrix = [
     { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
   ]),
   feature('User-facing documentation and operator handoff', [
-    'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md', 'docs/web-store-listing.md', 'artifacts/screenshots/*.png'
+    'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md', 'docs/web-store-listing.md', 'docs/manual-verification.md', 'artifacts/screenshots/*.png'
   ], [
     { name: 'README exists', ok: fileExists('README.md') },
-    { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md', 'release-readiness.md', 'web-store-listing.md'].every((name) => fileExists(`docs/${name}`)) },
-    { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator']) },
+    { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md', 'release-readiness.md', 'web-store-listing.md', 'manual-verification.md'].every((name) => fileExists(`docs/${name}`)) },
+    { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator', 'docs/manual-verification.md']) },
     { name: 'release readiness doc includes Web Store permission and upload checklist', ok: fileContains('docs/release-readiness.md', ['Permission justification', 'Data use disclosure draft', 'Final upload checklist', 'archive.sha256', 'npm run audit:release-readiness', 'docs/web-store-listing.md']) },
     { name: 'Chrome Web Store listing handoff covers listing copy, privacy, permissions, screenshots, and QA', ok: fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance', 'npm run verify:ci-artifact-parity']) },
+    { name: 'manual verification runbook covers credentialed and operator gates without secrets', ok: fileContains('docs/manual-verification.md', ['Manual and credentialed verification runbook', 'Credentialed Argus smoke', 'Credentialed ABN name-search smoke', 'Operator NSW workflow smoke', 'Do not paste secrets']) },
     { name: 'release screenshots are generated from non-sensitive fixtures', ok: gateOk('release-screenshot-capture') && screenshotChecks.every((check) => check.exists) },
     { name: 'release readiness verifier exists and writes evidence JSON', ok: fileContains('scripts/release_readiness_audit.mjs', ['release-readiness.json', 'writeFileSync']) },
     { name: 'release checksums writer exists and covers ZIP, evidence JSON, and screenshots', ok: fileContains('scripts/write_checksums.mjs', ['SHA256SUMS', 'argus-delta-courtlens.zip', 'delivery-audit.json', 'release-readiness.json', 'screenshots/01-overview.png', 'screenshots/04-settings.png']) },
