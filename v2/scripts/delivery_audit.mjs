@@ -239,8 +239,9 @@ const featureMatrix = [
     'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md'
   ], [
     { name: 'README exists', ok: fileExists('README.md') },
-    { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md'].every((name) => fileExists(`docs/${name}`)) },
+    { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md', 'release-readiness.md'].every((name) => fileExists(`docs/${name}`)) },
     { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator']) },
+    { name: 'release readiness doc includes Web Store permission and upload checklist', ok: fileContains('docs/release-readiness.md', ['Permission justification', 'Data use disclosure draft', 'Final upload checklist', 'archive.sha256']) },
     { name: 'README lists final delivery gate', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery']) },
   ]),
 ];
@@ -313,8 +314,8 @@ const criteria = [
     status: gates.find((gate) => gate.label === 'release-extension-smoke')?.ok ? 'pass' : 'fail',
   },
   {
-    requirement: 'Built dist and release archive pass secret-leak audit',
-    evidence: ['npm run audit:secrets', 'scripts/secret_audit.mjs', 'dist/', 'artifacts/argus-delta-courtlens.zip'],
+    requirement: 'Source tree, built dist, and release archive pass secret-leak audit',
+    evidence: ['npm run audit:secrets', 'scripts/secret_audit.mjs', 'source/docs/tests/scripts', 'dist/', 'artifacts/argus-delta-courtlens.zip'],
     status: gates.find((gate) => gate.label === 'release-secret-audit')?.ok ? 'pass' : 'fail',
   },
   {

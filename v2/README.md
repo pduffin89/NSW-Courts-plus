@@ -83,6 +83,8 @@ extension/
     styles/            # shadcn-like Courtlens CSS
 ```
 
+Release upload checklist and Chrome Web Store disclosure notes live in `docs/release-readiness.md`.
+
 ## Verification status
 
 The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` / `npm run audit:delivery` are the final evidence gates. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.

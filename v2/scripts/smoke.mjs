@@ -17,7 +17,9 @@ const required = [
   'docs/providers.md',
   'docs/argus-delta-api.md',
   'docs/document-applications.md',
-  'docs/smoke-testing.md'
+  'docs/smoke-testing.md',
+  'docs/privacy-security.md',
+  'docs/release-readiness.md'
 ];
 
 const missing = required.filter((path) => !existsSync(join(root, path)));
