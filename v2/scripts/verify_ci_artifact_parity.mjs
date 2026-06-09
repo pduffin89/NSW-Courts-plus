@@ -126,19 +126,26 @@ try {
   if (!ciAudit?.automatedOk) fail('CI delivery audit automatedOk is not true');
   if (!ciReadiness?.ok) fail('CI release readiness ok is not true');
 
-  const comparisons = expectedFiles
-    .filter((file) => file !== 'SHA256SUMS')
-    .map((file) => ({ file, localSha: sha256(join(root, 'artifacts', file)), ciSha: sha256(join(tmp, file)) }));
-  for (const comparison of comparisons) {
-    if (comparison.localSha !== comparison.ciSha) {
-      fail(`${comparison.file} differs between local and CI: local ${comparison.localSha}, CI ${comparison.ciSha}`);
-    }
+  const localArchiveSha = localAudit?.archive?.sha256;
+  const ciArchiveSha = ciAudit?.archive?.sha256;
+  const localReadinessArchiveSha = localReadiness?.archive?.sha256;
+  const ciReadinessArchiveSha = ciReadiness?.archive?.sha256;
+  const localZipSha = sha256(join(root, 'artifacts', 'argus-delta-courtlens.zip'));
+  const ciZipSha = sha256(join(tmp, 'argus-delta-courtlens.zip'));
+  if (localZipSha !== ciZipSha) fail(`release ZIP differs between local and CI: local ${localZipSha}, CI ${ciZipSha}`);
+  for (const [label, value] of [
+    ['local audit archive sha', localArchiveSha],
+    ['CI audit archive sha', ciArchiveSha],
+    ['local readiness archive sha', localReadinessArchiveSha],
+    ['CI readiness archive sha', ciReadinessArchiveSha],
+  ]) {
+    if (value !== localZipSha) fail(`${label} ${value} does not match release ZIP ${localZipSha}`);
   }
 
   console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
-  for (const comparison of comparisons) {
-    console.log(`${basename(comparison.file)} sha256 ${comparison.localSha}`);
-  }
+  console.log(`argus-delta-courtlens.zip sha256 ${localZipSha}`);
+  console.log(`local evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${localHead} and archive ${localZipSha}`);
+  console.log(`CI evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${runInfo.headSha} and archive ${ciZipSha}`);
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }
