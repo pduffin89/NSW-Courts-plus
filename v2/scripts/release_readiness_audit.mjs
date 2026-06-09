@@ -82,7 +82,8 @@ if (audit.automatedOk !== true) fail('delivery-audit automatedOk is not true');
 if (!Array.isArray(audit.featureMatrix) || !audit.featureMatrix.every((item) => item.status === 'pass')) fail('featureMatrix is not fully passing');
 if (!fileContains('package.json', ['"verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs"'])) fail('package.json missing verify:ci-artifact-parity command');
 if (!fileContains('scripts/verify_ci_artifact_parity.mjs', ['gh', 'run', 'download', 'SHA256SUMS', 'release ZIP differs between local and CI'])) fail('CI artifact parity verifier is missing expected checks');
-if (!fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity', 'argus-delta-courtlens', 'byte-for-byte'])) fail('release-readiness docs do not describe CI artifact parity verification');
+if (!fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity', 'argus-delta-courtlens', 'byte-for-byte', 'docs/web-store-listing.md'])) fail('release-readiness docs do not describe CI artifact parity verification and store listing handoff');
+if (!fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance'])) fail('Chrome Web Store listing handoff is missing required release sections');
 if (!fileContains('../.github/workflows/courtlens-v2.yml', ['workflow_dispatch:', 'ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}'])) fail('CI workflow must support manual credentialed live-smoke reruns with optional secrets');
 
 for (const criterion of audit.criteria || []) {

@@ -57,6 +57,8 @@ Courtlens stores user settings in Chrome local extension storage, including opti
 
 ## Privacy policy notes
 
+Store listing copy, permission explanations, privacy disclosure draft, and screenshot guidance live in `docs/web-store-listing.md`.
+
 A store-facing privacy policy should include:
 
 - Data is processed locally except when the user triggers provider searches or Gmail compose handoff.
@@ -78,5 +80,6 @@ A store-facing privacy policy should include:
 5. After adding or rotating those secrets, rerun GitHub Actions `Courtlens v2 CI` manually via `workflow_dispatch` so the credentialed live-smoke branches run without requiring another source change.
 6. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
 7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums and confirm the local release ZIP matches CI byte-for-byte.
-8. Upload `artifacts/argus-delta-courtlens.zip`.
-9. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
+8. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
+9. Upload `artifacts/argus-delta-courtlens.zip`.
+10. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
