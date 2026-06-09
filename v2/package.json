@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && node scripts/build.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
+    "package:extension": "npm run verify && node scripts/package_extension.mjs",
     "verify": "npm test && npm run build && npm run smoke"
   },
   "dependencies": {

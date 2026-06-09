@@ -52,7 +52,8 @@ npm test        # Vitest parser/provider/sidebar/content tests
 npm run build   # TypeScript + Vite production build
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live  # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
-npm run verify      # Full local verification gate
+npm run verify             # Full local verification gate
+npm run package:extension  # Verify, then create artifacts/argus-delta-courtlens.zip
 ```
 
 ## Project layout
