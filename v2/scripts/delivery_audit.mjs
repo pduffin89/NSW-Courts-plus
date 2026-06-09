@@ -229,10 +229,11 @@ const featureMatrix = [
     { name: 'real extension smoke verifies settings save/mask/persist', ok: fileContains('scripts/extension_load_smoke.py', ['Settings save/mask/persist', 'courtlens-smoke-token-do-not-leak', 'chrome.storage.local']) },
   ]),
   feature('Total smoke, CI, release packaging, provenance, and release cleanliness', [
-    'scripts/smoke.mjs', 'scripts/live_smoke.mjs', 'scripts/live_extension_smoke.py', 'scripts/release_extension_smoke.py', 'scripts/package_extension.mjs', 'scripts/package_determinism.mjs', '.github/workflows/courtlens-v2.yml'
+    'scripts/smoke.mjs', 'scripts/live_smoke.mjs', 'scripts/live_extension_smoke.py', 'scripts/release_extension_smoke.py', 'scripts/package_extension.mjs', 'scripts/package_determinism.mjs', 'scripts/verify_ci_artifact_parity.mjs', '.github/workflows/courtlens-v2.yml'
   ], [
     { name: 'all smoke scripts exist', ok: ['smoke.mjs', 'live_smoke.mjs', 'live_extension_smoke.py', 'release_extension_smoke.py', 'operator_live_smoke.py'].every((name) => fileExists(`scripts/${name}`)) },
     { name: 'packaging and determinism scripts exist', ok: fileExists('scripts/package_extension.mjs') && fileExists('scripts/package_determinism.mjs') },
+    { name: 'CI artifact parity verifier exists and is documented', ok: fileContains('scripts/verify_ci_artifact_parity.mjs', ['gh', 'run', 'download', 'SHA256SUMS']) && fileContains('package.json', ['verify:ci-artifact-parity']) && fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity']) },
     { name: 'CI workflow exists at repository root', ok: existsSync(join(root, '..', '.github/workflows/courtlens-v2.yml')) },
     { name: 'CI workflow passes optional live-smoke secrets to delivery and live jobs', ok: fileContains('../.github/workflows/courtlens-v2.yml', ['ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}', 'Live provider smoke (optional secrets)']) },
     { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },

@@ -76,6 +76,6 @@ A store-facing privacy policy should include:
    - operator-assisted authenticated/targeted NSW workflow if a login-specific target was requested.
 4. If credentialed provider coverage is required, configure GitHub repository secrets `ARGUS_DELTA_TOKEN` and either `ABN_GUID` or `COURTLENS_ABN_GUID`; the CI workflow passes them to both the full delivery audit and standalone live-smoke jobs.
 5. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
-6. Confirm local and CI artifact SHA-256 values match.
+6. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums and confirm the local release ZIP matches CI byte-for-byte.
 7. Upload `artifacts/argus-delta-courtlens.zip`.
 8. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.

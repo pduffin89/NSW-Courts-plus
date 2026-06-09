@@ -58,6 +58,7 @@ npm run audit:secrets # Source, dist, and release archive secret-leak checks
 npm run audit:package-determinism # Repeated package SHA-256 stability check
 npm run audit:release-readiness # Pre-upload audit/ZIP/manifest/provenance cross-check
 npm run write:checksums # Write artifacts/SHA256SUMS for release evidence
+npm run verify:ci-artifact-parity -- --run-id <run-id> # Compare local release artifacts to CI
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry
@@ -89,4 +90,4 @@ Release upload checklist and Chrome Web Store disclosure notes live in `docs/rel
 
 ## Verification status
 
-The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
+The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. After CI completes, `npm run verify:ci-artifact-parity -- --run-id <run-id>` verifies the uploaded CI artifact checksums and compares the local release ZIP with CI byte-for-byte. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.

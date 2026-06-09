@@ -1,0 +1,144 @@
+import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+
+const root = process.cwd();
+const repoRoot = join(root, '..');
+const workflowName = 'Courtlens v2 CI';
+const artifactName = 'argus-delta-courtlens';
+const expectedFiles = [
+  'argus-delta-courtlens.zip',
+  'delivery-audit.json',
+  'release-readiness.json',
+  'SHA256SUMS',
+];
+
+function fail(message) {
+  throw new Error(`CI artifact parity failed: ${message}`);
+}
+
+function run(command, args, options = {}) {
+  const result = spawnSync(command, args, {
+    cwd: options.cwd || root,
+    encoding: options.encoding || 'utf8',
+    stdio: options.stdio || ['ignore', 'pipe', 'pipe'],
+    maxBuffer: options.maxBuffer || 20 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    const details = [result.stderr, result.stdout].filter(Boolean).join('\n').trim();
+    fail(`${command} ${args.join(' ')} exited ${result.status}${details ? `: ${details}` : ''}`);
+  }
+  return result.stdout;
+}
+
+function parseArgs(argv) {
+  const parsed = { runId: process.env.COURTLENS_CI_RUN_ID || '', allowDifferentHead: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--run-id') parsed.runId = argv[++index] || '';
+    else if (arg === '--allow-different-head') parsed.allowDifferentHead = true;
+    else if (arg === '--help' || arg === '-h') {
+      console.log(`Usage: npm run verify:ci-artifact-parity -- [--run-id <id>] [--allow-different-head]\n\nRequires GitHub CLI authentication. Run after npm run package:extension.\nBy default, compares local artifacts to the latest completed ${workflowName} run.`);
+      process.exit(0);
+    } else fail(`unknown argument ${arg}`);
+  }
+  return parsed;
+}
+
+function sha256(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+function assertExists(path) {
+  if (!existsSync(path)) fail(`${path} is missing`);
+}
+
+function latestSuccessfulRun() {
+  const json = run('gh', [
+    'run', 'list',
+    '--workflow', workflowName,
+    '--status', 'success',
+    '--limit', '1',
+    '--json', 'databaseId,headSha,conclusion,status,url',
+  ], { cwd: repoRoot });
+  const runs = JSON.parse(json);
+  if (!Array.isArray(runs) || runs.length === 0) fail(`no successful ${workflowName} run found`);
+  return runs[0];
+}
+
+function runDetails(runId) {
+  const json = run('gh', ['run', 'view', String(runId), '--json', 'databaseId,headSha,conclusion,status,url'], { cwd: repoRoot });
+  return JSON.parse(json);
+}
+
+function readJson(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+function verifyChecksums(dir) {
+  const sumsPath = join(dir, 'SHA256SUMS');
+  const lines = readFileSync(sumsPath, 'utf8').split('\n').map((line) => line.trim()).filter(Boolean);
+  const seen = new Set();
+  for (const line of lines) {
+    const match = line.match(/^([0-9a-f]{64})  (.+)$/i);
+    if (!match) fail(`invalid checksum line in ${sumsPath}: ${line}`);
+    const [, expectedSha, relativePath] = match;
+    const filePath = join(dir, relativePath);
+    assertExists(filePath);
+    const actualSha = sha256(filePath);
+    if (actualSha !== expectedSha) fail(`${relativePath} checksum mismatch: expected ${expectedSha}, got ${actualSha}`);
+    seen.add(relativePath);
+  }
+  for (const file of expectedFiles.filter((name) => name !== 'SHA256SUMS')) {
+    if (!seen.has(file)) fail(`SHA256SUMS does not include ${file}`);
+  }
+}
+
+const args = parseArgs(process.argv.slice(2));
+const runInfo = args.runId ? runDetails(args.runId) : latestSuccessfulRun();
+if (runInfo.status !== 'completed' || runInfo.conclusion !== 'success') {
+  fail(`run ${runInfo.databaseId || args.runId} is not completed/success: ${runInfo.status}/${runInfo.conclusion}`);
+}
+
+for (const file of expectedFiles) assertExists(join(root, 'artifacts', file));
+verifyChecksums(join(root, 'artifacts'));
+
+const localAudit = readJson(join(root, 'artifacts', 'delivery-audit.json'));
+const localReadiness = readJson(join(root, 'artifacts', 'release-readiness.json'));
+const localHead = localAudit?.git?.headSha;
+if (!localHead || localReadiness?.gitHead !== localHead) fail('local audit/readiness git heads are missing or inconsistent');
+if (!args.allowDifferentHead && runInfo.headSha !== localHead) {
+  fail(`CI run head ${runInfo.headSha} does not match local audit head ${localHead}; rerun npm run package:extension or pass --allow-different-head intentionally`);
+}
+
+const tmp = mkdtempSync(join(tmpdir(), 'courtlens-ci-artifacts-'));
+try {
+  run('gh', ['run', 'download', String(runInfo.databaseId), '--name', artifactName, '--dir', tmp], { cwd: repoRoot });
+  for (const file of expectedFiles) assertExists(join(tmp, file));
+  verifyChecksums(tmp);
+
+  const ciAudit = readJson(join(tmp, 'delivery-audit.json'));
+  const ciReadiness = readJson(join(tmp, 'release-readiness.json'));
+  if (ciAudit?.git?.headSha !== runInfo.headSha) fail(`CI audit head ${ciAudit?.git?.headSha} does not match run head ${runInfo.headSha}`);
+  if (ciReadiness?.gitHead !== runInfo.headSha) fail(`CI readiness head ${ciReadiness?.gitHead} does not match run head ${runInfo.headSha}`);
+  if (!ciAudit?.automatedOk) fail('CI delivery audit automatedOk is not true');
+  if (!ciReadiness?.ok) fail('CI release readiness ok is not true');
+
+  const comparisons = expectedFiles
+    .filter((file) => file !== 'SHA256SUMS')
+    .map((file) => ({ file, localSha: sha256(join(root, 'artifacts', file)), ciSha: sha256(join(tmp, file)) }));
+  for (const comparison of comparisons) {
+    if (comparison.localSha !== comparison.ciSha) {
+      fail(`${comparison.file} differs between local and CI: local ${comparison.localSha}, CI ${comparison.ciSha}`);
+    }
+  }
+
+  console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
+  for (const comparison of comparisons) {
+    console.log(`${basename(comparison.file)} sha256 ${comparison.localSha}`);
+  }
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}

@@ -13,6 +13,7 @@
     "audit:package-determinism": "node scripts/package_determinism.mjs",
     "audit:release-readiness": "node scripts/release_readiness_audit.mjs",
     "write:checksums": "node scripts/write_checksums.mjs",
+    "verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
