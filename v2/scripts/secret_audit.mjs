@@ -6,6 +6,23 @@ const root = process.cwd();
 const dist = join(root, 'dist');
 const archive = join(root, 'artifacts', 'argus-delta-courtlens.zip');
 
+const sourceScanRoots = [
+  'extension',
+  'fixtures',
+  'scripts',
+  'tests',
+  'docs',
+  'README.md',
+  'CHANGELOG.md',
+  'package.json',
+  'tsconfig.json',
+  'vite.config.ts',
+  'vitest.config.ts',
+];
+const sourceScanExcludes = new Set([
+  'scripts/secret_audit.mjs',
+]);
+
 const forbiddenArchiveEntries = [
   /^\.env(?:\.|$)/,
   /(?:^|\/)\.env(?:\.|$)/,
@@ -28,7 +45,7 @@ const secretPatterns = [
   { label: 'hardcoded ABN GUID setting', pattern: /abnGuid\s*[:=]\s*["'`][0-9a-fA-F-]{24,}["'`]/ },
 ];
 
-const textExtensions = new Set(['.js', '.json', '.html', '.css', '.txt', '.md', '.map']);
+const textExtensions = new Set(['.js', '.mjs', '.ts', '.tsx', '.py', '.json', '.html', '.css', '.txt', '.md', '.map']);
 
 function fail(message) {
   throw new Error(`Secret audit failed: ${message}`);
@@ -56,6 +73,26 @@ function assertNoSecrets(label, path, content) {
   }
 }
 
+function sourceFiles() {
+  const files = [];
+  for (const relativePath of sourceScanRoots) {
+    const fullPath = join(root, relativePath);
+    if (!existsSync(fullPath)) continue;
+    if (statSync(fullPath).isDirectory()) files.push(...walkFiles(fullPath, relativePath));
+    else files.push({ fullPath, relativePath });
+  }
+  return files;
+}
+
+function assertNoForbiddenSourceSecretFiles() {
+  for (const file of sourceFiles()) {
+    if (file.relativePath === '.env.example') continue;
+    if (forbiddenArchiveEntries.some((pattern) => pattern.test(file.relativePath))) {
+      fail(`source tree contains forbidden secret-like file ${file.relativePath}`);
+    }
+  }
+}
+
 function readArchiveEntry(entry) {
   const result = spawnSync('unzip', ['-p', archive, entry], { cwd: root, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 });
   if (result.status !== 0) fail(`unable to read archive entry ${entry}`);
@@ -64,6 +101,16 @@ function readArchiveEntry(entry) {
 
 if (!existsSync(join(dist, 'manifest.json'))) fail('dist/manifest.json missing; run npm run build first');
 if (!existsSync(archive)) fail('release archive missing; run node scripts/package_extension.mjs first');
+
+assertNoForbiddenSourceSecretFiles();
+
+let scannedSourceFiles = 0;
+for (const file of sourceFiles()) {
+  if (sourceScanExcludes.has(file.relativePath)) continue;
+  if (!textExtensions.has(extensionOf(file.relativePath))) continue;
+  scannedSourceFiles += 1;
+  assertNoSecrets('source', file.relativePath, readFileSync(file.fullPath, 'utf8'));
+}
 
 let scannedDistFiles = 0;
 for (const file of walkFiles(dist)) {
@@ -87,4 +134,4 @@ for (const entry of archiveEntries) {
   assertNoSecrets('archive', entry, readArchiveEntry(entry));
 }
 
-console.log(`Secret audit passed: scanned ${scannedDistFiles} dist text file(s), ${scannedArchiveFiles} release archive text file(s), and ${archiveEntries.length} archive entr${archiveEntries.length === 1 ? 'y' : 'ies'}.`);
+console.log(`Secret audit passed: scanned ${scannedSourceFiles} source text file(s), ${scannedDistFiles} dist text file(s), ${scannedArchiveFiles} release archive text file(s), and ${archiveEntries.length} archive entr${archiveEntries.length === 1 ? 'y' : 'ies'}.`);

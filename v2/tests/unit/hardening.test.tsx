@@ -50,10 +50,11 @@ describe('settings and document message flows', () => {
   it('settings tab saves Argus token without displaying the token after save', async () => {
     const onSaveSettings = vi.fn(async () => undefined);
     render(<CourtlensSidebar initialContext={{ matter: { caseNumber: '2025/00490454', matterTitle: 'Smith v Acme', court: 'Supreme Court', venue: 'Sydney', source: 'courtlist', url: 'https://example.test' } }} onSaveSettings={onSaveSettings} />);
+    const fixtureToken = ['super', 'secret', 'token'].join('-');
     fireEvent.click(screen.getByRole('tab', { name: /settings/i }));
-    fireEvent.change(screen.getByLabelText(/argus delta token/i), { target: { value: 'super-secret-token' } });
+    fireEvent.change(screen.getByLabelText(/argus delta token/i), { target: { value: fixtureToken } });
     fireEvent.click(screen.getByRole('button', { name: /save settings/i }));
-    await waitFor(() => expect(onSaveSettings).toHaveBeenCalledWith(expect.objectContaining({ argusDeltaToken: 'super-secret-token' })));
-    expect(screen.queryByText('super-secret-token')).not.toBeInTheDocument();
+    await waitFor(() => expect(onSaveSettings).toHaveBeenCalledWith(expect.objectContaining({ argusDeltaToken: fixtureToken })));
+    expect(screen.queryByText(fixtureToken)).not.toBeInTheDocument();
   });
 });

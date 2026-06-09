@@ -33,7 +33,7 @@ npm run audit:secrets
 
 `scripts/extension_policy_audit.mjs` verifies MV3 manifest structure, exact permissions/host permissions, scoped content-script matches, no broad URL grants like `<all_urls>`, no insecure HTTP grants, and no obvious remote-code/eval patterns in built JavaScript bundles.
 
-`scripts/secret_audit.mjs` scans built text artifacts and the release zip for private-key blocks, JWT literals, common API token prefixes, hardcoded bearer tokens, hardcoded `argusDeltaToken`/`abnGuid` values, and secret-like files accidentally included in the release archive.
+`scripts/secret_audit.mjs` scans first-party source/docs/tests/scripts, built text artifacts, and the release zip for private-key blocks, JWT literals, common API token prefixes, hardcoded bearer tokens, hardcoded `argusDeltaToken`/`abnGuid` values, and secret-like files accidentally included in the release archive.
 
 ## What smoke verifies
 

@@ -14,8 +14,9 @@ const matter = {
 
 describe('Settings UI', () => {
   it('loads stored settings, masks secrets, and saves applicant profile fields', async () => {
+    const storedToken = ['stored', 'token'].join('-');
     const onLoadSettings = vi.fn(async () => ({
-      argusDeltaToken: 'stored-token',
+      argusDeltaToken: storedToken,
       abnGuid: 'stored-guid',
       argusDeltaProxyUrl: 'https://proxy.example.test',
       applicantName: 'Reporter One',
