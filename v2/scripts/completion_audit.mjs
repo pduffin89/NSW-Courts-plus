@@ -111,6 +111,8 @@ const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentia
   standaloneLiveSmokeArtifactEvidence?.status === 'pass'
   && standaloneLiveSmokeArtifactEvidence.headSha === gitHead
   && standaloneLiveSmokeArtifactEvidence.liveSmoke?.credentialedProviderStatus === 'pass'
+  && standaloneLiveSmokeArtifactEvidence.runEvent === 'workflow_dispatch'
+  && standaloneLiveSmokeArtifactEvidence.requiredWorkflowDispatch === true
 );
 const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok || Boolean(
   operatorSmokeEvidence?.status === 'pass'

@@ -28,14 +28,15 @@ function run(command, args, options = {}) {
 }
 
 function parseArgs(argv) {
-  const parsed = { runId: process.env.COURTLENS_CI_RUN_ID || '', requireCredentialed: false, allowDifferentHead: false };
+  const parsed = { runId: process.env.COURTLENS_CI_RUN_ID || '', requireCredentialed: false, allowDifferentHead: false, requireWorkflowDispatch: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--run-id') parsed.runId = argv[++index] || '';
     else if (arg === '--require-credentialed') parsed.requireCredentialed = true;
     else if (arg === '--allow-different-head') parsed.allowDifferentHead = true;
+    else if (arg === '--require-workflow-dispatch') parsed.requireWorkflowDispatch = true;
     else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: npm run verify:live-smoke-artifact -- [--run-id <id>] [--require-credentialed] [--allow-different-head]\n\nVerifies the standalone ${artifactName} artifact uploaded by ${workflowName}.`);
+      console.log(`Usage: npm run verify:live-smoke-artifact -- [--run-id <id>] [--require-credentialed] [--allow-different-head] [--require-workflow-dispatch]\n\nVerifies the standalone ${artifactName} artifact uploaded by ${workflowName}. Use --require-workflow-dispatch for credentialed/manual release reruns.`);
       process.exit(0);
     } else fail(`unknown argument ${arg}`);
   }
@@ -73,6 +74,9 @@ const runInfo = args.runId ? runDetails(args.runId) : latestSuccessfulRun();
 if (runInfo.status !== 'completed' || runInfo.conclusion !== 'success') {
   fail(`run ${runInfo.databaseId || args.runId} is not completed/success: ${runInfo.status}/${runInfo.conclusion}`);
 }
+if (args.requireWorkflowDispatch && runInfo.event !== 'workflow_dispatch') {
+  fail(`run ${runInfo.databaseId || args.runId} event ${runInfo.event || 'unknown'} is not workflow_dispatch`);
+}
 const currentHead = localHead();
 if (!args.allowDifferentHead && runInfo.headSha !== currentHead) {
   fail(`CI run head ${runInfo.headSha} does not match local HEAD ${currentHead}; pass --allow-different-head intentionally`);
@@ -93,10 +97,11 @@ try {
   const evidence = {
     generatedAt: new Date().toISOString(),
     status: 'pass',
-    command: `npm run verify:live-smoke-artifact -- --run-id ${runInfo.databaseId}${args.requireCredentialed ? ' --require-credentialed' : ''}`,
+    command: `npm run verify:live-smoke-artifact -- --run-id ${runInfo.databaseId}${args.requireCredentialed ? ' --require-credentialed' : ''}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`,
     runId: String(runInfo.databaseId),
     runUrl: runInfo.url,
     runEvent: runInfo.event,
+    requiredWorkflowDispatch: args.requireWorkflowDispatch,
     headSha: runInfo.headSha,
     localHeadSha: currentHead,
     artifactName,
