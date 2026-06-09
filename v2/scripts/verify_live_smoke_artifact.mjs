@@ -91,13 +91,23 @@ try {
   if (liveSmoke?.gitHead !== runInfo.headSha) fail(`live-smoke gitHead ${liveSmoke?.gitHead} does not match run head ${runInfo.headSha}`);
   if (liveSmoke?.status !== 'pass') fail(`live-smoke status ${liveSmoke?.status} is not pass`);
   const credentialedStatus = liveSmoke?.credentialedProviderSmoke?.status;
+  const degradedChecks = Array.isArray(liveSmoke?.checks) ? liveSmoke.checks.filter((check) => check.status === 'upstream-unavailable').map((check) => check.name) : [];
   if (args.requireCredentialed && credentialedStatus !== 'pass') {
     fail(`credentialed provider smoke status ${credentialedStatus} is not pass`);
   }
+  const command = `npm run verify:live-smoke-artifact -- --run-id ${runInfo.databaseId}${args.requireCredentialed ? ' --require-credentialed' : ''}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`;
+  const previousEvidence = existsSync(evidencePath) ? readJson(evidencePath) : null;
+  const reusableGeneratedAt = previousEvidence?.status === 'pass'
+    && previousEvidence?.command === command
+    && previousEvidence?.runId === String(runInfo.databaseId)
+    && previousEvidence?.headSha === runInfo.headSha
+    && previousEvidence?.localHeadSha === currentHead
+    ? previousEvidence.generatedAt
+    : null;
   const evidence = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: reusableGeneratedAt || new Date().toISOString(),
     status: 'pass',
-    command: `npm run verify:live-smoke-artifact -- --run-id ${runInfo.databaseId}${args.requireCredentialed ? ' --require-credentialed' : ''}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`,
+    command,
     runId: String(runInfo.databaseId),
     runUrl: runInfo.url,
     runEvent: runInfo.event,
@@ -110,6 +120,8 @@ try {
       credentialedProviderStatus: credentialedStatus,
       credentialsPresent: liveSmoke.credentialsPresent,
       checkCount: Array.isArray(liveSmoke.checks) ? liveSmoke.checks.length : null,
+      degradedChecks,
+      nonSecretLiveChecksOk: degradedChecks.length === 0,
     },
   };
   mkdirSync(join(root, 'artifacts'), { recursive: true });

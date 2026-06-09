@@ -114,6 +114,20 @@ const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentia
   && standaloneLiveSmokeArtifactEvidence.runEvent === 'workflow_dispatch'
   && standaloneLiveSmokeArtifactEvidence.requiredWorkflowDispatch === true
 );
+const liveNonSecretChecksOk = liveProviderCriterion?.status === 'pass' || Boolean(
+  standaloneLiveSmokeArtifactEvidence?.status === 'pass'
+  && standaloneLiveSmokeArtifactEvidence.headSha === gitHead
+  && standaloneLiveSmokeArtifactEvidence.runEvent === 'workflow_dispatch'
+  && standaloneLiveSmokeArtifactEvidence.requiredWorkflowDispatch === true
+  && standaloneLiveSmokeArtifactEvidence.liveSmoke?.nonSecretLiveChecksOk === true
+) || Boolean(
+  ciParityEvidence?.status === 'pass'
+  && ciParityEvidence.headSha === gitHead
+  && ciParityEvidence.runEvent === 'workflow_dispatch'
+  && ciParityEvidence.requiredWorkflowDispatch === true
+  && ciParityEvidence.liveSmoke?.ciNonSecretLiveChecksOk === true
+);
+const liveProviderOk = liveCredentialedOk && liveNonSecretChecksOk;
 const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok || Boolean(
   operatorSmokeEvidence?.status === 'pass'
   && operatorSmokeEvidence.gitHead === gitHead
@@ -133,7 +147,7 @@ const ciArtifactParityOk = ciParityManual.ok || Boolean(
 );
 const criteriaFailures = deliveryCriteria.filter((criterion) => {
   if (criterion.status === 'pass') return false;
-  if (criterion.requirement.startsWith('Live provider smoke')) return criterion.status !== 'pass' || !liveCredentialedOk;
+  if (criterion.requirement.startsWith('Live provider smoke')) return !liveProviderOk;
   if (criterion.requirement.startsWith('Operator-assisted smoke')) return !operatorOk;
   return true;
 });
@@ -205,7 +219,7 @@ const checklist = [
   check(
     'Authenticated Argus and ABN credentialed provider smoke is proven',
     'total smoketest',
-    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, liveSmokeEvidence?.credentialedProviderSmoke?.status && `live-smoke:${liveSmokeEvidence.credentialedProviderSmoke.status}`, standaloneLiveSmokeArtifactEvidence?.liveSmoke?.credentialedProviderStatus && `standalone-live-smoke-artifact:${standaloneLiveSmokeArtifactEvidence.liveSmoke.credentialedProviderStatus}`, ...credentialedManual.evidence],
+    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, liveSmokeEvidence?.credentialedProviderSmoke?.status && `live-smoke:${liveSmokeEvidence.credentialedProviderSmoke.status}`, standaloneLiveSmokeArtifactEvidence?.liveSmoke?.credentialedProviderStatus && `standalone-live-smoke-artifact:${standaloneLiveSmokeArtifactEvidence.liveSmoke.credentialedProviderStatus}`, standaloneLiveSmokeArtifactEvidence?.liveSmoke?.degradedChecks?.length ? `standalone degraded:${standaloneLiveSmokeArtifactEvidence.liveSmoke.degradedChecks.join(',')}` : null, ciParityEvidence?.liveSmoke?.ciDegradedChecks?.length ? `CI degraded:${ciParityEvidence.liveSmoke.ciDegradedChecks.join(',')}` : null, ...credentialedManual.evidence],
     liveCredentialedOk,
     liveCredentialedOk ? [] : ['ARGUS_DELTA_TOKEN and ABN_GUID/COURTLENS_ABN_GUID credentialed branches remain unverified']
   ),

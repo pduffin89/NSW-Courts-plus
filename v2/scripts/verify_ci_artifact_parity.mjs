@@ -8,6 +8,7 @@ const root = process.cwd();
 const repoRoot = join(root, '..');
 const workflowName = 'Courtlens v2 CI';
 const artifactName = 'argus-delta-courtlens';
+const evidencePath = join(root, 'artifacts', 'ci-artifact-parity.json');
 const expectedFiles = [
   'argus-delta-courtlens.zip',
   'delivery-audit.json',
@@ -148,6 +149,8 @@ try {
   if (localLiveSmoke?.gitHead !== localHead) fail(`local live-smoke head ${localLiveSmoke?.gitHead} does not match local audit head ${localHead}`);
   if (ciLiveSmoke?.status !== 'pass') fail(`CI live-smoke status ${ciLiveSmoke?.status} is not pass`);
   if (localLiveSmoke?.status !== 'pass') fail(`local live-smoke status ${localLiveSmoke?.status} is not pass`);
+  const localDegradedChecks = Array.isArray(localLiveSmoke?.checks) ? localLiveSmoke.checks.filter((check) => check.status === 'upstream-unavailable').map((check) => check.name) : [];
+  const ciDegradedChecks = Array.isArray(ciLiveSmoke?.checks) ? ciLiveSmoke.checks.filter((check) => check.status === 'upstream-unavailable').map((check) => check.name) : [];
   if (localLiveSmoke?.credentialedProviderSmoke?.status === 'pass' && ciLiveSmoke?.credentialedProviderSmoke?.status !== 'pass') {
     fail('local live-smoke has credentialed provider pass but CI live-smoke does not; configure CI secrets or rerun without local-only credentials');
   }
@@ -186,10 +189,19 @@ try {
     if (value !== localZipSha) fail(`${label} ${value} does not match release ZIP ${localZipSha}`);
   }
 
+  const command = `npm run verify:ci-artifact-parity -- --run-id ${runInfo.databaseId}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`;
+  const previousEvidence = existsSync(evidencePath) ? readJson(evidencePath) : null;
+  const reusableGeneratedAt = previousEvidence?.status === 'pass'
+    && previousEvidence?.command === command
+    && previousEvidence?.runId === String(runInfo.databaseId)
+    && previousEvidence?.headSha === runInfo.headSha
+    && previousEvidence?.localHeadSha === localHead
+    ? previousEvidence.generatedAt
+    : null;
   const evidence = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: reusableGeneratedAt || new Date().toISOString(),
     status: 'pass',
-    command: `npm run verify:ci-artifact-parity -- --run-id ${runInfo.databaseId}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`,
+    command,
     runId: String(runInfo.databaseId),
     runUrl: runInfo.url,
     runEvent: runInfo.event,
@@ -203,15 +215,20 @@ try {
       ciCredentialedProviderStatus: ciLiveSmoke?.credentialedProviderSmoke?.status,
       localCredentialsPresent: localLiveSmoke?.credentialsPresent,
       ciCredentialsPresent: ciLiveSmoke?.credentialsPresent,
+      localDegradedChecks,
+      ciDegradedChecks,
+      localNonSecretLiveChecksOk: localDegradedChecks.length === 0,
+      ciNonSecretLiveChecksOk: ciDegradedChecks.length === 0,
     },
     screenshotComparisons,
   };
   mkdirSync(join(root, 'artifacts'), { recursive: true });
-  writeFileSync(join(root, 'artifacts', 'ci-artifact-parity.json'), `${JSON.stringify(evidence, null, 2)}\n`);
+  writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
 
   console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
   console.log(`argus-delta-courtlens.zip sha256 ${localZipSha}`);
   console.log(`live-smoke credentialed provider status local=${localLiveSmoke?.credentialedProviderSmoke?.status}; CI=${ciLiveSmoke?.credentialedProviderSmoke?.status}`);
+  console.log(`live-smoke degraded checks local=${localDegradedChecks.join(',') || 'none'}; CI=${ciDegradedChecks.join(',') || 'none'}`);
   for (const comparison of screenshotComparisons) console.log(`${comparison.screenshot} local sha256 ${comparison.localSha}; CI sha256 ${comparison.ciSha}; dimensions ${comparison.localDimensions.width}x${comparison.localDimensions.height}`);
   console.log(`local evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${localHead} and archive ${localZipSha}`);
   console.log(`CI evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${runInfo.headSha} and archive ${ciZipSha}`);
