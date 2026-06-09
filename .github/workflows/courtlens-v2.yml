@@ -43,7 +43,7 @@ jobs:
           cache-dependency-path: v2/package-lock.json
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -64,7 +64,7 @@ jobs:
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run audit:delivery
 
       - name: Upload extension archive and audit evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: argus-delta-courtlens
           path: |
