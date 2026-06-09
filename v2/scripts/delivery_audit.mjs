@@ -131,8 +131,13 @@ const criteria = [
     status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (process.env.ARGUS_DELTA_TOKEN ? 'pass' : 'partial-external-credential-needed') : 'fail',
   },
   {
-    requirement: 'Live public NSW Caselaw page loads the real unpacked extension and sidebar',
-    evidence: ['npm run smoke:live-extension', 'scripts/live_extension_smoke.py', process.env.CASELAW_LIVE_URL || 'https://www.caselaw.nsw.gov.au/search?query=Smith&page=1'],
+    requirement: 'Live public NSW Caselaw and NSW Online Registry pages load the real unpacked extension and sidebar',
+    evidence: [
+      'npm run smoke:live-extension',
+      'scripts/live_extension_smoke.py',
+      process.env.CASELAW_LIVE_URL || 'https://www.caselaw.nsw.gov.au/search?query=Smith&page=1',
+      process.env.ONLINEREGISTRY_LIVE_URL || 'https://onlineregistry.lawlink.nsw.gov.au/content/court-lists',
+    ],
     status: gates.find((gate) => gate.label === 'live-public-extension-smoke')?.ok ? 'pass' : 'fail',
   },
   {
@@ -146,7 +151,7 @@ const criteria = [
     status: archiveReleaseClean ? 'pass' : 'fail',
   },
   {
-    requirement: 'Operator-assisted smoke on live NSW Online Registry and NSW Caselaw in a headed Chrome profile',
+    requirement: 'Operator-assisted smoke for authenticated or targeted live NSW workflows in a headed Chrome profile',
     evidence: ['npm run smoke:operator', 'scripts/operator_live_smoke.py', 'docs/smoke-testing.md#operator-assisted-live-chrome-smoke'],
     status: 'manual-operator-required',
   },

@@ -69,12 +69,14 @@ With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 
 ```bash
 npm run smoke:live-extension
-CASELAW_LIVE_URL='https://www.caselaw.nsw.gov.au/search?query=Smith&page=1' npm run smoke:live-extension
+CASELAW_LIVE_URL='https://www.caselaw.nsw.gov.au/search?query=Smith&page=1' \
+ONLINEREGISTRY_LIVE_URL='https://onlineregistry.lawlink.nsw.gov.au/content/court-lists' \
+npm run smoke:live-extension
 ```
 
-This loads `dist/` as a real unpacked MV3 extension against a live public NSW Caselaw page, verifies the floating launcher is injected by the manifest content script, clicks it, and confirms the Shadow DOM sidebar renders Overview, Research, Documents, and Settings. It is non-interactive and runs inside the delivery audit/CI under Xvfb.
+This loads `dist/` as a real unpacked MV3 extension against live public NSW Caselaw and NSW Online Registry pages. It verifies the Caselaw floating launcher, verifies live Online Registry `Courtlens` row buttons, opens both Shadow DOM sidebars, and confirms the Online Registry Documents tab can generate the bundled PDF attachments from a live row. It is non-interactive and runs inside the delivery audit/CI under Xvfb.
 
-NSW Online Registry live rows are intentionally left to the operator smoke because reaching a real matter list may require human login/navigation.
+Authenticated or targeted Online Registry workflows remain available through the operator smoke when a human browser session is needed.
 
 ## Operator-assisted live Chrome smoke
 
