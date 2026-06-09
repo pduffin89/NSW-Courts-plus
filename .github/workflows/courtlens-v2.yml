@@ -50,17 +50,16 @@ jobs:
           python -m pip install playwright
           python -m playwright install --with-deps chromium
 
-      - name: Verify tests, build, browser smoke, and unpacked extension smoke
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run verify
+      - name: Run delivery audit, smoke, and packaging
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run audit:delivery
 
-      - name: Package extension archive
-        run: node scripts/package_extension.mjs
-
-      - name: Upload extension archive
+      - name: Upload extension archive and audit evidence
         uses: actions/upload-artifact@v4
         with:
           name: argus-delta-courtlens
-          path: v2/artifacts/argus-delta-courtlens.zip
+          path: |
+            v2/artifacts/argus-delta-courtlens.zip
+            v2/artifacts/delivery-audit.json
           if-no-files-found: error
           retention-days: 14
 

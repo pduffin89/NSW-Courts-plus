@@ -11,7 +11,8 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "package:extension": "npm run verify && node scripts/package_extension.mjs",
-    "verify": "npm test && npm run build && npm run smoke"
+    "verify": "npm test && npm run build && npm run smoke",
+    "audit:delivery": "node scripts/delivery_audit.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

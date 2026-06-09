@@ -12,6 +12,14 @@ This runs:
 2. `npm run build`
 3. `npm run smoke`
 
+For final release evidence, run the delivery audit:
+
+```bash
+npm run audit:delivery
+```
+
+This runs unit tests, the production build, browser/extension smoke, live provider smoke, and packaging from the verified `dist/` output. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, package metadata, and any external/manual gates that still need an operator or private credential.
+
 ## What smoke verifies
 
 `scripts/smoke.mjs` checks:
