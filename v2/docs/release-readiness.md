@@ -82,6 +82,12 @@ A store-facing privacy policy should include:
 6. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
 7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums, confirm the local release ZIP matches CI byte-for-byte, confirm local/CI screenshot evidence is present, checksummed, and dimension-validated, validate `live-smoke.json` provenance/credentialed-branch status, and write `artifacts/ci-artifact-parity.json`.
 8. Run `npm run audit:completion`. This writes `artifacts/completion-audit.json` and should fail until credentialed provider and operator gates have concrete evidence in `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, or `artifacts/manual-verification.json`.
-9. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
-10. Upload `artifacts/argus-delta-courtlens.zip`.
-11. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, `artifacts/ci-artifact-parity.json`, `artifacts/completion-audit.json`, `artifacts/SHA256SUMS`, `artifacts/screenshots/*.png`, and any completed manual-verification evidence with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.
+9. Refresh and verify the release evidence manifest after parity/completion evidence changes:
+
+   ```bash
+   npm run write:checksums
+   npm run audit:evidence-manifest
+   ```
+10. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
+11. Upload `artifacts/argus-delta-courtlens.zip`.
+12. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, `artifacts/ci-artifact-parity.json`, `artifacts/completion-audit.json`, `artifacts/SHA256SUMS`, `artifacts/screenshots/*.png`, and any completed manual-verification evidence with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.
