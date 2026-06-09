@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { MatterContext, ProviderResultPage } from '../core/types';
+import type { EntityCandidate, MatterContext, ProviderResultPage } from '../core/types';
 import { parseNewsSearchCandidates } from '../parsers/partyParser';
 import { buildDocumentApplicationPayload } from '../documents/documentApplication';
 import type { ProviderId } from '../core/searchRouter';
@@ -33,7 +33,7 @@ interface AbnHistoryView {
 }
 
 interface Props {
-  initialContext: { matter: MatterContext };
+  initialContext: { matter: MatterContext; entities?: EntityCandidate[] };
   onSearch?: (input: { providerId: ProviderId; query: string; exact: boolean }) => Promise<ProviderResultPage>;
   onLoadSettings?: () => Promise<SettingsDraft>;
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
@@ -62,10 +62,16 @@ export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onS
   const [attachments, setAttachments] = useState<GeneratedAttachment[]>([]);
   const [abnDetails, setAbnDetails] = useState<Record<string, AbnHistoryView>>({});
   const matter = initialContext.matter;
-  const candidates = useMemo(
-    () => parseNewsSearchCandidates({ matterTitle: matter.matterTitle, jurisdiction: matter.jurisdiction }),
-    [matter.matterTitle, matter.jurisdiction]
-  );
+  const candidates = useMemo(() => {
+    const fromMatter = parseNewsSearchCandidates({ matterTitle: matter.matterTitle, jurisdiction: matter.jurisdiction });
+    const seen = new Set<string>();
+    return [...(initialContext.entities || []), ...fromMatter].filter((candidate) => {
+      const key = candidate.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [initialContext.entities, matter.matterTitle, matter.jurisdiction]);
   const primary = candidates[0]?.name || matter.plaintiff || matter.matterTitle;
   const payload = buildDocumentApplicationPayload({
     matter,

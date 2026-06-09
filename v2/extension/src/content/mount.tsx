@@ -2,13 +2,13 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { CourtlensSidebar } from '../sidebar/CourtlensSidebar';
 import sidebarCss from '../styles/sidebar.css?inline';
-import type { MatterContext, ProviderResultPage } from '../core/types';
+import type { EntityCandidate, MatterContext, ProviderResultPage } from '../core/types';
 import type { ProviderId } from '../core/searchRouter';
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
 
-export function openCourtlensSidebar(matter: MatterContext): void {
+export function openCourtlensSidebar(matter: MatterContext, entities: EntityCandidate[] = []): void {
   if (!host) {
     host = document.createElement('div');
     host.id = 'argus-delta-courtlens-root';
@@ -49,5 +49,5 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     if (!response?.ok) throw new Error(response?.error || 'Gmail draft failed');
     return response.data;
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onLoadSettings={onLoadSettings} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
+  root?.render(<CourtlensSidebar initialContext={{ matter, entities }} onSearch={onSearch} onLoadSettings={onLoadSettings} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
 }

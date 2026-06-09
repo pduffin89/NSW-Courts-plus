@@ -9,7 +9,7 @@ Courtlens is a Vite-built Manifest V3 extension with separate entry points for t
 | `background/index.ts` | Registers the MV3 message listener. |
 | `background/messageHandler.ts` | Testable message handler with injected storage/fetch dependencies. |
 | `content/courtlist.tsx` | Scans NSW court-list rows, injects Courtlens row buttons, opens sidebar with row context. |
-| `content/caselaw.tsx` | Adds a floating launcher and extracts NSW Caselaw page context. |
+| `content/caselaw.tsx` | Adds a floating launcher and extracts NSW Caselaw page context, including judgment body entities passed into the sidebar. |
 | `content/mount.tsx` | Creates a Shadow DOM host, injects CSS, and renders the React sidebar. |
 | `sidebar/CourtlensSidebar.tsx` | Workflow UI for overview, research, documents, and settings. |
 | `core/searchRouter.ts` | Normalizes provider routing behind one interface. |

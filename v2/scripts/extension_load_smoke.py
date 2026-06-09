@@ -53,6 +53,8 @@ def main():
                 case_page.locator("[data-courtlens-caselaw-launcher]").click()
                 case_text = case_page.locator("#argus-delta-courtlens-root").evaluate("el => el.shadowRoot.textContent")
                 assert "Mitchell v State of New South Wales" in case_text
+                assert "Acme Pty Ltd" in case_text
+                assert "Byron Shire Council" in case_text
             finally:
                 context.close()
     print("Extension load smoke passed: unpacked dist extension ran content scripts and generated document attachments on routed NSW URLs.")
