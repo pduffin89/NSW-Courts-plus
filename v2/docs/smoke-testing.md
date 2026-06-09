@@ -85,7 +85,7 @@ With `ABN_GUID` or `COURTLENS_ABN_GUID`, it additionally verifies:
 
 - ABN Lookup name-search JSONP returns the stable public ATO record.
 
-The GitHub Actions workflow passes optional repository secrets named `ARGUS_DELTA_TOKEN`, `ABN_GUID`, and `COURTLENS_ABN_GUID` into both the full delivery audit job and the standalone live-smoke job. If the secrets are absent, the corresponding live branches skip with explicit evidence in `artifacts/delivery-audit.json`.
+The GitHub Actions workflow passes optional repository secrets named `ARGUS_DELTA_TOKEN`, `ABN_GUID`, and `COURTLENS_ABN_GUID` into both the full delivery audit job and the standalone live-smoke job. If the secrets are absent, the corresponding live branches skip with explicit evidence in `artifacts/delivery-audit.json`. The workflow also supports `workflow_dispatch`, so credentialed provider smoke can be rerun manually after adding or rotating secrets without requiring another source change.
 
 With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 

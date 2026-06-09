@@ -75,7 +75,8 @@ A store-facing privacy policy should include:
    - optional authenticated ABN name-search live smoke if `ABN_GUID` / `COURTLENS_ABN_GUID` was not provided;
    - operator-assisted authenticated/targeted NSW workflow if a login-specific target was requested.
 4. If credentialed provider coverage is required, configure GitHub repository secrets `ARGUS_DELTA_TOKEN` and either `ABN_GUID` or `COURTLENS_ABN_GUID`; the CI workflow passes them to both the full delivery audit and standalone live-smoke jobs.
-5. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
-6. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums and confirm the local release ZIP matches CI byte-for-byte.
-7. Upload `artifacts/argus-delta-courtlens.zip`.
-8. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
+5. After adding or rotating those secrets, rerun GitHub Actions `Courtlens v2 CI` manually via `workflow_dispatch` so the credentialed live-smoke branches run without requiring another source change.
+6. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
+7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums and confirm the local release ZIP matches CI byte-for-byte.
+8. Upload `artifacts/argus-delta-courtlens.zip`.
+9. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
