@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright, expect
@@ -97,10 +98,10 @@ def shadow_wait_text(page, text, timeout=20_000):
 def shadow_fill_input(page, aria_label, value):
     field = page.locator(f'#argus-delta-courtlens-root input[aria-label="{aria_label}"]')
     field.click()
-    page.keyboard.press("Meta+A")
-    page.keyboard.press("Control+A")
+    page.keyboard.press("Meta+A" if sys.platform == "darwin" else "Control+A")
     page.keyboard.press("Backspace")
-    page.keyboard.insert_text(value)
+    page.keyboard.type(value, delay=1)
+    expect(field).to_have_value(value, timeout=5_000)
 
 
 def shadow_input_value(page, aria_label):
