@@ -79,6 +79,15 @@ const archiveEntries = listArchiveEntries(archivePath);
 const archiveEntryDetails = archiveEntries.map((entry) => describeArchiveEntry(archivePath, entry));
 const archiveForbiddenEntries = archiveEntries.filter((entry) => entry.endsWith('.map') || entry.endsWith('.DS_Store'));
 const archiveReleaseClean = archiveExists && archiveEntries.length > 0 && archiveForbiddenEntries.length === 0;
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const dependencySpecs = Object.entries({
+  ...(packageJson.dependencies || {}),
+  ...(packageJson.devDependencies || {}),
+}).map(([name, spec]) => ({ name, spec }));
+const nonExactDependencySpecs = dependencySpecs.filter(({ spec }) =>
+  spec === 'latest' || spec === '*' || /^[~^<>]/.test(spec) || spec.includes('x')
+);
+const dependencySpecsPinned = nonExactDependencySpecs.length === 0;
 const git = {
   branch: runText('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
   headSha: runText('git', ['rev-parse', 'HEAD']),
@@ -105,6 +114,11 @@ const criteria = [
     requirement: 'Unit and integration coverage for parsers, UI flows, providers, documents, accessibility, determinism, and local NER seam',
     evidence: ['npm test'],
     status: gates.find((gate) => gate.label === 'unit-tests')?.ok ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Dependency versions are pinned for reproducible installs',
+    evidence: dependencySpecsPinned ? ['package.json exact dependency/devDependency versions'] : nonExactDependencySpecs.map(({ name, spec }) => `${name}@${spec}`),
+    status: dependencySpecsPinned ? 'pass' : 'fail',
   },
   {
     requirement: 'Browser fixture smoke and real unpacked-extension smoke against routed NSW URLs',
@@ -156,6 +170,8 @@ const audit = {
     entryDetails: archiveEntryDetails,
   },
   gates,
+  dependencySpecs,
+  nonExactDependencySpecs,
   distChecks,
   criteria,
   externalOrManualGates: criteria.filter((item) => item.status.includes('external') || item.status.includes('manual')),
@@ -165,7 +181,7 @@ mkdirSync(artifactsDir, { recursive: true });
 writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`, 'utf8');
 console.log(`\nDelivery audit written to ${auditPath}`);
 
-if (!automatedOk || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists)) {
+if (!automatedOk || !dependencySpecsPinned || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists)) {
   process.exit(1);
 }
 
