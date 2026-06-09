@@ -17,6 +17,7 @@
     "write:checksums": "node scripts/write_checksums.mjs",
     "verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs",
     "verify:live-smoke-artifact": "node scripts/verify_live_smoke_artifact.mjs",
+    "verify:operator-smoke-evidence": "node scripts/verify_operator_smoke_evidence.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",

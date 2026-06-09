@@ -12,6 +12,7 @@ const ciParityPath = join(artifactsDir, 'ci-artifact-parity.json');
 const liveSmokePath = join(artifactsDir, 'live-smoke.json');
 const standaloneLiveSmokeArtifactPath = join(artifactsDir, 'standalone-live-smoke-artifact.json');
 const operatorSmokePath = join(artifactsDir, 'operator-live-smoke.json');
+const operatorSmokeVerificationPath = join(artifactsDir, 'operator-smoke-verification.json');
 
 function readJson(path, fallback = null) {
   if (!existsSync(path)) return fallback;
@@ -69,6 +70,7 @@ const ciParityEvidence = readJson(ciParityPath);
 const liveSmokeEvidence = readJson(liveSmokePath);
 const standaloneLiveSmokeArtifactEvidence = readJson(standaloneLiveSmokeArtifactPath);
 const operatorSmokeEvidence = readJson(operatorSmokePath);
+const operatorSmokeVerificationEvidence = readJson(operatorSmokeVerificationPath);
 const gitHead = runText('git', ['rev-parse', 'HEAD']);
 const gitStatus = runText('git', ['status', '--short']);
 const liveProviderCriterion = findCriterion(delivery, 'Live provider smoke');
@@ -108,6 +110,11 @@ const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok || 
   && operatorSmokeEvidence.gitHead === gitHead
   && operatorSmokeEvidence.courtlist?.skipped !== true
   && operatorSmokeEvidence.caselaw?.skipped !== true
+) || Boolean(
+  operatorSmokeVerificationEvidence?.status === 'pass'
+  && operatorSmokeVerificationEvidence.headSha === gitHead
+  && operatorSmokeVerificationEvidence.operatorEvidence?.courtlistSkipped !== true
+  && operatorSmokeVerificationEvidence.operatorEvidence?.caselawSkipped !== true
 );
 const ciArtifactParityOk = ciParityManual.ok || Boolean(
   ciParityEvidence?.status === 'pass'
@@ -196,7 +203,7 @@ const checklist = [
   check(
     'Authenticated or targeted operator NSW workflow smoke is proven',
     'total smoketest; no slop',
-    [operatorCriterion?.requirement, operatorCriterion?.status, operatorSmokeEvidence?.status && `operator-live-smoke:${operatorSmokeEvidence.status}`, ...operatorManual.evidence],
+    [operatorCriterion?.requirement, operatorCriterion?.status, operatorSmokeEvidence?.status && `operator-live-smoke:${operatorSmokeEvidence.status}`, operatorSmokeVerificationEvidence?.status && `operator-smoke-verification:${operatorSmokeVerificationEvidence.status}`, ...operatorManual.evidence],
     operatorOk,
     operatorOk ? [] : ['operator-assisted headed Chrome NSW workflow remains unverified']
   ),
@@ -229,6 +236,7 @@ const completion = {
     liveSmoke: liveSmokePath,
     standaloneLiveSmokeArtifact: standaloneLiveSmokeArtifactPath,
     operatorLiveSmoke: operatorSmokePath,
+    operatorSmokeVerification: operatorSmokeVerificationPath,
     output: outputPath,
   },
 };
