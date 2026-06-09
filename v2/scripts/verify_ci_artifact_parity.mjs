@@ -41,13 +41,14 @@ function run(command, args, options = {}) {
 }
 
 function parseArgs(argv) {
-  const parsed = { runId: process.env.COURTLENS_CI_RUN_ID || '', allowDifferentHead: false };
+  const parsed = { runId: process.env.COURTLENS_CI_RUN_ID || '', allowDifferentHead: false, requireWorkflowDispatch: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--run-id') parsed.runId = argv[++index] || '';
     else if (arg === '--allow-different-head') parsed.allowDifferentHead = true;
+    else if (arg === '--require-workflow-dispatch') parsed.requireWorkflowDispatch = true;
     else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: npm run verify:ci-artifact-parity -- [--run-id <id>] [--allow-different-head]\n\nRequires GitHub CLI authentication. Run after npm run package:extension.\nBy default, compares local artifacts to the latest completed ${workflowName} run.`);
+      console.log(`Usage: npm run verify:ci-artifact-parity -- [--run-id <id>] [--allow-different-head] [--require-workflow-dispatch]\n\nRequires GitHub CLI authentication. Run after npm run package:extension.\nBy default, compares local artifacts to the latest completed ${workflowName} run. Use --require-workflow-dispatch for credentialed/manual release reruns.`);
       process.exit(0);
     } else fail(`unknown argument ${arg}`);
   }
@@ -68,7 +69,7 @@ function latestSuccessfulRun() {
     '--workflow', workflowName,
     '--status', 'success',
     '--limit', '1',
-    '--json', 'databaseId,headSha,conclusion,status,url',
+    '--json', 'databaseId,headSha,conclusion,status,url,event',
   ], { cwd: repoRoot });
   const runs = JSON.parse(json);
   if (!Array.isArray(runs) || runs.length === 0) fail(`no successful ${workflowName} run found`);
@@ -76,7 +77,7 @@ function latestSuccessfulRun() {
 }
 
 function runDetails(runId) {
-  const json = run('gh', ['run', 'view', String(runId), '--json', 'databaseId,headSha,conclusion,status,url'], { cwd: repoRoot });
+  const json = run('gh', ['run', 'view', String(runId), '--json', 'databaseId,headSha,conclusion,status,url,event'], { cwd: repoRoot });
   return JSON.parse(json);
 }
 
@@ -113,6 +114,9 @@ const args = parseArgs(process.argv.slice(2));
 const runInfo = args.runId ? runDetails(args.runId) : latestSuccessfulRun();
 if (runInfo.status !== 'completed' || runInfo.conclusion !== 'success') {
   fail(`run ${runInfo.databaseId || args.runId} is not completed/success: ${runInfo.status}/${runInfo.conclusion}`);
+}
+if (args.requireWorkflowDispatch && runInfo.event !== 'workflow_dispatch') {
+  fail(`run ${runInfo.databaseId || args.runId} event ${runInfo.event || 'unknown'} is not workflow_dispatch`);
 }
 
 for (const file of expectedFiles) assertExists(join(root, 'artifacts', file));
@@ -185,9 +189,11 @@ try {
   const evidence = {
     generatedAt: new Date().toISOString(),
     status: 'pass',
-    command: `npm run verify:ci-artifact-parity -- --run-id ${runInfo.databaseId}`,
+    command: `npm run verify:ci-artifact-parity -- --run-id ${runInfo.databaseId}${args.requireWorkflowDispatch ? ' --require-workflow-dispatch' : ''}`,
     runId: String(runInfo.databaseId),
     runUrl: runInfo.url,
+    runEvent: runInfo.event,
+    requiredWorkflowDispatch: args.requireWorkflowDispatch,
     headSha: runInfo.headSha,
     localHeadSha: localHead,
     archiveSha256: localZipSha,
