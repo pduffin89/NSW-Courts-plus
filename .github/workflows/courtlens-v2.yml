@@ -61,6 +61,8 @@ jobs:
       - name: Run delivery audit, smoke, packaging, and release readiness
         env:
           ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}
+          ABN_GUID: ${{ secrets.ABN_GUID }}
+          COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run package:extension
 
       - name: Upload extension archive and audit evidence
@@ -76,7 +78,7 @@ jobs:
           retention-days: 14
 
   live-smoke:
-    name: Live provider smoke (non-secret)
+    name: Live provider smoke (optional secrets)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     defaults:
@@ -99,4 +101,6 @@ jobs:
       - name: Run live smoke
         env:
           ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}
+          ABN_GUID: ${{ secrets.ABN_GUID }}
+          COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}
         run: npm run smoke:live
