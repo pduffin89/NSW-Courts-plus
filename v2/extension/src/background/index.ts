@@ -8,7 +8,8 @@ const handler = createMessageHandler({
     const response = await fetch(chrome.runtime.getURL(path), { method: 'GET', cache: 'no-store' });
     if (!response.ok) throw new Error(`Missing extension asset: ${path}`);
     return new Uint8Array(await response.arrayBuffer());
-  }
+  },
+  openTab: (url) => new Promise((resolve) => chrome.tabs.create({ url }, (tab) => resolve(tab.id)))
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -24,7 +24,7 @@ This runs:
 - content script matches include NSW Caselaw decision pages.
 - background bundle does not contain obvious hardcoded token strings.
 - court-list bundle contains the Courtlens launcher text.
-- Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages, confirms the sidebar mounts in a Shadow DOM, and verifies the document-generation UI renders generated attachments.
+- Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages, confirms the sidebar mounts in a Shadow DOM, verifies the document-generation UI renders generated attachments, and exercises the Gmail draft handoff callback.
 - Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, confirms manifest content scripts execute, and exercises real background PDF generation against bundled templates.
 
 ## Browser fixture smoke

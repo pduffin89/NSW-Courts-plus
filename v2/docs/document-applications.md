@@ -1,6 +1,6 @@
 # Document Applications
 
-The Documents tab builds a validated application payload from detected matter metadata and applicant profile fields. The background service worker also exposes `COURTLENS_GENERATE_DOCUMENTS`, which fills bundled PDF templates with `pdf-lib` and returns PDF attachments as base64 payloads.
+The Documents tab builds a validated application payload from detected matter metadata and applicant profile fields. The background service worker also exposes `COURTLENS_GENERATE_DOCUMENTS`, which fills bundled PDF templates with `pdf-lib` and returns PDF attachments as base64 payloads. The tab can also call `COURTLENS_OPEN_GMAIL_DRAFT` to open a Gmail compose URL with the routed court recipient, subject, and email body.
 
 ## Included assets
 
@@ -24,6 +24,10 @@ These files are copied into `dist/` by Vite's `publicDir`.
 - Coroner's Court
 
 Unknown courts use a safe generic fallback.
+
+## Gmail draft handoff
+
+`extension/src/documents/gmailCompose.ts` builds a Gmail compose URL using encoded `to`, `subject`, and `body` parameters. This is intentionally a safe draft handoff; brittle Gmail DOM attachment automation is not attempted in this Vite build.
 
 ## PDF generation
 

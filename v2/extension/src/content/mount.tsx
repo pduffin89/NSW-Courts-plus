@@ -39,5 +39,10 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     if (!response?.ok) throw new Error(response?.error || 'ABN history failed');
     return response.data;
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} />);
+  const onOpenGmailDraft = async (email: { to: string; subject: string; body: string }) => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_OPEN_GMAIL_DRAFT', email });
+    if (!response?.ok) throw new Error(response?.error || 'Gmail draft failed');
+    return response.data;
+  };
+  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
 }

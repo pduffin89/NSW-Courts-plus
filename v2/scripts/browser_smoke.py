@@ -24,6 +24,7 @@ def install_chrome_stub(page):
               if (message.type === 'COURTLENS_GENERATE_DOCUMENTS') {
                 return { ok: true, data: { attachments: [{ name: 'fixture_media_access_2026.pdf', mime: 'application/pdf', base64: 'JVBERi0=' }] } };
               }
+              if (message.type === 'COURTLENS_OPEN_GMAIL_DRAFT') return { ok: true, data: { tabId: 99 } };
               return { ok: true, data: {} };
             }
           },
@@ -53,6 +54,8 @@ def smoke_courtlist(page, base_url):
     page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Documents').click()")
     page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Generate PDFs').click()")
     page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('fixture_media_access_2026.pdf')")
+    page.locator("#argus-delta-courtlens-root").evaluate("el => [...el.shadowRoot.querySelectorAll('button')].find(b => b.textContent === 'Open Gmail draft').click()")
+    page.wait_for_function("document.querySelector('#argus-delta-courtlens-root').shadowRoot.textContent.includes('Gmail draft opened')")
 
 
 def smoke_caselaw(page, base_url):

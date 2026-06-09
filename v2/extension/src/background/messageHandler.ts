@@ -1,6 +1,7 @@
 import { routeSearch, type ProviderId } from '../core/searchRouter';
 import { buildDocumentApplicationPayload } from '../documents/documentApplication';
 import { generateApplicationPdfs } from '../documents/pdfGeneration';
+import { composeGmailUrl } from '../documents/gmailCompose';
 import { fetchAbnHistoryDetails } from '../providers/abnProvider';
 
 export interface CourtlensSettings {
@@ -17,6 +18,7 @@ interface Dependencies {
   set: (items: Record<string, unknown>) => Promise<void>;
   fetcher?: typeof fetch;
   loadAsset?: (path: string) => Promise<Uint8Array | ArrayBuffer>;
+  openTab?: (url: string) => Promise<number | undefined>;
 }
 
 const SETTINGS_KEY = 'courtlensSettings';
@@ -38,6 +40,12 @@ export function createMessageHandler(deps: Dependencies) {
       }
       if (message?.type === 'COURTLENS_GET_SETTINGS') {
         return { ok: true, data: ((await deps.get(SETTINGS_KEY)) || {}) as CourtlensSettings };
+      }
+      if (message?.type === 'COURTLENS_OPEN_GMAIL_DRAFT') {
+        if (!deps.openTab) throw new Error('Tab opener is not configured.');
+        const url = composeGmailUrl(message.email || {});
+        const tabId = await deps.openTab(url);
+        return { ok: true, data: { url, tabId } };
       }
       if (message?.type === 'COURTLENS_ABN_HISTORY_DETAILS') {
         const data = await fetchAbnHistoryDetails(message.abn, deps.fetcher);

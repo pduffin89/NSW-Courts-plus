@@ -38,6 +38,7 @@ interface Props {
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
   onGenerateDocuments?: (input: { matter: MatterContext; requestedDocuments: string[]; applicant: { name: string; organisation: string; email: string } }) => Promise<{ attachments: GeneratedAttachment[] }>;
   onAbnHistory?: (abn: string) => Promise<AbnHistoryView>;
+  onOpenGmailDraft?: (email: { to: string; subject: string; body: string }) => Promise<{ tabId?: number }>;
 }
 
 const tabs = ['Overview', 'Research', 'Documents', 'Settings'] as const;
@@ -51,7 +52,7 @@ function panelId(tab: Tab): string {
   return `cl-panel-${tab.toLowerCase()}`;
 }
 
-export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments, onAbnHistory }: Props) {
+export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments, onAbnHistory, onOpenGmailDraft }: Props) {
   const [active, setActive] = useState<Tab>('Overview');
   const [exact, setExact] = useState(true);
   const [result, setResult] = useState<ProviderResultPage | null>(null);
@@ -79,6 +80,16 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
         : Promise.resolve({ providerId, query: primary, items: [], hasMore: false }));
       setResult(page);
       setStatus(page.items.length ? `${page.items.length} result(s)` : 'No results returned');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function openGmailDraft() {
+    setStatus('Opening Gmail draft…');
+    try {
+      await onOpenGmailDraft?.(payload.email);
+      setStatus('Gmail draft opened');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     }
@@ -193,6 +204,7 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
         <section id={panelId('Documents')} role="tabpanel" aria-labelledby={tabId('Documents')} hidden={active !== 'Documents'} className="cl-card cl-documents">
           <h2>Application payload</h2>
           <button className="cl-provider" onClick={generateDocuments}>Generate PDFs</button>
+          <button className="cl-provider" onClick={openGmailDraft}>Open Gmail draft</button>
           {attachments.length > 0 && (
             <div className="cl-attachments" aria-label="Generated attachments">
               {attachments.map((attachment) => <span className="cl-chip" key={attachment.name}>{attachment.name}</span>)}

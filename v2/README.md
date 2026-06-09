@@ -18,6 +18,7 @@ Argus Delta Courtlens is a Manifest V3 Chrome extension for NSW court-list and N
 - Argus Delta quote stripping, minimum query validation, bearer-token settings seam, nullable-result normalization, pagination metadata.
 - Document application payload generation with court-recipient routing.
 - Background PDF generation route using bundled templates and `pdf-lib`, returning base64 PDF attachments.
+- Gmail compose handoff from the Documents tab using encoded court-recipient email payloads.
 
 ## Install for local development
 
