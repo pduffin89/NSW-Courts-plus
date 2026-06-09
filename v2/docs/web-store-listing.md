@@ -70,7 +70,7 @@ cd artifacts && shasum -a 256 -c SHA256SUMS
 npm run verify:ci-artifact-parity -- --run-id <run-id>
 ```
 
-Expected release ZIP SHA for the current deterministic build is recorded in `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS`.
+Expected release ZIP SHA for the current deterministic build is recorded in `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS`. `SHA256SUMS` also records screenshot checksums for the non-sensitive store/release images.
 
 ## Screenshot guidance
 

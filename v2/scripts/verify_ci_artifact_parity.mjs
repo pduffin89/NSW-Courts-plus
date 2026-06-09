@@ -97,7 +97,7 @@ function verifyChecksums(dir) {
     if (actualSha !== expectedSha) fail(`${relativePath} checksum mismatch: expected ${expectedSha}, got ${actualSha}`);
     seen.add(relativePath);
   }
-  for (const file of expectedFiles.filter((name) => name !== 'SHA256SUMS')) {
+  for (const file of [...expectedFiles.filter((name) => name !== 'SHA256SUMS'), ...expectedScreenshots]) {
     if (!seen.has(file)) fail(`SHA256SUMS does not include ${file}`);
   }
 }

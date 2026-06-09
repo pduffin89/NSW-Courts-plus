@@ -29,7 +29,7 @@ npm run build
 npm run capture:screenshots
 ```
 
-The screenshot capture uses fixtures and deterministic provider stubs only. It writes non-sensitive store/release evidence to `artifacts/screenshots/01-overview.png`, `02-research.png`, `03-documents.png`, and `04-settings.png`. The full `npm run package:extension` gate also runs screenshot capture and release-readiness verifies those files exist.
+The screenshot capture uses fixtures and deterministic provider stubs only. It writes non-sensitive store/release evidence to `artifacts/screenshots/01-overview.png`, `02-research.png`, `03-documents.png`, and `04-settings.png`. The full `npm run package:extension` gate also runs screenshot capture, release-readiness verifies those files exist, and `artifacts/SHA256SUMS` includes their checksums.
 
 ## Extension policy and secret audits
 

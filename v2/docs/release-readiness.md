@@ -82,4 +82,4 @@ A store-facing privacy policy should include:
 7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums and confirm the local release ZIP matches CI byte-for-byte.
 8. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
 9. Upload `artifacts/argus-delta-courtlens.zip`.
-10. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, and `artifacts/SHA256SUMS` with the release record.
+10. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/SHA256SUMS`, and `artifacts/screenshots/*.png` with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.

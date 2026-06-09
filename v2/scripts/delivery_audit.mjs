@@ -257,7 +257,7 @@ const featureMatrix = [
     { name: 'Chrome Web Store listing handoff covers listing copy, privacy, permissions, screenshots, and QA', ok: fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance', 'npm run verify:ci-artifact-parity']) },
     { name: 'release screenshots are generated from non-sensitive fixtures', ok: gateOk('release-screenshot-capture') && screenshotChecks.every((check) => check.exists) },
     { name: 'release readiness verifier exists and writes evidence JSON', ok: fileContains('scripts/release_readiness_audit.mjs', ['release-readiness.json', 'writeFileSync']) },
-    { name: 'release checksums writer exists', ok: fileContains('scripts/write_checksums.mjs', ['SHA256SUMS', 'argus-delta-courtlens.zip', 'delivery-audit.json', 'release-readiness.json']) },
+    { name: 'release checksums writer exists and covers ZIP, evidence JSON, and screenshots', ok: fileContains('scripts/write_checksums.mjs', ['SHA256SUMS', 'argus-delta-courtlens.zip', 'delivery-audit.json', 'release-readiness.json', 'screenshots/01-overview.png', 'screenshots/04-settings.png']) },
     { name: 'README lists final delivery gates', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery', 'npm run audit:release-readiness', 'npm run write:checksums']) },
   ]),
 ];

@@ -9,6 +9,10 @@ const artifactNames = [
   'argus-delta-courtlens.zip',
   'delivery-audit.json',
   'release-readiness.json',
+  'screenshots/01-overview.png',
+  'screenshots/02-research.png',
+  'screenshots/03-documents.png',
+  'screenshots/04-settings.png',
 ];
 
 function fail(message) {
