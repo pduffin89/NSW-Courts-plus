@@ -8,6 +8,7 @@ const outputPath = join(artifactsDir, 'completion-audit.json');
 const deliveryPath = join(artifactsDir, 'delivery-audit.json');
 const readinessPath = join(artifactsDir, 'release-readiness.json');
 const manualEvidencePath = join(artifactsDir, 'manual-verification.json');
+const manualEvidenceAuditPath = join(artifactsDir, 'manual-verification-audit.json');
 const ciParityPath = join(artifactsDir, 'ci-artifact-parity.json');
 const liveSmokePath = join(artifactsDir, 'live-smoke.json');
 const standaloneLiveSmokeArtifactPath = join(artifactsDir, 'standalone-live-smoke-artifact.json');
@@ -38,10 +39,13 @@ function findCriterion(delivery, startsWith) {
   return (delivery?.criteria || []).find((criterion) => criterion.requirement.startsWith(startsWith));
 }
 
-function manualGate(manualEvidence, key) {
+function manualGate(manualEvidence, manualAuditEvidence, key, currentHead) {
   const value = manualEvidence?.[key];
   if (!value) return { ok: false, evidence: ['artifacts/manual-verification.json missing or does not include this gate'] };
-  const ok = value.status === 'pass' || value.ok === true;
+  const manualHead = manualEvidence?.gitHead || manualEvidence?.headSha || manualEvidence?.releaseGitHead;
+  const matchingHead = manualHead === currentHead;
+  const auditMatchingHead = manualAuditEvidence?.status === 'pass' && manualAuditEvidence.headSha === currentHead;
+  const ok = (value.status === 'pass' || value.ok === true) && matchingHead && auditMatchingHead;
   return {
     ok,
     evidence: [
@@ -49,6 +53,8 @@ function manualGate(manualEvidence, key) {
       value.ciRunUrl,
       value.result,
       value.notes,
+      matchingHead ? `manual-verification head:${manualHead}` : `manual-verification head mismatch:${manualHead || 'missing'}`,
+      auditMatchingHead ? 'manual-verification-audit:pass' : 'manual-verification-audit missing or stale',
     ].filter(Boolean),
   };
 }
@@ -66,6 +72,7 @@ function check(requirement, explicitPromptText, evidence, ok, missing = []) {
 const delivery = readJson(deliveryPath);
 const readiness = readJson(readinessPath);
 const manualEvidence = readJson(manualEvidencePath);
+const manualEvidenceAudit = readJson(manualEvidenceAuditPath);
 const ciParityEvidence = readJson(ciParityPath);
 const liveSmokeEvidence = readJson(liveSmokePath);
 const standaloneLiveSmokeArtifactEvidence = readJson(standaloneLiveSmokeArtifactPath);
@@ -75,9 +82,9 @@ const gitHead = runText('git', ['rev-parse', 'HEAD']);
 const gitStatus = runText('git', ['status', '--short']);
 const liveProviderCriterion = findCriterion(delivery, 'Live provider smoke');
 const operatorCriterion = findCriterion(delivery, 'Operator-assisted smoke');
-const credentialedManual = manualGate(manualEvidence, 'credentialedProviderSmoke');
-const operatorManual = manualGate(manualEvidence, 'operatorNswWorkflowSmoke');
-const ciParityManual = manualGate(manualEvidence, 'ciArtifactParity');
+const credentialedManual = manualGate(manualEvidence, manualEvidenceAudit, 'credentialedProviderSmoke', gitHead);
+const operatorManual = manualGate(manualEvidence, manualEvidenceAudit, 'operatorNswWorkflowSmoke', gitHead);
+const ciParityManual = manualGate(manualEvidence, manualEvidenceAudit, 'ciArtifactParity', gitHead);
 const featureMatrix = delivery?.featureMatrix || [];
 const featureMatrixOk = featureMatrix.length > 0 && featureMatrix.every((item) => item.status === 'pass');
 const deliveryCriteria = delivery?.criteria || [];
@@ -232,6 +239,7 @@ const completion = {
     deliveryAudit: deliveryPath,
     releaseReadiness: readinessPath,
     manualVerification: manualEvidencePath,
+    manualVerificationAudit: manualEvidenceAuditPath,
     ciArtifactParity: ciParityPath,
     liveSmoke: liveSmokePath,
     standaloneLiveSmokeArtifact: standaloneLiveSmokeArtifactPath,

@@ -112,7 +112,7 @@ npm run smoke:live-extension
 
 This loads `dist/` as a real unpacked MV3 extension against live public NSW Caselaw and NSW Online Registry pages. It verifies the Caselaw floating launcher, verifies live Online Registry `Courtlens` row buttons, opens both Shadow DOM sidebars, and confirms the Online Registry Documents tab can generate the bundled PDF attachments from a live row. It is non-interactive and runs inside the delivery audit/CI under Xvfb.
 
-Authenticated or targeted Online Registry workflows remain available through the operator smoke when a human browser session is needed. A successful run writes `artifacts/operator-live-smoke.json`; validate it with `npm run verify:operator-smoke-evidence`, which writes `artifacts/operator-smoke-verification.json`. Use `docs/manual-verification.md` to record any extra credentialed/provider/operator evidence without secrets.
+Authenticated or targeted Online Registry workflows remain available through the operator smoke when a human browser session is needed. A successful run writes `artifacts/operator-live-smoke.json`; validate it with `npm run verify:operator-smoke-evidence`, which writes `artifacts/operator-smoke-verification.json`. Use `docs/manual-verification.md` to record any extra credentialed/provider/operator evidence without secrets, then run `npm run verify:manual-verification -- --require-all` if manual evidence is used to clear completion gates.
 
 ## Operator-assisted live Chrome smoke
 

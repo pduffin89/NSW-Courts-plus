@@ -23,6 +23,7 @@ const optionalEntries = new Set([
   'standalone-live-smoke-artifact.json',
   'completion-audit.json',
   'manual-verification.json',
+  'manual-verification-audit.json',
 ]);
 
 function fail(message) {
@@ -49,6 +50,7 @@ function artifactHead(name, payload) {
   if (name === 'operator-live-smoke.json') return payload?.gitHead || null;
   if (name === 'operator-smoke-verification.json') return payload?.headSha || null;
   if (name === 'manual-verification.json') return payload?.gitHead || payload?.headSha || null;
+  if (name === 'manual-verification-audit.json') return payload?.headSha || null;
   return null;
 }
 
