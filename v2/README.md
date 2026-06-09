@@ -68,6 +68,7 @@ npm run capture:screenshots  # Generate non-sensitive release/store screenshot e
 npm run verify             # Fast local verification gate
 npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON
 npm run audit:delivery     # Same final delivery gate used by package:extension
+npm run audit:completion   # Goal-completion audit; fails until credentialed/manual gates are evidenced
 ```
 
 ## Project layout
@@ -91,4 +92,4 @@ Release upload checklist and Chrome Web Store disclosure notes live in `docs/rel
 
 ## Verification status
 
-The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. After CI completes, `npm run verify:ci-artifact-parity -- --run-id <run-id>` verifies the uploaded CI artifact checksums and compares the local release ZIP with CI byte-for-byte. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
+The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. After CI completes, `npm run verify:ci-artifact-parity -- --run-id <run-id>` verifies the uploaded CI artifact checksums and compares the local release ZIP with CI byte-for-byte. `npm run audit:completion` writes `artifacts/completion-audit.json` and fails until private-credential and operator gates have concrete evidence. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.

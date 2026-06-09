@@ -236,11 +236,12 @@ const featureMatrix = [
     { name: 'real extension smoke verifies settings save/mask/persist', ok: fileContains('scripts/extension_load_smoke.py', ['Settings save/mask/persist', 'courtlens-smoke-token-do-not-leak', 'chrome.storage.local']) },
   ]),
   feature('Total smoke, CI, release packaging, provenance, and release cleanliness', [
-    'scripts/smoke.mjs', 'scripts/live_smoke.mjs', 'scripts/live_extension_smoke.py', 'scripts/release_extension_smoke.py', 'scripts/package_extension.mjs', 'scripts/package_determinism.mjs', 'scripts/verify_ci_artifact_parity.mjs', '.github/workflows/courtlens-v2.yml'
+    'scripts/smoke.mjs', 'scripts/live_smoke.mjs', 'scripts/live_extension_smoke.py', 'scripts/release_extension_smoke.py', 'scripts/package_extension.mjs', 'scripts/package_determinism.mjs', 'scripts/verify_ci_artifact_parity.mjs', 'scripts/completion_audit.mjs', '.github/workflows/courtlens-v2.yml'
   ], [
     { name: 'all smoke scripts exist', ok: ['smoke.mjs', 'live_smoke.mjs', 'live_extension_smoke.py', 'release_extension_smoke.py', 'operator_live_smoke.py'].every((name) => fileExists(`scripts/${name}`)) },
     { name: 'packaging and determinism scripts exist', ok: fileExists('scripts/package_extension.mjs') && fileExists('scripts/package_determinism.mjs') },
     { name: 'CI artifact parity verifier exists and is documented', ok: fileContains('scripts/verify_ci_artifact_parity.mjs', ['gh', 'run', 'download', 'SHA256SUMS']) && fileContains('package.json', ['verify:ci-artifact-parity']) && fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity']) },
+    { name: 'completion audit exists and records unresolved manual gates', ok: fileContains('scripts/completion_audit.mjs', ['completion-audit.json', 'credentialedProviderSmoke', 'operatorNswWorkflowSmoke']) && fileContains('package.json', ['audit:completion']) && fileContains('docs/release-readiness.md', ['npm run audit:completion']) },
     { name: 'CI workflow exists at repository root', ok: existsSync(join(root, '..', '.github/workflows/courtlens-v2.yml')) },
     { name: 'CI workflow passes optional live-smoke secrets to delivery and live jobs', ok: fileContains('../.github/workflows/courtlens-v2.yml', ['workflow_dispatch:', 'ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}', 'Live provider smoke (optional secrets)']) },
     { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },
@@ -259,7 +260,7 @@ const featureMatrix = [
     { name: 'release screenshots are generated from non-sensitive fixtures', ok: gateOk('release-screenshot-capture') && screenshotChecks.every((check) => check.exists) },
     { name: 'release readiness verifier exists and writes evidence JSON', ok: fileContains('scripts/release_readiness_audit.mjs', ['release-readiness.json', 'writeFileSync']) },
     { name: 'release checksums writer exists and covers ZIP, evidence JSON, and screenshots', ok: fileContains('scripts/write_checksums.mjs', ['SHA256SUMS', 'argus-delta-courtlens.zip', 'delivery-audit.json', 'release-readiness.json', 'screenshots/01-overview.png', 'screenshots/04-settings.png']) },
-    { name: 'README lists final delivery gates', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery', 'npm run audit:release-readiness', 'npm run write:checksums']) },
+    { name: 'README lists final delivery gates', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery', 'npm run audit:release-readiness', 'npm run audit:completion', 'npm run write:checksums']) },
   ]),
 ];
 const featureMatrixOk = featureMatrix.every((item) => item.status === 'pass');

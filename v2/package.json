@@ -12,6 +12,7 @@
     "audit:secrets": "node scripts/secret_audit.mjs",
     "audit:package-determinism": "node scripts/package_determinism.mjs",
     "audit:release-readiness": "node scripts/release_readiness_audit.mjs",
+    "audit:completion": "node scripts/completion_audit.mjs",
     "write:checksums": "node scripts/write_checksums.mjs",
     "verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs",
     "smoke": "node scripts/smoke.mjs",

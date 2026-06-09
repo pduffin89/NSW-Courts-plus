@@ -115,6 +115,33 @@ Expected pass evidence:
 - Do not capture real tokens, ABN GUIDs, client email addresses, confidential matter names, or non-public filings.
 - If a real live page must be shown, crop or redact confidential details before release records are shared.
 
+## Machine-readable manual evidence
+
+`npm run audit:completion` reads optional machine-readable evidence from `artifacts/manual-verification.json`. Create this file only after running the relevant commands; do not include secret values.
+
+Example shape:
+
+```json
+{
+  "ciArtifactParity": {
+    "status": "pass",
+    "command": "npm run verify:ci-artifact-parity -- --run-id 123456789",
+    "ciRunUrl": "https://github.com/pduffin89/NSW-Courts-plus/actions/runs/123456789",
+    "result": "passed for HEAD ... and ZIP sha256 ..."
+  },
+  "credentialedProviderSmoke": {
+    "status": "pass",
+    "command": "ARGUS_DELTA_TOKEN=*** ABN_GUID=*** npm run smoke:live",
+    "result": "authenticated Argus and ABN name-search branches passed; no secret values logged"
+  },
+  "operatorNswWorkflowSmoke": {
+    "status": "pass",
+    "command": "npm run smoke:operator -- --profile-dir artifacts/operator-chrome-profile",
+    "result": "operator verified live Online Registry and Caselaw sidebar workflows"
+  }
+}
+```
+
 ## Completion rule
 
-Only clear the external/manual gates when the evidence summary is filled out with concrete command output or CI run URLs and no unresolved credential/operator items remain.
+Only clear the external/manual gates when the evidence summary is filled out with concrete command output or CI run URLs and no unresolved credential/operator items remain. `npm run audit:completion` should pass before the thread goal is marked complete.
