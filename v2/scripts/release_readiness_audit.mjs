@@ -44,6 +44,13 @@ function assertExactSet(label, actual, expected) {
   }
 }
 
+function fileContains(relativePath, needles) {
+  const path = join(root, relativePath);
+  if (!existsSync(path)) return false;
+  const text = readFileSync(path, 'utf8');
+  return needles.every((needle) => text.includes(needle));
+}
+
 function gitHead() {
   const result = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) fail('unable to read git HEAD');
@@ -73,6 +80,9 @@ if (audit.git?.headSha !== head) fail(`delivery-audit git head ${audit.git?.head
 if (audit.archive?.sha256 !== archiveSha) fail(`delivery-audit archive SHA ${audit.archive?.sha256} does not match ${archiveSha}`);
 if (audit.automatedOk !== true) fail('delivery-audit automatedOk is not true');
 if (!Array.isArray(audit.featureMatrix) || !audit.featureMatrix.every((item) => item.status === 'pass')) fail('featureMatrix is not fully passing');
+if (!fileContains('package.json', ['"verify:ci-artifact-parity": "node scripts/verify_ci_artifact_parity.mjs"'])) fail('package.json missing verify:ci-artifact-parity command');
+if (!fileContains('scripts/verify_ci_artifact_parity.mjs', ['gh', 'run', 'download', 'SHA256SUMS', 'release ZIP differs between local and CI'])) fail('CI artifact parity verifier is missing expected checks');
+if (!fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity', 'argus-delta-courtlens', 'byte-for-byte'])) fail('release-readiness docs do not describe CI artifact parity verification');
 
 for (const criterion of audit.criteria || []) {
   if (criterion.status === 'pass') continue;
@@ -113,6 +123,14 @@ const readiness = {
     hostPermissions: manifest.host_permissions,
     contentSecurityPolicy: manifest.content_security_policy,
     webAccessibleResourceCount: (manifest.web_accessible_resources || []).length,
+  },
+  ciArtifactParity: {
+    command: 'npm run verify:ci-artifact-parity -- --run-id <run-id>',
+    verifies: [
+      'CI artifact SHA256SUMS',
+      'CI audit/readiness git provenance',
+      'local release ZIP equals CI release ZIP byte-for-byte',
+    ],
   },
   expectedExternalOrManualGates: (audit.criteria || [])
     .filter((criterion) => criterion.status !== 'pass')
