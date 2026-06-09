@@ -42,7 +42,7 @@ Open the Courtlens sidebar and use the Settings tab/workflow to store private va
 - `argusDeltaToken`
 - `argusDeltaProxyUrl`
 - `abnGuid`
-- applicant profile fields
+- applicant profile fields: name, organisation, email
 
 Never hardcode tokens or GUIDs. The build and smoke tests include a basic hardcoded-secret guard for the background bundle.
 

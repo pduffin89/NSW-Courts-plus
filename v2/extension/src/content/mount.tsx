@@ -25,6 +25,11 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     if (!response?.ok) throw new Error(response?.error || 'Search failed');
     return response.data;
   };
+  const onLoadSettings = async () => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_GET_SETTINGS' });
+    if (!response?.ok) throw new Error(response?.error || 'Settings load failed');
+    return response.data;
+  };
   const onSaveSettings = async (settings: { argusDeltaToken?: string; argusDeltaProxyUrl?: string; abnGuid?: string; applicantName?: string; applicantOrganisation?: string; applicantEmail?: string }): Promise<void> => {
     const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_SAVE_SETTINGS', settings });
     if (!response?.ok) throw new Error(response?.error || 'Settings save failed');
@@ -44,5 +49,5 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     if (!response?.ok) throw new Error(response?.error || 'Gmail draft failed');
     return response.data;
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
+  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onLoadSettings={onLoadSettings} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} onAbnHistory={onAbnHistory} onOpenGmailDraft={onOpenGmailDraft} />);
 }

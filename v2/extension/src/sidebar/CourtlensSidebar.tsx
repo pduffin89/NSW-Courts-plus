@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { MatterContext, ProviderResultPage } from '../core/types';
 import { parseNewsSearchCandidates } from '../parsers/partyParser';
 import { buildDocumentApplicationPayload } from '../documents/documentApplication';
@@ -35,6 +35,7 @@ interface AbnHistoryView {
 interface Props {
   initialContext: { matter: MatterContext };
   onSearch?: (input: { providerId: ProviderId; query: string; exact: boolean }) => Promise<ProviderResultPage>;
+  onLoadSettings?: () => Promise<SettingsDraft>;
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
   onGenerateDocuments?: (input: { matter: MatterContext; requestedDocuments: string[]; applicant: { name: string; organisation: string; email: string } }) => Promise<{ attachments: GeneratedAttachment[] }>;
   onAbnHistory?: (abn: string) => Promise<AbnHistoryView>;
@@ -52,7 +53,7 @@ function panelId(tab: Tab): string {
   return `cl-panel-${tab.toLowerCase()}`;
 }
 
-export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments, onAbnHistory, onOpenGmailDraft }: Props) {
+export function CourtlensSidebar({ initialContext, onSearch, onLoadSettings, onSaveSettings, onGenerateDocuments, onAbnHistory, onOpenGmailDraft }: Props) {
   const [active, setActive] = useState<Tab>('Overview');
   const [exact, setExact] = useState(true);
   const [result, setResult] = useState<ProviderResultPage | null>(null);
@@ -69,8 +70,28 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
   const payload = buildDocumentApplicationPayload({
     matter,
     requestedDocuments: ['Statement of Claim', 'Submissions', 'Orders'],
-    applicant: { name: 'Applicant', organisation: 'Argus Delta', email: 'configure@example.invalid' }
+    applicant: {
+      name: settings.applicantName || 'Applicant',
+      organisation: settings.applicantOrganisation || 'Argus Delta',
+      email: settings.applicantEmail || 'configure@example.invalid'
+    }
   });
+
+  useEffect(() => {
+    if (active !== 'Settings' || !onLoadSettings) return;
+    let cancelled = false;
+    onLoadSettings()
+      .then((loaded) => {
+        if (cancelled) return;
+        setSettings({
+          ...loaded,
+          argusDeltaToken: loaded.argusDeltaToken ? '••••••••' : '',
+          abnGuid: loaded.abnGuid ? '••••••••' : ''
+        });
+      })
+      .catch((error) => setStatus(error instanceof Error ? error.message : String(error)));
+    return () => { cancelled = true; };
+  }, [active, onLoadSettings]);
 
   async function runSearch(providerId: ProviderId) {
     setStatus(`Searching ${providerId}…`);
@@ -219,6 +240,8 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onG
           <label>Argus Delta token<input aria-label="Argus Delta token" autoComplete="off" type="password" value={settings.argusDeltaToken || ''} onChange={(event) => setSettings({ ...settings, argusDeltaToken: event.currentTarget.value })} /></label>
           <label>Argus proxy URL<input aria-label="Argus proxy URL" autoComplete="url" value={settings.argusDeltaProxyUrl || ''} onChange={(event) => setSettings({ ...settings, argusDeltaProxyUrl: event.currentTarget.value })} /></label>
           <label>ABN GUID<input aria-label="ABN GUID" autoComplete="off" type="password" value={settings.abnGuid || ''} onChange={(event) => setSettings({ ...settings, abnGuid: event.currentTarget.value })} /></label>
+          <label>Applicant name<input aria-label="Applicant name" autoComplete="name" value={settings.applicantName || ''} onChange={(event) => setSettings({ ...settings, applicantName: event.currentTarget.value })} /></label>
+          <label>Applicant organisation<input aria-label="Applicant organisation" autoComplete="organization" value={settings.applicantOrganisation || ''} onChange={(event) => setSettings({ ...settings, applicantOrganisation: event.currentTarget.value })} /></label>
           <label>Applicant email<input aria-label="Applicant email" autoComplete="email" value={settings.applicantEmail || ''} onChange={(event) => setSettings({ ...settings, applicantEmail: event.currentTarget.value })} /></label>
           <button className="cl-provider" onClick={saveSettings}>Save settings</button>
         </section>

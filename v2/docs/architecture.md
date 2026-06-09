@@ -27,7 +27,7 @@ Shared contracts live in `extension/src/core/types.ts`:
 ## Security boundaries
 
 - Content scripts never hardcode provider secrets.
-- Background service worker reads secrets from `chrome.storage.local`.
+- Background service worker reads secrets and applicant profile settings from `chrome.storage.local`.
 - Argus Delta calls use an `Authorization: Bearer <token>` header only when a token exists.
 - A proxy URL can be configured for distributable use.
 
