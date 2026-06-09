@@ -38,6 +38,12 @@ function sha256(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
+function pngDimensions(path) {
+  const buffer = readFileSync(path);
+  if (buffer.length < 24 || buffer.toString('ascii', 1, 4) !== 'PNG') fail(`${path} is not a PNG file`);
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
 function sorted(value) {
   return [...value].sort();
 }
@@ -92,9 +98,16 @@ if (!fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity', 'ar
 if (!fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance'])) fail('Chrome Web Store listing handoff is missing required release sections');
 if (!fileContains('scripts/write_checksums.mjs', ['screenshots/01-overview.png', 'screenshots/02-research.png', 'screenshots/03-documents.png', 'screenshots/04-settings.png'])) fail('checksum manifest must include release screenshots');
 if (!fileContains('../.github/workflows/courtlens-v2.yml', ['workflow_dispatch:', 'ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}'])) fail('CI workflow must support manual credentialed live-smoke reruns with optional secrets');
-for (const screenshot of expectedScreenshots) {
-  if (!existsSync(join(root, screenshot))) fail(`${screenshot} missing; run npm run capture:screenshots or npm run package:extension first`);
-}
+const expectedScreenshotDimensions = { width: 422, height: 930 };
+const screenshotEvidence = expectedScreenshots.map((relativePath) => {
+  const path = join(root, relativePath);
+  if (!existsSync(path)) fail(`${relativePath} missing; run npm run capture:screenshots or npm run package:extension first`);
+  const dimensions = pngDimensions(path);
+  if (JSON.stringify(dimensions) !== JSON.stringify(expectedScreenshotDimensions)) {
+    fail(`${relativePath} dimensions ${JSON.stringify(dimensions)} do not match ${JSON.stringify(expectedScreenshotDimensions)}`);
+  }
+  return { relativePath, exists: true, ...dimensions };
+});
 
 for (const criterion of audit.criteria || []) {
   if (criterion.status === 'pass') continue;
@@ -130,7 +143,7 @@ const readiness = {
     automatedOk: audit.automatedOk,
     featureMatrixOk: audit.featureMatrix.every((item) => item.status === 'pass'),
   },
-  screenshots: expectedScreenshots.map((relativePath) => ({ relativePath, exists: existsSync(join(root, relativePath)) })),
+  screenshots: screenshotEvidence,
   manifest: {
     permissions: manifest.permissions,
     hostPermissions: manifest.host_permissions,
