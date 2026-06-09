@@ -93,6 +93,9 @@ const nonExactDependencySpecs = dependencySpecs.filter(({ spec }) =>
   spec === 'latest' || spec === '*' || /^[~^<>]/.test(spec) || spec.includes('x')
 );
 const dependencySpecsPinned = nonExactDependencySpecs.length === 0;
+const argusLiveCredentialPresent = Boolean(process.env.ARGUS_DELTA_TOKEN);
+const abnLiveCredentialPresent = Boolean(process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID);
+const optionalLiveCredentialsPresent = argusLiveCredentialPresent && abnLiveCredentialPresent;
 const git = {
   branch: runText('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
   headSha: runText('git', ['rev-parse', 'HEAD']),
@@ -231,6 +234,7 @@ const featureMatrix = [
     { name: 'all smoke scripts exist', ok: ['smoke.mjs', 'live_smoke.mjs', 'live_extension_smoke.py', 'release_extension_smoke.py', 'operator_live_smoke.py'].every((name) => fileExists(`scripts/${name}`)) },
     { name: 'packaging and determinism scripts exist', ok: fileExists('scripts/package_extension.mjs') && fileExists('scripts/package_determinism.mjs') },
     { name: 'CI workflow exists at repository root', ok: existsSync(join(root, '..', '.github/workflows/courtlens-v2.yml')) },
+    { name: 'CI workflow passes optional live-smoke secrets to delivery and live jobs', ok: fileContains('../.github/workflows/courtlens-v2.yml', ['ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}', 'Live provider smoke (optional secrets)']) },
     { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },
     { name: 'release zip includes all icon sizes', ok: ['icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'].every((entry) => archiveEntries.includes(entry)) },
     { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
@@ -284,10 +288,10 @@ const criteria = [
     requirement: 'Live provider smoke for non-secret endpoints plus optional authenticated Argus and ABN name-search checks',
     evidence: [
       'npm run smoke:live',
-      process.env.ARGUS_DELTA_TOKEN ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped',
-      (process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID) ? 'ABN_GUID/COURTLENS_ABN_GUID present' : 'ABN_GUID/COURTLENS_ABN_GUID absent; ABN name-search branch skipped',
+      argusLiveCredentialPresent ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped',
+      abnLiveCredentialPresent ? 'ABN_GUID/COURTLENS_ABN_GUID present' : 'ABN_GUID/COURTLENS_ABN_GUID absent; ABN name-search branch skipped',
     ],
-    status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (process.env.ARGUS_DELTA_TOKEN ? 'pass' : 'partial-external-credential-needed') : 'fail',
+    status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (optionalLiveCredentialsPresent ? 'pass' : 'partial-external-credential-needed') : 'fail',
   },
   {
     requirement: 'Live public NSW Caselaw and NSW Online Registry pages load the real unpacked extension and sidebar',
