@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { normalizeLocalNerResponse, extractEntitiesWithLocalNer } from '../../extension/src/providers/localNerProvider';
+import { normalizeLocalNerResponse, extractEntitiesWithLocalNer, assertLoopbackNerEndpoint } from '../../extension/src/providers/localNerProvider';
 import { createMessageHandler } from '../../extension/src/background/messageHandler';
 import { CourtlensSidebar } from '../../extension/src/sidebar/CourtlensSidebar';
 
@@ -30,6 +30,12 @@ describe('local NER / GLiNER-compatible seam', () => {
       ['Acme Pty Ltd', 'company', 0.91],
       ['Harrison J', 'judge', 0.93]
     ]);
+  });
+
+  it('rejects non-loopback local NER endpoints before fetch', async () => {
+    expect(() => assertLoopbackNerEndpoint('https://example.com/extract')).toThrow(/127\.0\.0\.1|localhost/);
+    expect(() => assertLoopbackNerEndpoint('http://192.168.1.10/extract')).toThrow(/127\.0\.0\.1|localhost/);
+    expect(assertLoopbackNerEndpoint('http://localhost:8766/extract')).toBe('http://localhost:8766/extract');
   });
 
   it('posts judgment text to the configured local NER endpoint', async () => {

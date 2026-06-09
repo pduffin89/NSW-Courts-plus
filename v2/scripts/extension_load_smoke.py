@@ -54,6 +54,7 @@ ABN_HISTORY_HTML = """
 """
 FEDERAL_HTML = '<html><body><a href="/judgment/1">Courtlens Smoke Federal Result</a></body></html>'
 NSW_CASELAW_HTML = '<html><body><a href="/decision/smoke">Courtlens Smoke NSW Caselaw Result</a></body></html>'
+LOCAL_NER_JSON = '{"entities":[{"text":"Jane Citizen","label":"PERSON","score":0.96},{"text":"Courtlens Local NER Pty Ltd","label":"ORG","score":0.91}]}'
 GMAIL_HTML = '<html><body><h1>Routed Gmail compose smoke</h1></body></html>'
 
 
@@ -119,6 +120,7 @@ def exercise_settings_ui(context, page):
     shadow_fill_input(page, "Applicant name", "Courtlens Smoke Applicant")
     shadow_fill_input(page, "Applicant organisation", "Argus Delta Smoke Org")
     shadow_fill_input(page, "Applicant email", "smoke@example.invalid")
+    shadow_fill_input(page, "Local NER endpoint", "http://127.0.0.1:8766/extract")
     page.wait_for_timeout(250)
     assert shadow_input_value(page, "Argus Delta token") == smoke_token
     assert shadow_input_value(page, "ABN GUID") == "00000000-0000-4000-8000-000000000000"
@@ -128,6 +130,7 @@ def exercise_settings_ui(context, page):
     assert settings["argusDeltaToken"] == smoke_token
     assert settings["abnGuid"] == "00000000-0000-4000-8000-000000000000"
     assert settings["applicantName"] == "Courtlens Smoke Applicant"
+    assert settings["localNerEndpoint"] == "http://127.0.0.1:8766/extract"
     assert shadow_input_value(page, "Argus Delta token") == "••••••••"
     assert shadow_input_value(page, "ABN GUID") == "••••••••"
     assert smoke_token not in shadow_text(page)
@@ -215,6 +218,7 @@ def install_provider_routes(context):
     context.route("https://abr.business.gov.au/json/MatchingNames.aspx**", lambda route: fulfill_text(route, ABN_JSONP, "application/javascript; charset=utf-8"))
     context.route("https://abr.business.gov.au/ABN/View**", lambda route: fulfill_text(route, ABN_CURRENT_HTML, "text/html; charset=utf-8"))
     context.route("https://abr.business.gov.au/AbnHistory/View**", lambda route: fulfill_text(route, ABN_HISTORY_HTML, "text/html; charset=utf-8"))
+    context.route("http://127.0.0.1:8766/extract", lambda route: fulfill_text(route, LOCAL_NER_JSON, "application/json; charset=utf-8"))
     context.route("https://mail.google.com/mail/**", lambda route: fulfill_text(route, GMAIL_HTML, "text/html; charset=utf-8"))
 
 
@@ -259,9 +263,12 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 assert "Mitchell v State of New South Wales" in case_text
                 assert "Acme Pty Ltd" in case_text
                 assert "Byron Shire Council" in case_text
+                shadow_click(case_page, "Enhance entities")
+                shadow_wait_text(case_page, "Jane Citizen")
+                shadow_wait_text(case_page, "Courtlens Local NER Pty Ltd")
             finally:
                 context.close()
-    print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, document generation, and Gmail handoff on routed NSW URLs.")
+    print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, local NER enhancement, document generation, and Gmail handoff on routed NSW URLs.")
 
 
 def main():

@@ -31,6 +31,7 @@ const manifest = JSON.parse(readFileSync(join(root, 'dist/manifest.json'), 'utf8
 if (manifest.name !== 'Argus Delta Courtlens') throw new Error('Manifest name mismatch');
 if (manifest.background?.service_worker !== 'background.js') throw new Error('Background worker not wired');
 if (!manifest.host_permissions.includes('https://be-api.argusdelta.com/*')) throw new Error('Argus Delta host permission missing');
+if (!manifest.host_permissions.includes('http://127.0.0.1/*') || !manifest.host_permissions.includes('http://localhost/*')) throw new Error('Loopback local NER host permissions missing');
 if (!manifest.content_scripts.some((script) => script.matches.includes('https://www.caselaw.nsw.gov.au/decision/*'))) throw new Error('Caselaw content script missing');
 
 const background = readFileSync(join(root, 'dist/background.js'), 'utf8');

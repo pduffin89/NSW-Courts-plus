@@ -175,6 +175,9 @@ const featureMatrix = [
     { name: 'judgment entity parser exists', ok: fileExists('extension/src/parsers/judgmentEntityParser.ts') },
     { name: 'local NER provider seam exists', ok: fileExists('extension/src/providers/localNerProvider.ts') },
     { name: 'local NER message route exists', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_EXTRACT_ENTITIES']) },
+    { name: 'manifest grants loopback-only local NER hosts', ok: fileContains('extension/public/manifest.json', ['http://127.0.0.1/*', 'http://localhost/*']) },
+    { name: 'local NER provider rejects non-loopback endpoints', ok: fileContains('extension/src/providers/localNerProvider.ts', ['assertLoopbackNerEndpoint', '127.0.0.1', 'localhost']) },
+    { name: 'real extension smoke exercises local NER enhancement', ok: fileContains('scripts/extension_load_smoke.py', ['Local NER endpoint', 'Jane Citizen', 'local NER enhancement']) },
     { name: 'local NER tests exist', ok: fileExists('tests/unit/local-ner.test.tsx') },
   ]),
   feature('Research provider search: Argus Delta, News, ABN, Federal Court, NSW Caselaw', [

@@ -35,6 +35,7 @@ Courtlens providers normalize results to `ProviderResultPage`.
 ## Local NER / GLiNER-compatible endpoint
 
 - Optional endpoint configured in Settings as `localNerEndpoint`.
+- Endpoint is intentionally loopback-only: `http://127.0.0.1/...` or `http://localhost/...`.
 - Background route: `COURTLENS_EXTRACT_ENTITIES`.
 - Request shape: `POST { "text": "...judgment body..." }`.
 - Expected response shape: `{ "entities": [{ "text": "Jane Citizen", "label": "PERSON", "score": 0.96 }] }`.

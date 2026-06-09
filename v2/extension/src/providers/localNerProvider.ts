@@ -43,9 +43,24 @@ export function normalizeLocalNerResponse(payload: LocalNerPayload, options: { s
   return dedupeBy(entities, (entity) => entity.name);
 }
 
+export function assertLoopbackNerEndpoint(endpoint: string): string {
+  const cleaned = cleanText(endpoint);
+  if (!cleaned) throw new Error('Local NER endpoint is not configured. Add it in Settings.');
+  let url: URL;
+  try {
+    url = new URL(cleaned);
+  } catch {
+    throw new Error('Local NER endpoint must be a valid loopback URL.');
+  }
+  const allowedHosts = new Set(['127.0.0.1', 'localhost']);
+  if (url.protocol !== 'http:' || !allowedHosts.has(url.hostname)) {
+    throw new Error('Local NER endpoint must use http://127.0.0.1 or http://localhost.');
+  }
+  return url.toString();
+}
+
 export async function extractEntitiesWithLocalNer(options: { endpoint: string; text: string; fetcher?: typeof fetch }): Promise<EntityCandidate[]> {
-  const endpoint = cleanText(options.endpoint);
-  if (!endpoint) throw new Error('Local NER endpoint is not configured. Add it in Settings.');
+  const endpoint = assertLoopbackNerEndpoint(options.endpoint);
   const response = await (options.fetcher || fetch)(endpoint, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
