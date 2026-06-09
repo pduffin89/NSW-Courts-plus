@@ -12,6 +12,7 @@ const expectedFiles = [
   'argus-delta-courtlens.zip',
   'delivery-audit.json',
   'release-readiness.json',
+  'live-smoke.json',
   'SHA256SUMS',
 ];
 const expectedScreenshots = [
