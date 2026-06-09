@@ -107,3 +107,11 @@ jobs:
           ABN_GUID: ${{ secrets.ABN_GUID }}
           COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}
         run: npm run smoke:live
+
+      - name: Upload standalone live-smoke evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: argus-delta-courtlens-live-smoke
+          path: v2/artifacts/live-smoke.json
+          if-no-files-found: error
+          retention-days: 14

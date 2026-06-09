@@ -78,7 +78,7 @@ A store-facing privacy policy should include:
    - optional authenticated ABN name-search live smoke if `ABN_GUID` / `COURTLENS_ABN_GUID` was not provided;
    - operator-assisted authenticated/targeted NSW workflow if a login-specific target was requested.
 4. If credentialed provider coverage is required, configure GitHub repository secrets `ARGUS_DELTA_TOKEN` and either `ABN_GUID` or `COURTLENS_ABN_GUID`; the CI workflow passes them to both the full delivery audit and standalone live-smoke jobs.
-5. After adding or rotating those secrets, rerun GitHub Actions `Courtlens v2 CI` manually via `workflow_dispatch` so the credentialed live-smoke branches run without requiring another source change.
+5. After adding or rotating those secrets, rerun GitHub Actions `Courtlens v2 CI` manually via `workflow_dispatch` so the credentialed live-smoke branches run without requiring another source change. The standalone live-smoke job uploads the `argus-delta-courtlens-live-smoke` evidence artifact containing `live-smoke.json`.
 6. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
 7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums, confirm the local release ZIP matches CI byte-for-byte, confirm local/CI screenshot evidence is present, checksummed, and dimension-validated, validate `live-smoke.json` provenance/credentialed-branch status, and write `artifacts/ci-artifact-parity.json`.
 8. Run `npm run audit:completion`. This writes `artifacts/completion-audit.json` and should fail until credentialed provider and operator gates have concrete evidence in `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, or `artifacts/manual-verification.json`.
