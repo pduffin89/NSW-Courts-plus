@@ -58,7 +58,7 @@ npm run audit:secrets # Source, dist, and release archive secret-leak checks
 npm run audit:package-determinism # Repeated package SHA-256 stability check
 npm run audit:release-readiness # Pre-upload audit/ZIP/manifest/provenance cross-check
 npm run write:checksums # Write artifacts/SHA256SUMS for release evidence
-npm run verify:ci-artifact-parity -- --run-id <run-id> # Compare local release artifacts to CI
+npm run verify:ci-artifact-parity -- --run-id <run-id> # Compare local release artifacts to CI and write artifacts/ci-artifact-parity.json
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -171,6 +171,21 @@ try {
   ]) {
     if (value !== localZipSha) fail(`${label} ${value} does not match release ZIP ${localZipSha}`);
   }
+
+  const evidence = {
+    generatedAt: new Date().toISOString(),
+    status: 'pass',
+    command: `npm run verify:ci-artifact-parity -- --run-id ${runInfo.databaseId}`,
+    runId: String(runInfo.databaseId),
+    runUrl: runInfo.url,
+    headSha: runInfo.headSha,
+    localHeadSha: localHead,
+    archiveSha256: localZipSha,
+    ciArchiveSha256: ciZipSha,
+    screenshotComparisons,
+  };
+  mkdirSync(join(root, 'artifacts'), { recursive: true });
+  writeFileSync(join(root, 'artifacts', 'ci-artifact-parity.json'), `${JSON.stringify(evidence, null, 2)}\n`);
 
   console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
   console.log(`argus-delta-courtlens.zip sha256 ${localZipSha}`);

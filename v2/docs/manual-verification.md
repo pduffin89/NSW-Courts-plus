@@ -117,7 +117,7 @@ Expected pass evidence:
 
 ## Machine-readable manual evidence
 
-`npm run audit:completion` reads optional machine-readable evidence from `artifacts/manual-verification.json`. Create this file only after running the relevant commands; do not include secret values.
+`npm run verify:ci-artifact-parity -- --run-id <run-id>` writes `artifacts/ci-artifact-parity.json` when parity passes. `npm run audit:completion` reads that file plus optional machine-readable evidence from `artifacts/manual-verification.json`. Create manual evidence only after running the relevant commands; do not include secret values.
 
 Example shape:
 

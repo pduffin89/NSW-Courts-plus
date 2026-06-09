@@ -5,7 +5,7 @@ This checklist is for the final human/operator release review before uploading `
 ## Release artifact
 
 - Upload artifact: `artifacts/argus-delta-courtlens.zip`
-- Evidence artifacts: `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/completion-audit.json`, and `artifacts/SHA256SUMS`
+- Evidence artifacts: `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/ci-artifact-parity.json`, `artifacts/completion-audit.json`, and `artifacts/SHA256SUMS`
 - Final command: `npm run package:extension`
 - Pre-upload verifier: `npm run audit:release-readiness`
 - Goal-completion verifier: `npm run audit:completion`
@@ -80,8 +80,8 @@ A store-facing privacy policy should include:
 4. If credentialed provider coverage is required, configure GitHub repository secrets `ARGUS_DELTA_TOKEN` and either `ABN_GUID` or `COURTLENS_ABN_GUID`; the CI workflow passes them to both the full delivery audit and standalone live-smoke jobs.
 5. After adding or rotating those secrets, rerun GitHub Actions `Courtlens v2 CI` manually via `workflow_dispatch` so the credentialed live-smoke branches run without requiring another source change.
 6. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
-7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums, confirm the local release ZIP matches CI byte-for-byte, and confirm local/CI screenshot evidence is present, checksummed, and dimension-validated.
+7. Run `npm run verify:ci-artifact-parity -- --run-id <run-id>` to verify the CI `argus-delta-courtlens` artifact checksums, confirm the local release ZIP matches CI byte-for-byte, confirm local/CI screenshot evidence is present, checksummed, and dimension-validated, and write `artifacts/ci-artifact-parity.json`.
 8. Run `npm run audit:completion`. This writes `artifacts/completion-audit.json` and should fail until credentialed provider and operator gates have concrete evidence in `artifacts/manual-verification.json`.
 9. Confirm `docs/web-store-listing.md` is still accurate for permissions, host access, privacy disclosure, screenshots, and support notes.
 10. Upload `artifacts/argus-delta-courtlens.zip`.
-11. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/completion-audit.json`, `artifacts/SHA256SUMS`, `artifacts/screenshots/*.png`, and any completed manual-verification evidence with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.
+11. Keep `artifacts/delivery-audit.json`, `artifacts/release-readiness.json`, `artifacts/ci-artifact-parity.json`, `artifacts/completion-audit.json`, `artifacts/SHA256SUMS`, `artifacts/screenshots/*.png`, and any completed manual-verification evidence with the release record. `SHA256SUMS` includes the release ZIP, evidence JSON, and screenshot checksums.

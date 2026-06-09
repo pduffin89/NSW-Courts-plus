@@ -8,6 +8,7 @@ const outputPath = join(artifactsDir, 'completion-audit.json');
 const deliveryPath = join(artifactsDir, 'delivery-audit.json');
 const readinessPath = join(artifactsDir, 'release-readiness.json');
 const manualEvidencePath = join(artifactsDir, 'manual-verification.json');
+const ciParityPath = join(artifactsDir, 'ci-artifact-parity.json');
 
 function readJson(path, fallback = null) {
   if (!existsSync(path)) return fallback;
@@ -61,6 +62,7 @@ function check(requirement, explicitPromptText, evidence, ok, missing = []) {
 const delivery = readJson(deliveryPath);
 const readiness = readJson(readinessPath);
 const manualEvidence = readJson(manualEvidencePath);
+const ciParityEvidence = readJson(ciParityPath);
 const gitHead = runText('git', ['rev-parse', 'HEAD']);
 const gitStatus = runText('git', ['status', '--short']);
 const liveProviderCriterion = findCriterion(delivery, 'Live provider smoke');
@@ -86,7 +88,12 @@ const checksumManifestOk = fileExists('artifacts/SHA256SUMS') && fileContains('a
 const screenshotEvidenceOk = (readiness?.screenshots || []).length === 4 && readiness.screenshots.every((shot) => shot.exists && shot.width === 422 && shot.height === 930);
 const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentialedManual.ok;
 const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok;
-const ciArtifactParityOk = ciParityManual.ok || Boolean(readiness?.ciArtifactParity?.lastVerifiedRunId);
+const ciArtifactParityOk = ciParityManual.ok || Boolean(
+  ciParityEvidence?.status === 'pass'
+  && ciParityEvidence.headSha === gitHead
+  && ciParityEvidence.localHeadSha === gitHead
+  && ciParityEvidence.archiveSha256 === delivery?.archive?.sha256
+);
 
 const checklist = [
   check(
@@ -147,9 +154,9 @@ const checklist = [
   check(
     'CI artifact parity has concrete evidence for the final head',
     'Before declaring completion, inspect PR/CI state and real evidence',
-    ['npm run verify:ci-artifact-parity -- --run-id <run-id>', 'artifacts/manual-verification.json.ciArtifactParity or release-readiness parity metadata'],
+    ['npm run verify:ci-artifact-parity -- --run-id <run-id>', 'artifacts/ci-artifact-parity.json or artifacts/manual-verification.json.ciArtifactParity'],
     ciArtifactParityOk,
-    ciArtifactParityOk ? [] : ['record CI artifact parity evidence in artifacts/manual-verification.json using docs/manual-verification.md']
+    ciArtifactParityOk ? [] : ['run npm run verify:ci-artifact-parity -- --run-id <run-id> or record CI parity evidence in artifacts/manual-verification.json']
   ),
   check(
     'Authenticated Argus and ABN credentialed provider smoke is proven',
@@ -190,6 +197,7 @@ const completion = {
     deliveryAudit: deliveryPath,
     releaseReadiness: readinessPath,
     manualVerification: manualEvidencePath,
+    ciArtifactParity: ciParityPath,
     output: outputPath,
   },
 };
