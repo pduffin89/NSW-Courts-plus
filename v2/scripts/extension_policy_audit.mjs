@@ -85,6 +85,7 @@ for (const [size, relativePath] of Object.entries(expectedIcons)) {
 
 assertExactSet('permissions', manifest.permissions, expectedPermissions);
 assertExactSet('host_permissions', manifest.host_permissions, expectedHostPermissions);
+if ((manifest.web_accessible_resources || []).length !== 0) fail('web_accessible_resources must be empty; Courtlens keeps bundled assets private to extension contexts');
 
 const allUrlGrants = [
   ...(manifest.host_permissions || []),
@@ -113,4 +114,4 @@ for (const file of jsFiles) {
   }
 }
 
-console.log(`Extension policy audit passed: MV3 manifest, icons, exact permissions, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);
+console.log(`Extension policy audit passed: MV3 manifest, icons, exact permissions, no web-accessible resources, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);

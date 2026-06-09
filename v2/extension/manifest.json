@@ -42,19 +42,6 @@
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "forms/*.pdf",
-        "vendor/*.js",
-        "assets/*.css"
-      ],
-      "matches": [
-        "https://onlineregistry.lawlink.nsw.gov.au/*",
-        "https://www.caselaw.nsw.gov.au/*"
-      ]
-    }
-  ],
   "action": {
     "default_title": "Argus Delta Courtlens",
     "default_icon": {
