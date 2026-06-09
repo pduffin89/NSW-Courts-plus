@@ -32,7 +32,7 @@ npm run audit:secrets
 npm run audit:release-readiness
 ```
 
-`scripts/extension_policy_audit.mjs` verifies MV3 manifest structure, exact permissions/host permissions, scoped content-script matches, no broad URL grants like `<all_urls>`, no insecure HTTP grants, and no obvious remote-code/eval patterns in built JavaScript bundles.
+`scripts/extension_policy_audit.mjs` verifies MV3 manifest structure, exact permissions/host permissions, scoped content-script matches, no broad URL grants like `<all_urls>`, no insecure HTTP grants except loopback local NER, and no remote-code/eval patterns in built JavaScript bundles, including remote script tags, remote `importScripts`, remote dynamic imports, remote workers, and WebAssembly compile/instantiate calls.
 
 `scripts/secret_audit.mjs` scans first-party source/docs/tests/scripts, built text artifacts, and the release zip for private-key blocks, JWT literals, common API token prefixes, hardcoded bearer tokens, hardcoded `argusDeltaToken`/`abnGuid` values, and secret-like files accidentally included in the release archive.
 

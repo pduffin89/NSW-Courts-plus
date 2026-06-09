@@ -46,6 +46,7 @@ Notably absent:
 - No Gmail host permission; Gmail is opened by URL handoff only.
 - No web-accessible resources; bundled PDFs/vendor assets stay private to extension contexts.
 - No optional permissions, externally-connectable surface, OAuth client, manifest key, or custom update URL.
+- Policy audit rejects remote-code vectors including remote script tags, remote `importScripts`, remote dynamic imports, remote workers, and WebAssembly compile/instantiate calls.
 
 ## Data use disclosure draft
 

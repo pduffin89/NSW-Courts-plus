@@ -41,6 +41,11 @@ const forbiddenBundlePatterns = [
   { label: 'unsafe-eval', pattern: /unsafe-eval/ },
   { label: 'document.write()', pattern: /\bdocument\.write\s*\(/ },
   { label: 'remote script tag', pattern: /<script[^>]+src=["']https?:\/\//i },
+  { label: 'remote importScripts()', pattern: /\bimportScripts\s*\(\s*["']https?:\/\//i },
+  { label: 'remote dynamic import()', pattern: /\bimport\s*\(\s*["']https?:\/\//i },
+  { label: 'remote Worker()', pattern: /\b(?:new\s+)?(?:Shared)?Worker\s*\(\s*["']https?:\/\//i },
+  { label: 'WebAssembly.compile()', pattern: /\bWebAssembly\.compile\s*\(/ },
+  { label: 'WebAssembly.instantiate()', pattern: /\bWebAssembly\.instantiate\s*\(/ },
 ];
 
 function fail(message) {
