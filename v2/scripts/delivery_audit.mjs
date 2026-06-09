@@ -203,6 +203,7 @@ const featureMatrix = [
     { name: 'background exposes Gmail route', ok: fileContains('extension/src/background/messageHandler.ts', ['COURTLENS_OPEN_GMAIL_DRAFT']) },
     { name: 'sidebar exposes Gmail action', ok: fileContains('extension/src/sidebar/CourtlensSidebar.tsx', ['Open Gmail draft']) },
     { name: 'Gmail tests exist', ok: fileExists('tests/unit/gmail-compose.test.ts') && fileExists('tests/unit/gmail-compose-ui.test.tsx') },
+    { name: 'real extension smoke verifies Gmail handoff', ok: fileContains('scripts/extension_load_smoke.py', ['Gmail compose handoff', 'Open Gmail draft', 'chrome.tabs.create']) || fileContains('scripts/extension_load_smoke.py', ['Gmail compose handoff', 'Open Gmail draft', 'expect_page']) },
   ]),
   feature('Settings/profile/secrets handling', [
     'extension/src/background/messageHandler.ts', 'extension/src/sidebar/CourtlensSidebar.tsx', 'scripts/secret_audit.mjs', 'tests/unit/settings-ui.test.tsx'

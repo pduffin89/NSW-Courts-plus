@@ -2,6 +2,7 @@
 import argparse
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from tempfile import TemporaryDirectory
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, sync_playwright, expect
 
@@ -53,6 +54,7 @@ ABN_HISTORY_HTML = """
 """
 FEDERAL_HTML = '<html><body><a href="/judgment/1">Courtlens Smoke Federal Result</a></body></html>'
 NSW_CASELAW_HTML = '<html><body><a href="/decision/smoke">Courtlens Smoke NSW Caselaw Result</a></body></html>'
+GMAIL_HTML = '<html><body><h1>Routed Gmail compose smoke</h1></body></html>'
 
 
 def fulfill_fixture(route, fixture_name):
@@ -131,6 +133,29 @@ def exercise_settings_ui(context, page):
     assert smoke_token not in shadow_text(page)
 
 
+def exercise_gmail_handoff(context, page):
+    print("Extension load smoke: exercising Gmail compose handoff")
+    with context.expect_page(timeout=10_000) as gmail_page_info:
+        shadow_click(page, "Open Gmail draft")
+    gmail_page = gmail_page_info.value
+    gmail_page.wait_for_load_state("domcontentloaded")
+    gmail_url = gmail_page.url
+    parsed = urlparse(gmail_url)
+    target_url = gmail_url
+    if parsed.netloc == "accounts.google.com":
+        target_url = parse_qs(parsed.query).get("continue", [""])[0]
+    if not target_url.startswith("https://mail.google.com/mail/?"):
+        print(f"Extension load smoke: Gmail tab URL was {gmail_url!r}; target compose URL was {target_url!r}")
+    assert target_url.startswith("https://mail.google.com/mail/?")
+    compose_params = parse_qs(urlparse(target_url).query)
+    assert compose_params.get("view") == ["cm"]
+    assert compose_params.get("to") == ["sc.enquiries@justice.nsw.gov.au"]
+    assert compose_params.get("su") == ["2025/00490454 SMITH v ACME PTY LTD"]
+    assert compose_params.get("body") and "Courtlens Smoke Applicant" in compose_params["body"][0]
+    shadow_wait_text(page, "Gmail draft opened")
+    gmail_page.close()
+
+
 def exercise_research_providers(page):
     shadow_click(page, "Research")
     provider_expectations = [
@@ -190,6 +215,7 @@ def install_provider_routes(context):
     context.route("https://abr.business.gov.au/json/MatchingNames.aspx**", lambda route: fulfill_text(route, ABN_JSONP, "application/javascript; charset=utf-8"))
     context.route("https://abr.business.gov.au/ABN/View**", lambda route: fulfill_text(route, ABN_CURRENT_HTML, "text/html; charset=utf-8"))
     context.route("https://abr.business.gov.au/AbnHistory/View**", lambda route: fulfill_text(route, ABN_HISTORY_HTML, "text/html; charset=utf-8"))
+    context.route("https://mail.google.com/mail/**", lambda route: fulfill_text(route, GMAIL_HTML, "text/html; charset=utf-8"))
 
 
 def run_extension_load_smoke(extension_dir: Path, label: str):
@@ -221,6 +247,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 shadow_click(page, "Documents")
                 shadow_click(page, "Generate PDFs")
                 shadow_wait_text(page, "_media_access_2026.pdf")
+                exercise_gmail_handoff(context, page)
 
                 case_page = context.new_page()
                 case_page.route(CASELAW_URL, lambda route: fulfill_fixture(route, "caselaw.html"))
@@ -234,7 +261,7 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 assert "Byron Shire Council" in case_text
             finally:
                 context.close()
-    print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, and document generation on routed NSW URLs.")
+    print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, document generation, and Gmail handoff on routed NSW URLs.")
 
 
 def main():
