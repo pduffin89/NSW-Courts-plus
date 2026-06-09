@@ -47,4 +47,12 @@ if (browserSmoke.status !== 0) {
 }
 process.stdout.write(browserSmoke.stdout || '');
 
-console.log('Smoke passed: manifest, bundles, assets, docs, secret guard, and browser fixture smoke verified.');
+const extensionSmoke = spawnSync('python3', ['scripts/extension_load_smoke.py'], { cwd: root, encoding: 'utf8' });
+if (extensionSmoke.status !== 0) {
+  process.stdout.write(extensionSmoke.stdout || '');
+  process.stderr.write(extensionSmoke.stderr || '');
+  throw new Error(`Extension load smoke failed with exit ${extensionSmoke.status}`);
+}
+process.stdout.write(extensionSmoke.stdout || '');
+
+console.log('Smoke passed: manifest, bundles, assets, docs, secret guard, browser fixture smoke, and unpacked-extension smoke verified.');

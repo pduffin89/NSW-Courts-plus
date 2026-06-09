@@ -25,15 +25,17 @@ This runs:
 - background bundle does not contain obvious hardcoded token strings.
 - court-list bundle contains the Courtlens launcher text.
 - Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages and confirms the sidebar mounts in a Shadow DOM.
+- Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, and confirms manifest content scripts execute.
 
 ## Browser fixture smoke
 
 ```bash
 npm run build
 python3 scripts/browser_smoke.py
+python3 scripts/extension_load_smoke.py
 ```
 
-Fixtures live in `fixtures/` and are served through a local ephemeral HTTP server so Vite module chunks load like real browser resources.
+Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` and uses Playwright route fulfillment for NSW URLs.
 
 ## Manual Chrome smoke
 
