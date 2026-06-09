@@ -13,10 +13,17 @@ interface SettingsDraft {
   applicantEmail?: string;
 }
 
+interface GeneratedAttachment {
+  name: string;
+  mime: string;
+  base64: string;
+}
+
 interface Props {
   initialContext: { matter: MatterContext };
   onSearch?: (input: { providerId: ProviderId; query: string; exact: boolean }) => Promise<ProviderResultPage>;
   onSaveSettings?: (settings: SettingsDraft) => Promise<void>;
+  onGenerateDocuments?: (input: { matter: MatterContext; requestedDocuments: string[]; applicant: { name: string; organisation: string; email: string } }) => Promise<{ attachments: GeneratedAttachment[] }>;
 }
 
 const tabs = ['Overview', 'Research', 'Documents', 'Settings'] as const;
@@ -30,12 +37,13 @@ function panelId(tab: Tab): string {
   return `cl-panel-${tab.toLowerCase()}`;
 }
 
-export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings }: Props) {
+export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings, onGenerateDocuments }: Props) {
   const [active, setActive] = useState<Tab>('Overview');
   const [exact, setExact] = useState(true);
   const [result, setResult] = useState<ProviderResultPage | null>(null);
   const [status, setStatus] = useState('Ready');
   const [settings, setSettings] = useState<SettingsDraft>({});
+  const [attachments, setAttachments] = useState<GeneratedAttachment[]>([]);
   const matter = initialContext.matter;
   const candidates = useMemo(
     () => parseNewsSearchCandidates({ matterTitle: matter.matterTitle, jurisdiction: matter.jurisdiction }),
@@ -56,6 +64,21 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings }: P
         : Promise.resolve({ providerId, query: primary, items: [], hasMore: false }));
       setResult(page);
       setStatus(page.items.length ? `${page.items.length} result(s)` : 'No results returned');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function generateDocuments() {
+    setStatus('Generating PDFs…');
+    try {
+      const response = await onGenerateDocuments?.({
+        matter,
+        requestedDocuments: payload.requestedDocuments,
+        applicant: payload.applicant
+      });
+      setAttachments(response?.attachments || []);
+      setStatus(response?.attachments?.length ? `${response.attachments.length} PDF(s) generated` : 'No PDFs generated');
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     }
@@ -130,8 +153,14 @@ export function CourtlensSidebar({ initialContext, onSearch, onSaveSettings }: P
           )}
         </section>
 
-        <section id={panelId('Documents')} role="tabpanel" aria-labelledby={tabId('Documents')} hidden={active !== 'Documents'} className="cl-card">
+        <section id={panelId('Documents')} role="tabpanel" aria-labelledby={tabId('Documents')} hidden={active !== 'Documents'} className="cl-card cl-documents">
           <h2>Application payload</h2>
+          <button className="cl-provider" onClick={generateDocuments}>Generate PDFs</button>
+          {attachments.length > 0 && (
+            <div className="cl-attachments" aria-label="Generated attachments">
+              {attachments.map((attachment) => <span className="cl-chip" key={attachment.name}>{attachment.name}</span>)}
+            </div>
+          )}
           <pre>{JSON.stringify(payload, null, 2)}</pre>
         </section>
 

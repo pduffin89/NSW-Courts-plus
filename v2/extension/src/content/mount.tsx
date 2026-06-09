@@ -29,5 +29,10 @@ export function openCourtlensSidebar(matter: MatterContext): void {
     const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_SAVE_SETTINGS', settings });
     if (!response?.ok) throw new Error(response?.error || 'Settings save failed');
   };
-  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} />);
+  const onGenerateDocuments = async (input: { matter: unknown; requestedDocuments: string[]; applicant: unknown }) => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_GENERATE_DOCUMENTS', ...input });
+    if (!response?.ok) throw new Error(response?.error || 'Document generation failed');
+    return response.data;
+  };
+  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} onGenerateDocuments={onGenerateDocuments} />);
 }
