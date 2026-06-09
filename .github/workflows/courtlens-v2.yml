@@ -58,10 +58,10 @@ jobs:
           python -m pip install playwright
           python -m playwright install --with-deps chromium
 
-      - name: Run delivery audit, smoke, and packaging
+      - name: Run delivery audit, smoke, packaging, and release readiness
         env:
           ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run audit:delivery
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run package:extension
 
       - name: Upload extension archive and audit evidence
         uses: actions/upload-artifact@v6

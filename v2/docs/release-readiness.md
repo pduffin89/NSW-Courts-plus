@@ -7,6 +7,7 @@ This checklist is for the final human/operator release review before uploading `
 - Upload artifact: `artifacts/argus-delta-courtlens.zip`
 - Evidence artifact: `artifacts/delivery-audit.json`
 - Final command: `npm run package:extension`
+- Pre-upload verifier: `npm run audit:release-readiness`
 - CI workflow: `Courtlens v2 CI`
 - The release ZIP is deterministic, source-map-free, `.DS_Store`-free, and secret-audited.
 - Before upload, confirm `delivery-audit.json.archive.sha256` matches the ZIP being uploaded.
