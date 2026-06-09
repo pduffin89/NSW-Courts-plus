@@ -65,6 +65,17 @@ With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 - authenticated search returns `200` without printing the token.
 - short-query validation returns `400`.
 
+## Live public extension smoke
+
+```bash
+npm run smoke:live-extension
+CASELAW_LIVE_URL='https://www.caselaw.nsw.gov.au/search?query=Smith&page=1' npm run smoke:live-extension
+```
+
+This loads `dist/` as a real unpacked MV3 extension against a live public NSW Caselaw page, verifies the floating launcher is injected by the manifest content script, clicks it, and confirms the Shadow DOM sidebar renders Overview, Research, Documents, and Settings. It is non-interactive and runs inside the delivery audit/CI under Xvfb.
+
+NSW Online Registry live rows are intentionally left to the operator smoke because reaching a real matter list may require human login/navigation.
+
 ## Operator-assisted live Chrome smoke
 
 After `npm run verify`, run the headed operator smoke:

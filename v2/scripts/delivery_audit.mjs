@@ -45,6 +45,7 @@ const gates = [
   runGate('production-build', 'npm', ['run', 'build']),
   runGate('browser-and-extension-smoke', 'npm', ['run', 'smoke']),
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
+  runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
   runGate('package-verified-dist', 'node', ['scripts/package_extension.mjs']),
 ];
 
@@ -85,6 +86,11 @@ const criteria = [
     requirement: 'Live provider smoke for non-secret endpoints and optional authenticated Argus search',
     evidence: ['npm run smoke:live', process.env.ARGUS_DELTA_TOKEN ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped'],
     status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (process.env.ARGUS_DELTA_TOKEN ? 'pass' : 'partial-external-credential-needed') : 'fail',
+  },
+  {
+    requirement: 'Live public NSW Caselaw page loads the real unpacked extension and sidebar',
+    evidence: ['npm run smoke:live-extension', 'scripts/live_extension_smoke.py', process.env.CASELAW_LIVE_URL || 'https://www.caselaw.nsw.gov.au/search?query=Smith&page=1'],
+    status: gates.find((gate) => gate.label === 'live-public-extension-smoke')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Packaged extension archive from verified dist',

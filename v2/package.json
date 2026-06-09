@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && node scripts/build.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
+    "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
     "smoke:operator": "python3 scripts/operator_live_smoke.py",
     "package:extension": "npm run verify && node scripts/package_extension.mjs",
     "verify": "npm test && npm run build && npm run smoke",
