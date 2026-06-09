@@ -18,7 +18,16 @@ For final release evidence, run the delivery audit:
 npm run audit:delivery
 ```
 
-This runs unit tests, `npm audit --audit-level=moderate`, the production build, browser/extension smoke, live provider smoke, and packaging from the verified `dist/` output. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+This runs unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, and packaging from the verified `dist/` output. It writes `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+
+## Extension policy audit
+
+```bash
+npm run build
+npm run audit:policy
+```
+
+`scripts/extension_policy_audit.mjs` verifies MV3 manifest structure, exact permissions/host permissions, scoped content-script matches, no broad URL grants like `<all_urls>`, no insecure HTTP grants, and no obvious remote-code/eval patterns in built JavaScript bundles.
 
 ## What smoke verifies
 

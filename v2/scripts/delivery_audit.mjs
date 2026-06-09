@@ -66,6 +66,7 @@ const gates = [
   runGate('unit-tests', 'npm', ['test']),
   runGate('dependency-security-audit', 'npm', ['audit', '--audit-level=moderate']),
   runGate('production-build', 'npm', ['run', 'build']),
+  runGate('extension-policy-audit', 'npm', ['run', 'audit:policy']),
   runGate('browser-and-extension-smoke', 'npm', ['run', 'smoke']),
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
   runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
@@ -125,6 +126,11 @@ const criteria = [
     requirement: 'Dependency security audit has no moderate-or-higher vulnerabilities',
     evidence: ['npm audit --audit-level=moderate'],
     status: gates.find((gate) => gate.label === 'dependency-security-audit')?.ok ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Chrome MV3 extension policy audit passes with scoped permissions and no remote-code patterns',
+    evidence: ['npm run audit:policy', 'scripts/extension_policy_audit.mjs', 'dist/manifest.json'],
+    status: gates.find((gate) => gate.label === 'extension-policy-audit')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Browser fixture smoke and real unpacked-extension smoke against routed NSW URLs',

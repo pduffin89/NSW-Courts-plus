@@ -1,0 +1,98 @@
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+const root = process.cwd();
+const dist = join(root, 'dist');
+const manifestPath = join(dist, 'manifest.json');
+
+const expectedPermissions = ['downloads', 'scripting', 'storage', 'tabs'];
+const expectedHostPermissions = [
+  'https://abr.business.gov.au/*',
+  'https://be-api.argusdelta.com/*',
+  'https://mail.google.com/*',
+  'https://news.google.com/*',
+  'https://onlineregistry.lawlink.nsw.gov.au/*',
+  'https://search.judgments.fedcourt.gov.au/*',
+  'https://www.austlii.edu.au/*',
+  'https://www.caselaw.nsw.gov.au/*',
+];
+const expectedContentScripts = new Map([
+  ['courtlist.js', ['https://onlineregistry.lawlink.nsw.gov.au/content/court-lists*']],
+  ['caselaw.js', ['https://www.caselaw.nsw.gov.au/decision/*', 'https://www.caselaw.nsw.gov.au/search*']],
+]);
+const forbiddenUrlPatterns = ['<all_urls>', 'http://*/*', 'https://*/*', '*://*/*'];
+const forbiddenBundlePatterns = [
+  { label: 'eval()', pattern: /\beval\s*\(/ },
+  { label: 'new Function()', pattern: /\bnew\s+Function\s*\(/ },
+  { label: 'unsafe-eval', pattern: /unsafe-eval/ },
+  { label: 'document.write()', pattern: /\bdocument\.write\s*\(/ },
+  { label: 'remote script tag', pattern: /<script[^>]+src=["']https?:\/\//i },
+];
+
+function fail(message) {
+  throw new Error(`Extension policy audit failed: ${message}`);
+}
+
+function sorted(value) {
+  return [...value].sort();
+}
+
+function assertExactSet(label, actual, expected) {
+  const actualSorted = sorted(actual || []);
+  const expectedSorted = sorted(expected);
+  if (JSON.stringify(actualSorted) !== JSON.stringify(expectedSorted)) {
+    fail(`${label} mismatch. expected ${JSON.stringify(expectedSorted)}, got ${JSON.stringify(actualSorted)}`);
+  }
+}
+
+function walkFiles(dir, prefix = '') {
+  const files = [];
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    const relativePath = prefix ? `${prefix}/${entry}` : entry;
+    if (statSync(fullPath).isDirectory()) files.push(...walkFiles(fullPath, relativePath));
+    else files.push({ fullPath, relativePath });
+  }
+  return files;
+}
+
+if (!existsSync(manifestPath)) fail('dist/manifest.json missing; run npm run build first');
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+
+if (manifest.manifest_version !== 3) fail(`manifest_version must be 3, got ${manifest.manifest_version}`);
+if (manifest.name !== 'Argus Delta Courtlens') fail(`unexpected extension name ${manifest.name}`);
+if (manifest.background?.service_worker !== 'background.js') fail('background service worker must be background.js');
+if (manifest.background?.type !== 'module') fail('background service worker must be type=module');
+if (manifest.content_security_policy?.extension_pages?.includes('unsafe-eval')) fail('extension_pages CSP contains unsafe-eval');
+
+assertExactSet('permissions', manifest.permissions, expectedPermissions);
+assertExactSet('host_permissions', manifest.host_permissions, expectedHostPermissions);
+
+const allUrlGrants = [
+  ...(manifest.host_permissions || []),
+  ...((manifest.content_scripts || []).flatMap((script) => script.matches || [])),
+  ...((manifest.web_accessible_resources || []).flatMap((resource) => resource.matches || [])),
+];
+for (const grant of allUrlGrants) {
+  if (forbiddenUrlPatterns.includes(grant)) fail(`broad URL grant is forbidden: ${grant}`);
+  if (grant.startsWith('http://')) fail(`insecure HTTP grant is forbidden: ${grant}`);
+}
+
+const contentScripts = manifest.content_scripts || [];
+for (const [jsFile, expectedMatches] of expectedContentScripts) {
+  const script = contentScripts.find((candidate) => JSON.stringify(candidate.js || []) === JSON.stringify([jsFile]));
+  if (!script) fail(`missing content script for ${jsFile}`);
+  assertExactSet(`${jsFile} matches`, script.matches, expectedMatches);
+  if (script.run_at !== 'document_idle') fail(`${jsFile} must run at document_idle`);
+}
+if (contentScripts.length !== expectedContentScripts.size) fail(`unexpected content script count ${contentScripts.length}`);
+
+const jsFiles = walkFiles(dist).filter((file) => file.relativePath.endsWith('.js'));
+for (const file of jsFiles) {
+  const source = readFileSync(file.fullPath, 'utf8');
+  for (const forbidden of forbiddenBundlePatterns) {
+    if (forbidden.pattern.test(source)) fail(`${file.relativePath} contains ${forbidden.label}`);
+  }
+}
+
+console.log(`Extension policy audit passed: MV3 manifest, exact permissions, scoped hosts, and ${jsFiles.length} JS bundle(s) verified.`);
