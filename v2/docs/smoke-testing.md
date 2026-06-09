@@ -20,7 +20,7 @@ npm run package:extension
 npm run audit:delivery
 ```
 
-These commands run unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, and release secret-leak audit. They write `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging uses a temporary staging directory and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
+These commands run unit tests, `npm audit --audit-level=moderate`, the production build, MV3 extension policy audit, browser/extension smoke, live provider smoke, packaging from the verified `dist/` output, deterministic-package verification, and release secret-leak audit. They write `artifacts/delivery-audit.json` with a prompt-to-artifact checklist, command statuses, exact dependency-spec checks, package metadata, release-archive contents, SHA-256 provenance for the zip and each packaged file, git metadata, and any external/manual gates that still need an operator or private credential. Release packaging is deterministic, uses fixed ZIP timestamps and sorted entries, and excludes source maps / macOS metadata from the zip while leaving `dist/` useful for local debugging.
 
 ## Extension policy and secret audits
 

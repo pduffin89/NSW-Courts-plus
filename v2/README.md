@@ -54,6 +54,7 @@ npm test        # Vitest parser/provider/sidebar/content tests
 npm run build   # TypeScript + Vite production build
 npm run audit:policy  # MV3 manifest, permissions, host scopes, and remote-code policy checks
 npm run audit:secrets # Built dist and release archive secret-leak checks
+npm run audit:package-determinism # Repeated package SHA-256 stability check
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
 npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry

@@ -71,6 +71,7 @@ const gates = [
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
   runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
   runGate('package-verified-dist', 'node', ['scripts/package_extension.mjs']),
+  runGate('package-determinism-audit', 'npm', ['run', 'audit:package-determinism']),
   runGate('release-secret-audit', 'npm', ['run', 'audit:secrets']),
 ];
 
@@ -162,6 +163,11 @@ const criteria = [
     requirement: 'Release archive excludes debug source maps and macOS metadata',
     evidence: ['artifacts/argus-delta-courtlens.zip archive listing', archiveReleaseClean ? 'no .map or .DS_Store entries' : `forbidden entries: ${archiveForbiddenEntries.join(', ')}`],
     status: archiveReleaseClean ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Release archive packaging is byte-deterministic for the same build output',
+    evidence: ['npm run audit:package-determinism', 'scripts/package_determinism.mjs'],
+    status: gates.find((gate) => gate.label === 'package-determinism-audit')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Built dist and release archive pass secret-leak audit',

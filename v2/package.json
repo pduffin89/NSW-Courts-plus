@@ -10,6 +10,7 @@
     "build": "tsc --noEmit && node scripts/build.mjs",
     "audit:policy": "node scripts/extension_policy_audit.mjs",
     "audit:secrets": "node scripts/secret_audit.mjs",
+    "audit:package-determinism": "node scripts/package_determinism.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
