@@ -64,6 +64,7 @@ function describeArchiveEntry(archive, entry) {
 
 const gates = [
   runGate('unit-tests', 'npm', ['test']),
+  runGate('dependency-security-audit', 'npm', ['audit', '--audit-level=moderate']),
   runGate('production-build', 'npm', ['run', 'build']),
   runGate('browser-and-extension-smoke', 'npm', ['run', 'smoke']),
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
@@ -119,6 +120,11 @@ const criteria = [
     requirement: 'Dependency versions are pinned for reproducible installs',
     evidence: dependencySpecsPinned ? ['package.json exact dependency/devDependency versions'] : nonExactDependencySpecs.map(({ name, spec }) => `${name}@${spec}`),
     status: dependencySpecsPinned ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Dependency security audit has no moderate-or-higher vulnerabilities',
+    evidence: ['npm audit --audit-level=moderate'],
+    status: gates.find((gate) => gate.label === 'dependency-security-audit')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Browser fixture smoke and real unpacked-extension smoke against routed NSW URLs',
