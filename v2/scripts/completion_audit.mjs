@@ -9,6 +9,8 @@ const deliveryPath = join(artifactsDir, 'delivery-audit.json');
 const readinessPath = join(artifactsDir, 'release-readiness.json');
 const manualEvidencePath = join(artifactsDir, 'manual-verification.json');
 const ciParityPath = join(artifactsDir, 'ci-artifact-parity.json');
+const liveSmokePath = join(artifactsDir, 'live-smoke.json');
+const operatorSmokePath = join(artifactsDir, 'operator-live-smoke.json');
 
 function readJson(path, fallback = null) {
   if (!existsSync(path)) return fallback;
@@ -63,6 +65,8 @@ const delivery = readJson(deliveryPath);
 const readiness = readJson(readinessPath);
 const manualEvidence = readJson(manualEvidencePath);
 const ciParityEvidence = readJson(ciParityPath);
+const liveSmokeEvidence = readJson(liveSmokePath);
+const operatorSmokeEvidence = readJson(operatorSmokePath);
 const gitHead = runText('git', ['rev-parse', 'HEAD']);
 const gitStatus = runText('git', ['status', '--short']);
 const liveProviderCriterion = findCriterion(delivery, 'Live provider smoke');
@@ -72,7 +76,7 @@ const operatorManual = manualGate(manualEvidence, 'operatorNswWorkflowSmoke');
 const ciParityManual = manualGate(manualEvidence, 'ciArtifactParity');
 const featureMatrix = delivery?.featureMatrix || [];
 const featureMatrixOk = featureMatrix.length > 0 && featureMatrix.every((item) => item.status === 'pass');
-const criteriaOk = (delivery?.criteria || []).every((criterion) => criterion.status === 'pass');
+const deliveryCriteria = delivery?.criteria || [];
 const automatedOk = delivery?.automatedOk === true;
 const readinessOk = readiness?.ok === true;
 const releaseArchiveOk = Boolean(delivery?.archive?.exists && delivery?.archive?.releaseClean && delivery?.archive?.sha256);
@@ -86,14 +90,32 @@ const checksumManifestOk = fileExists('artifacts/SHA256SUMS') && fileContains('a
   'screenshots/04-settings.png',
 ]);
 const screenshotEvidenceOk = (readiness?.screenshots || []).length === 4 && readiness.screenshots.every((shot) => shot.exists && shot.width === 422 && shot.height === 930);
-const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentialedManual.ok;
-const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok;
+const liveCredentialedOk = liveProviderCriterion?.status === 'pass' || credentialedManual.ok || Boolean(
+  liveSmokeEvidence?.status === 'pass'
+  && liveSmokeEvidence.gitHead === gitHead
+  && liveSmokeEvidence.credentialedProviderSmoke?.status === 'pass'
+  && liveSmokeEvidence.credentialedProviderSmoke?.authenticatedArgus === true
+  && liveSmokeEvidence.credentialedProviderSmoke?.credentialedAbn === true
+);
+const operatorOk = operatorCriterion?.status === 'pass' || operatorManual.ok || Boolean(
+  operatorSmokeEvidence?.status === 'pass'
+  && operatorSmokeEvidence.gitHead === gitHead
+  && operatorSmokeEvidence.courtlist?.skipped !== true
+  && operatorSmokeEvidence.caselaw?.skipped !== true
+);
 const ciArtifactParityOk = ciParityManual.ok || Boolean(
   ciParityEvidence?.status === 'pass'
   && ciParityEvidence.headSha === gitHead
   && ciParityEvidence.localHeadSha === gitHead
   && ciParityEvidence.archiveSha256 === delivery?.archive?.sha256
 );
+const criteriaFailures = deliveryCriteria.filter((criterion) => {
+  if (criterion.status === 'pass') return false;
+  if (criterion.requirement.startsWith('Live provider smoke')) return !liveCredentialedOk;
+  if (criterion.requirement.startsWith('Operator-assisted smoke')) return !operatorOk;
+  return true;
+});
+const criteriaOk = criteriaFailures.length === 0;
 
 const checklist = [
   check(
@@ -121,7 +143,7 @@ const checklist = [
     'Before declaring completion, perform a concrete audit against actual artifacts, commands, files, and test evidence',
     ['artifacts/delivery-audit.json.criteria'],
     criteriaOk,
-    (delivery?.criteria || []).filter((criterion) => criterion.status !== 'pass').map((criterion) => `${criterion.requirement}: ${criterion.status}`)
+    criteriaFailures.map((criterion) => `${criterion.requirement}: ${criterion.status}`)
   ),
   check(
     'Release-readiness audit passes',
@@ -161,14 +183,14 @@ const checklist = [
   check(
     'Authenticated Argus and ABN credentialed provider smoke is proven',
     'total smoketest',
-    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, ...credentialedManual.evidence],
+    [liveProviderCriterion?.requirement, liveProviderCriterion?.status, liveSmokeEvidence?.credentialedProviderSmoke?.status && `live-smoke:${liveSmokeEvidence.credentialedProviderSmoke.status}`, ...credentialedManual.evidence],
     liveCredentialedOk,
     liveCredentialedOk ? [] : ['ARGUS_DELTA_TOKEN and ABN_GUID/COURTLENS_ABN_GUID credentialed branches remain unverified']
   ),
   check(
     'Authenticated or targeted operator NSW workflow smoke is proven',
     'total smoketest; no slop',
-    [operatorCriterion?.requirement, operatorCriterion?.status, ...operatorManual.evidence],
+    [operatorCriterion?.requirement, operatorCriterion?.status, operatorSmokeEvidence?.status && `operator-live-smoke:${operatorSmokeEvidence.status}`, ...operatorManual.evidence],
     operatorOk,
     operatorOk ? [] : ['operator-assisted headed Chrome NSW workflow remains unverified']
   ),
@@ -198,6 +220,8 @@ const completion = {
     releaseReadiness: readinessPath,
     manualVerification: manualEvidencePath,
     ciArtifactParity: ciParityPath,
+    liveSmoke: liveSmokePath,
+    operatorLiveSmoke: operatorSmokePath,
     output: outputPath,
   },
 };

@@ -15,6 +15,8 @@ const requiredArtifactNames = [
   'screenshots/04-settings.png',
 ];
 const optionalArtifactNames = [
+  'live-smoke.json',
+  'operator-live-smoke.json',
   'ci-artifact-parity.json',
   'completion-audit.json',
   'manual-verification.json',

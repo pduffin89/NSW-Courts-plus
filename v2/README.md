@@ -60,10 +60,10 @@ npm run audit:release-readiness # Pre-upload audit/ZIP/manifest/provenance cross
 npm run write:checksums # Write artifacts/SHA256SUMS for release evidence
 npm run verify:ci-artifact-parity -- --run-id <run-id> # Compare local release artifacts to CI and write artifacts/ci-artifact-parity.json
 npm run smoke       # Manifest, bundle, asset, docs, browser, extension-load, and secret checks
-npm run smoke:live           # Safe live Argus health/unauth checks; authenticated checks if ARGUS_DELTA_TOKEN is set
+npm run smoke:live           # Live provider checks; writes artifacts/live-smoke.json; credentialed branches run when secrets are set
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry
 npm run smoke:release-extension # Extract and load the shipped zip as a real MV3 extension
-npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages
+npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages; writes artifacts/operator-live-smoke.json on pass
 npm run capture:screenshots  # Generate non-sensitive release/store screenshot evidence
 npm run verify             # Fast local verification gate
 npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON
@@ -92,4 +92,4 @@ Release upload checklist and Chrome Web Store disclosure notes live in `docs/rel
 
 ## Verification status
 
-The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. After CI completes, `npm run verify:ci-artifact-parity -- --run-id <run-id>` verifies the uploaded CI artifact checksums and compares the local release ZIP with CI byte-for-byte. `npm run audit:completion` writes `artifacts/completion-audit.json` and fails until private-credential and operator gates have concrete evidence. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
+The project is designed so `npm run verify` is the fast local gate, while `npm run package:extension` is the final evidence and pre-upload gate. `npm run audit:delivery` writes `artifacts/delivery-audit.json`; `npm run audit:release-readiness` verifies that the current release ZIP, audit JSON, git HEAD, manifest policy, and known external/manual gates all agree. After CI completes, `npm run verify:ci-artifact-parity -- --run-id <run-id>` verifies the uploaded CI artifact checksums and compares the local release ZIP with CI byte-for-byte. `npm run audit:completion` writes `artifacts/completion-audit.json` and fails until private-credential and operator gates have concrete evidence from `artifacts/live-smoke.json`, `artifacts/operator-live-smoke.json`, or `artifacts/manual-verification.json`. Do not claim a milestone is complete unless the final gate passes and the prompt-to-artifact checklist is satisfied, including any manual or private-credential items recorded in `artifacts/delivery-audit.json`.
