@@ -5,8 +5,6 @@
   "description": "Sidebar research and document workflow assistant for NSW court lists and NSW Caselaw.",
   "permissions": [
     "storage",
-    "downloads",
-    "scripting",
     "tabs"
   ],
   "host_permissions": [

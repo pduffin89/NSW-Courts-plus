@@ -5,7 +5,7 @@ const root = process.cwd();
 const dist = join(root, 'dist');
 const manifestPath = join(dist, 'manifest.json');
 
-const expectedPermissions = ['downloads', 'scripting', 'storage', 'tabs'];
+const expectedPermissions = ['storage', 'tabs'];
 const expectedHostPermissions = [
   'https://abr.business.gov.au/*',
   'https://be-api.argusdelta.com/*',
