@@ -75,6 +75,7 @@ jobs:
             v2/artifacts/delivery-audit.json
             v2/artifacts/release-readiness.json
             v2/artifacts/SHA256SUMS
+            v2/artifacts/screenshots/*.png
           if-no-files-found: error
           retention-days: 14
 

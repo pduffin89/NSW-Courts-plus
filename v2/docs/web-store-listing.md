@@ -74,7 +74,15 @@ Expected release ZIP SHA for the current deterministic build is recorded in `art
 
 ## Screenshot guidance
 
-Capture screenshots from a clean browser profile with no real client secrets visible:
+Generate non-sensitive fixture screenshots with:
+
+```bash
+npm run capture:screenshots
+```
+
+`npm run package:extension` also runs this capture and writes screenshots to `artifacts/screenshots/` for release evidence.
+
+Capture any additional screenshots from a clean browser profile with no real client secrets visible:
 
 1. Sidebar Overview tab on a fixture or non-sensitive public NSW court-list row.
 2. Research tab showing provider buttons and non-sensitive routed results.

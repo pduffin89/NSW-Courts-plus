@@ -68,6 +68,7 @@ const gates = [
   runGate('production-build', 'npm', ['run', 'build']),
   runGate('extension-policy-audit', 'npm', ['run', 'audit:policy']),
   runGate('browser-and-extension-smoke', 'npm', ['run', 'smoke']),
+  runGate('release-screenshot-capture', 'npm', ['run', 'capture:screenshots']),
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
   runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
   runGate('package-verified-dist', 'node', ['scripts/package_extension.mjs']),
@@ -101,6 +102,12 @@ const git = {
   headSha: runText('git', ['rev-parse', 'HEAD']),
   statusShort: runText('git', ['status', '--short']),
 };
+const screenshotChecks = [
+  'artifacts/screenshots/01-overview.png',
+  'artifacts/screenshots/02-research.png',
+  'artifacts/screenshots/03-documents.png',
+  'artifacts/screenshots/04-settings.png',
+].map((relativePath) => ({ relativePath, exists: existsSync(join(root, relativePath)) }));
 const distChecks = [
   'dist/manifest.json',
   'dist/background.js',
@@ -241,13 +248,14 @@ const featureMatrix = [
     { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
   ]),
   feature('User-facing documentation and operator handoff', [
-    'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md', 'docs/web-store-listing.md'
+    'README.md', 'docs/architecture.md', 'docs/providers.md', 'docs/document-applications.md', 'docs/privacy-security.md', 'docs/smoke-testing.md', 'docs/web-store-listing.md', 'artifacts/screenshots/*.png'
   ], [
     { name: 'README exists', ok: fileExists('README.md') },
     { name: 'core docs exist', ok: ['architecture.md', 'providers.md', 'document-applications.md', 'privacy-security.md', 'smoke-testing.md', 'release-readiness.md', 'web-store-listing.md'].every((name) => fileExists(`docs/${name}`)) },
     { name: 'smoke docs include operator-assisted path', ok: fileContains('docs/smoke-testing.md', ['Operator-assisted live Chrome smoke', 'npm run smoke:operator']) },
     { name: 'release readiness doc includes Web Store permission and upload checklist', ok: fileContains('docs/release-readiness.md', ['Permission justification', 'Data use disclosure draft', 'Final upload checklist', 'archive.sha256', 'npm run audit:release-readiness', 'docs/web-store-listing.md']) },
     { name: 'Chrome Web Store listing handoff covers listing copy, privacy, permissions, screenshots, and QA', ok: fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance', 'npm run verify:ci-artifact-parity']) },
+    { name: 'release screenshots are generated from non-sensitive fixtures', ok: gateOk('release-screenshot-capture') && screenshotChecks.every((check) => check.exists) },
     { name: 'release readiness verifier exists and writes evidence JSON', ok: fileContains('scripts/release_readiness_audit.mjs', ['release-readiness.json', 'writeFileSync']) },
     { name: 'release checksums writer exists', ok: fileContains('scripts/write_checksums.mjs', ['SHA256SUMS', 'argus-delta-courtlens.zip', 'delivery-audit.json', 'release-readiness.json']) },
     { name: 'README lists final delivery gates', ok: fileContains('README.md', ['npm run package:extension', 'npm run audit:delivery', 'npm run audit:release-readiness', 'npm run write:checksums']) },
@@ -363,6 +371,7 @@ const audit = {
   dependencySpecs,
   nonExactDependencySpecs,
   distChecks,
+  screenshotChecks,
   featureMatrix,
   criteria,
   externalOrManualGates: criteria.filter((item) => item.status.includes('external') || item.status.includes('manual')),
@@ -372,7 +381,7 @@ mkdirSync(artifactsDir, { recursive: true });
 writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`, 'utf8');
 console.log(`\nDelivery audit written to ${auditPath}`);
 
-if (!automatedOk || !dependencySpecsPinned || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists) || !featureMatrixOk) {
+if (!automatedOk || !dependencySpecsPinned || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists) || screenshotChecks.some((check) => !check.exists) || !featureMatrixOk) {
   process.exit(1);
 }
 

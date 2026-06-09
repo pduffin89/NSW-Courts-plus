@@ -7,6 +7,12 @@ const root = process.cwd();
 const archivePath = join(root, 'artifacts', 'argus-delta-courtlens.zip');
 const auditPath = join(root, 'artifacts', 'delivery-audit.json');
 const readinessPath = join(root, 'artifacts', 'release-readiness.json');
+const expectedScreenshots = [
+  'artifacts/screenshots/01-overview.png',
+  'artifacts/screenshots/02-research.png',
+  'artifacts/screenshots/03-documents.png',
+  'artifacts/screenshots/04-settings.png',
+];
 
 const expectedPermissions = ['storage'];
 const expectedHostPermissions = [
@@ -85,6 +91,9 @@ if (!fileContains('scripts/verify_ci_artifact_parity.mjs', ['gh', 'run', 'downlo
 if (!fileContains('docs/release-readiness.md', ['verify:ci-artifact-parity', 'argus-delta-courtlens', 'byte-for-byte', 'docs/web-store-listing.md'])) fail('release-readiness docs do not describe CI artifact parity verification and store listing handoff');
 if (!fileContains('docs/web-store-listing.md', ['Chrome Web Store listing draft', 'Long description', 'Permission justification', 'Privacy disclosure draft', 'Single-purpose statement', 'Remote code / MV3 policy statement', 'Screenshot guidance'])) fail('Chrome Web Store listing handoff is missing required release sections');
 if (!fileContains('../.github/workflows/courtlens-v2.yml', ['workflow_dispatch:', 'ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}'])) fail('CI workflow must support manual credentialed live-smoke reruns with optional secrets');
+for (const screenshot of expectedScreenshots) {
+  if (!existsSync(join(root, screenshot))) fail(`${screenshot} missing; run npm run capture:screenshots or npm run package:extension first`);
+}
 
 for (const criterion of audit.criteria || []) {
   if (criterion.status === 'pass') continue;
@@ -120,6 +129,7 @@ const readiness = {
     automatedOk: audit.automatedOk,
     featureMatrixOk: audit.featureMatrix.every((item) => item.status === 'pass'),
   },
+  screenshots: expectedScreenshots.map((relativePath) => ({ relativePath, exists: existsSync(join(root, relativePath)) })),
   manifest: {
     permissions: manifest.permissions,
     hostPermissions: manifest.host_permissions,

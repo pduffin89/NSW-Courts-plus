@@ -14,6 +14,12 @@ const expectedFiles = [
   'release-readiness.json',
   'SHA256SUMS',
 ];
+const expectedScreenshots = [
+  'screenshots/01-overview.png',
+  'screenshots/02-research.png',
+  'screenshots/03-documents.png',
+  'screenshots/04-settings.png',
+];
 
 function fail(message) {
   throw new Error(`CI artifact parity failed: ${message}`);
@@ -103,6 +109,7 @@ if (runInfo.status !== 'completed' || runInfo.conclusion !== 'success') {
 }
 
 for (const file of expectedFiles) assertExists(join(root, 'artifacts', file));
+for (const screenshot of expectedScreenshots) assertExists(join(root, 'artifacts', screenshot));
 verifyChecksums(join(root, 'artifacts'));
 
 const localAudit = readJson(join(root, 'artifacts', 'delivery-audit.json'));
@@ -117,6 +124,7 @@ const tmp = mkdtempSync(join(tmpdir(), 'courtlens-ci-artifacts-'));
 try {
   run('gh', ['run', 'download', String(runInfo.databaseId), '--name', artifactName, '--dir', tmp], { cwd: repoRoot });
   for (const file of expectedFiles) assertExists(join(tmp, file));
+  for (const screenshot of expectedScreenshots) assertExists(join(tmp, screenshot));
   verifyChecksums(tmp);
 
   const ciAudit = readJson(join(tmp, 'delivery-audit.json'));

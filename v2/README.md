@@ -64,6 +64,7 @@ npm run smoke:live           # Safe live Argus health/unauth checks; authenticat
 npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + Online Registry
 npm run smoke:release-extension # Extract and load the shipped zip as a real MV3 extension
 npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages
+npm run capture:screenshots  # Generate non-sensitive release/store screenshot evidence
 npm run verify             # Fast local verification gate
 npm run package:extension  # Full delivery audit, release-clean zip, and evidence JSON
 npm run audit:delivery     # Same final delivery gate used by package:extension
