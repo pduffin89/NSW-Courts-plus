@@ -33,6 +33,13 @@ function runGate(label, command, args) {
   };
 }
 
+function listArchiveEntries(archive) {
+  if (!existsSync(archive)) return [];
+  const result = spawnSync('unzip', ['-Z1', archive], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) return [];
+  return result.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
 const gates = [
   runGate('unit-tests', 'npm', ['test']),
   runGate('production-build', 'npm', ['run', 'build']),
@@ -44,6 +51,9 @@ const gates = [
 const automatedOk = gates.every((gate) => gate.ok);
 const archiveExists = existsSync(archivePath);
 const archiveSizeBytes = archiveExists ? statSync(archivePath).size : 0;
+const archiveEntries = listArchiveEntries(archivePath);
+const archiveForbiddenEntries = archiveEntries.filter((entry) => entry.endsWith('.map') || entry.endsWith('.DS_Store'));
+const archiveReleaseClean = archiveExists && archiveEntries.length > 0 && archiveForbiddenEntries.length === 0;
 const distChecks = [
   'dist/manifest.json',
   'dist/background.js',
@@ -82,6 +92,11 @@ const criteria = [
     status: gates.find((gate) => gate.label === 'package-verified-dist')?.ok && archiveExists && archiveSizeBytes > 0 ? 'pass' : 'fail',
   },
   {
+    requirement: 'Release archive excludes debug source maps and macOS metadata',
+    evidence: ['artifacts/argus-delta-courtlens.zip archive listing', archiveReleaseClean ? 'no .map or .DS_Store entries' : `forbidden entries: ${archiveForbiddenEntries.join(', ')}`],
+    status: archiveReleaseClean ? 'pass' : 'fail',
+  },
+  {
     requirement: 'Manual smoke on live NSW Online Registry and NSW Caselaw in operator Chrome profile',
     evidence: ['docs/smoke-testing.md#manual-chrome-smoke'],
     status: 'manual-operator-required',
@@ -97,6 +112,10 @@ const audit = {
     path: archivePath,
     exists: archiveExists,
     sizeBytes: archiveSizeBytes,
+    entryCount: archiveEntries.length,
+    releaseClean: archiveReleaseClean,
+    forbiddenEntries: archiveForbiddenEntries,
+    entries: archiveEntries,
   },
   gates,
   distChecks,
@@ -108,7 +127,7 @@ mkdirSync(artifactsDir, { recursive: true });
 writeFileSync(auditPath, `${JSON.stringify(audit, null, 2)}\n`, 'utf8');
 console.log(`\nDelivery audit written to ${auditPath}`);
 
-if (!automatedOk || !archiveExists || archiveSizeBytes === 0 || distChecks.some((check) => !check.exists)) {
+if (!automatedOk || !archiveExists || archiveSizeBytes === 0 || !archiveReleaseClean || distChecks.some((check) => !check.exists)) {
   process.exit(1);
 }
 
