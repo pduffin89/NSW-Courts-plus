@@ -20,9 +20,7 @@ const expectedHostPermissions = [
   'http://localhost/*',
   'https://abr.business.gov.au/*',
   'https://be-api.argusdelta.com/*',
-  'https://mail.google.com/*',
   'https://news.google.com/*',
-  'https://onlineregistry.lawlink.nsw.gov.au/*',
   'https://search.judgments.fedcourt.gov.au/*',
   'https://www.caselaw.nsw.gov.au/*',
 ];
