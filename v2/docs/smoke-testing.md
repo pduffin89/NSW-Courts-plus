@@ -48,7 +48,7 @@ npm run audit:secrets
 - background bundle does not contain obvious hardcoded token strings.
 - court-list bundle contains the Courtlens launcher text.
 - Python Playwright browser fixture smoke loads built `courtlist.js` and `caselaw.js` into mocked pages, confirms the sidebar mounts in a Shadow DOM, verifies local NER entity enhancement, verifies the document-generation UI renders generated attachments, and exercises the Gmail draft handoff callback.
-- Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, confirms manifest content scripts execute, verifies a routed Research provider search through the real MV3 background, verifies caselaw body entities render, and exercises real background PDF generation against bundled templates.
+- Python Playwright unpacked-extension smoke loads `dist/` as a real Chrome extension, routes NSW target URLs to local fixtures, confirms manifest content scripts execute, verifies routed Argus Delta, News, Federal Court, NSW Caselaw, ABN search, and ABN history workflows through the real MV3 background, verifies caselaw body entities render, and exercises real background PDF generation against bundled templates.
 
 ## Browser fixture smoke
 
@@ -60,7 +60,7 @@ node scripts/package_extension.mjs
 npm run smoke:release-extension
 ```
 
-Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` by default and uses Playwright route fulfillment for NSW URLs. `smoke:release-extension` extracts `artifacts/argus-delta-courtlens.zip`, loads the extracted payload as a real MV3 extension, and reruns the same routed NSW court-list/caselaw workflow smoke against the artifact that is actually shipped.
+Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` by default and uses Playwright route fulfillment for NSW URLs plus deterministic provider fixtures for Argus Delta, News, Federal Court, NSW Caselaw, ABN search, and ABN history. `smoke:release-extension` extracts `artifacts/argus-delta-courtlens.zip`, loads the extracted payload as a real MV3 extension, and reruns the same routed NSW court-list/caselaw/provider workflow smoke against the artifact that is actually shipped.
 
 ## Live provider smoke
 
