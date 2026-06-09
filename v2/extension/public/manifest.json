@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Argus Delta Courtlens",
+  "version": "0.1.0",
+  "description": "Sidebar research and document workflow assistant for NSW court lists and NSW Caselaw.",
+  "permissions": ["storage", "downloads", "scripting", "tabs"],
+  "host_permissions": [
+    "https://onlineregistry.lawlink.nsw.gov.au/*",
+    "https://www.caselaw.nsw.gov.au/*",
+    "https://news.google.com/*",
+    "https://abr.business.gov.au/*",
+    "https://www.austlii.edu.au/*",
+    "https://search.judgments.fedcourt.gov.au/*",
+    "https://be-api.argusdelta.com/*",
+    "https://mail.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://onlineregistry.lawlink.nsw.gov.au/content/court-lists*"],
+      "js": ["courtlist.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.caselaw.nsw.gov.au/decision/*", "https://www.caselaw.nsw.gov.au/search*"],
+      "js": ["caselaw.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["forms/*.pdf", "vendor/*.js", "assets/*.css"],
+      "matches": ["https://onlineregistry.lawlink.nsw.gov.au/*", "https://www.caselaw.nsw.gov.au/*"]
+    }
+  ],
+  "action": {
+    "default_title": "Argus Delta Courtlens"
+  }
+}

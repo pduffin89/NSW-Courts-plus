@@ -1,0 +1,33 @@
+import React from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { CourtlensSidebar } from '../sidebar/CourtlensSidebar';
+import sidebarCss from '../styles/sidebar.css?inline';
+import type { MatterContext, ProviderResultPage } from '../core/types';
+import type { ProviderId } from '../core/searchRouter';
+
+let root: Root | null = null;
+let host: HTMLElement | null = null;
+
+export function openCourtlensSidebar(matter: MatterContext): void {
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'argus-delta-courtlens-root';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = sidebarCss;
+    const mount = document.createElement('div');
+    shadow.append(style, mount);
+    document.documentElement.appendChild(host);
+    root = createRoot(mount);
+  }
+  const onSearch = async (input: { providerId: ProviderId; query: string; exact: boolean }): Promise<ProviderResultPage> => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_SEARCH', ...input });
+    if (!response?.ok) throw new Error(response?.error || 'Search failed');
+    return response.data;
+  };
+  const onSaveSettings = async (settings: { argusDeltaToken?: string; argusDeltaProxyUrl?: string; abnGuid?: string; applicantName?: string; applicantOrganisation?: string; applicantEmail?: string }): Promise<void> => {
+    const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_SAVE_SETTINGS', settings });
+    if (!response?.ok) throw new Error(response?.error || 'Settings save failed');
+  };
+  root?.render(<CourtlensSidebar initialContext={{ matter }} onSearch={onSearch} onSaveSettings={onSaveSettings} />);
+}
