@@ -67,6 +67,7 @@ npm run smoke:live-extension # Real unpacked extension on public NSW Caselaw + O
 npm run smoke:release-extension # Extract and load the shipped zip as a real MV3 extension
 npm run smoke:operator       # Headed operator-assisted smoke on live NSW pages; writes artifacts/operator-live-smoke.json on pass
 npm run verify:operator-smoke-evidence # Verify headed operator smoke evidence for current HEAD
+npm run create:manual-verification-template # Create current-head manual evidence template
 npm run verify:manual-verification    # Verify manual-verification.json provenance and secret hygiene
 npm run capture:screenshots  # Generate non-sensitive release/store screenshot evidence
 npm run verify             # Fast local verification gate

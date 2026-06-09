@@ -19,6 +19,7 @@
     "verify:live-smoke-artifact": "node scripts/verify_live_smoke_artifact.mjs",
     "verify:operator-smoke-evidence": "node scripts/verify_operator_smoke_evidence.mjs",
     "verify:manual-verification": "node scripts/verify_manual_verification.mjs",
+    "create:manual-verification-template": "node scripts/create_manual_verification_template.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:live": "node scripts/live_smoke.mjs",
     "smoke:live-extension": "python3 scripts/live_extension_smoke.py",
