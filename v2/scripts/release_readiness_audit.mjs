@@ -143,6 +143,7 @@ const readiness = {
       'CI artifact SHA256SUMS',
       'CI audit/readiness git provenance',
       'local release ZIP equals CI release ZIP byte-for-byte',
+      'local and CI screenshot evidence is present, checksummed, and dimension-validated',
     ],
   },
   expectedExternalOrManualGates: (audit.criteria || [])

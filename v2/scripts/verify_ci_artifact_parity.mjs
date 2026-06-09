@@ -83,6 +83,12 @@ function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function pngDimensions(path) {
+  const buffer = readFileSync(path);
+  if (buffer.length < 24 || buffer.toString('ascii', 1, 4) !== 'PNG') fail(`${path} is not a PNG file`);
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
+
 function verifyChecksums(dir) {
   const sumsPath = join(dir, 'SHA256SUMS');
   const lines = readFileSync(sumsPath, 'utf8').split('\n').map((line) => line.trim()).filter(Boolean);
@@ -141,6 +147,22 @@ try {
   const localZipSha = sha256(join(root, 'artifacts', 'argus-delta-courtlens.zip'));
   const ciZipSha = sha256(join(tmp, 'argus-delta-courtlens.zip'));
   if (localZipSha !== ciZipSha) fail(`release ZIP differs between local and CI: local ${localZipSha}, CI ${ciZipSha}`);
+  const screenshotComparisons = expectedScreenshots.map((screenshot) => ({
+    screenshot,
+    localSha: sha256(join(root, 'artifacts', screenshot)),
+    ciSha: sha256(join(tmp, screenshot)),
+    localDimensions: pngDimensions(join(root, 'artifacts', screenshot)),
+    ciDimensions: pngDimensions(join(tmp, screenshot)),
+  }));
+  for (const comparison of screenshotComparisons) {
+    const expectedDimensions = { width: 422, height: 930 };
+    if (JSON.stringify(comparison.localDimensions) !== JSON.stringify(expectedDimensions)) {
+      fail(`${comparison.screenshot} local dimensions ${JSON.stringify(comparison.localDimensions)} do not match ${JSON.stringify(expectedDimensions)}`);
+    }
+    if (JSON.stringify(comparison.ciDimensions) !== JSON.stringify(expectedDimensions)) {
+      fail(`${comparison.screenshot} CI dimensions ${JSON.stringify(comparison.ciDimensions)} do not match ${JSON.stringify(expectedDimensions)}`);
+    }
+  }
   for (const [label, value] of [
     ['local audit archive sha', localArchiveSha],
     ['CI audit archive sha', ciArchiveSha],
@@ -152,6 +174,7 @@ try {
 
   console.log(`CI artifact parity passed: run ${runInfo.databaseId} (${runInfo.headSha}) ${runInfo.url}`);
   console.log(`argus-delta-courtlens.zip sha256 ${localZipSha}`);
+  for (const comparison of screenshotComparisons) console.log(`${comparison.screenshot} local sha256 ${comparison.localSha}; CI sha256 ${comparison.ciSha}; dimensions ${comparison.localDimensions.width}x${comparison.localDimensions.height}`);
   console.log(`local evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${localHead} and archive ${localZipSha}`);
   console.log(`CI evidence: ${basename('delivery-audit.json')} and ${basename('release-readiness.json')} verify head ${runInfo.headSha} and archive ${ciZipSha}`);
 } finally {
