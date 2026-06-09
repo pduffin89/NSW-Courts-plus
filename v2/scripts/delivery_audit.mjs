@@ -71,6 +71,7 @@ const gates = [
   runGate('live-provider-smoke', 'npm', ['run', 'smoke:live']),
   runGate('live-public-extension-smoke', 'npm', ['run', 'smoke:live-extension']),
   runGate('package-verified-dist', 'node', ['scripts/package_extension.mjs']),
+  runGate('release-secret-audit', 'npm', ['run', 'audit:secrets']),
 ];
 
 const automatedOk = gates.every((gate) => gate.ok);
@@ -161,6 +162,11 @@ const criteria = [
     requirement: 'Release archive excludes debug source maps and macOS metadata',
     evidence: ['artifacts/argus-delta-courtlens.zip archive listing', archiveReleaseClean ? 'no .map or .DS_Store entries' : `forbidden entries: ${archiveForbiddenEntries.join(', ')}`],
     status: archiveReleaseClean ? 'pass' : 'fail',
+  },
+  {
+    requirement: 'Built dist and release archive pass secret-leak audit',
+    evidence: ['npm run audit:secrets', 'scripts/secret_audit.mjs', 'dist/', 'artifacts/argus-delta-courtlens.zip'],
+    status: gates.find((gate) => gate.label === 'release-secret-audit')?.ok ? 'pass' : 'fail',
   },
   {
     requirement: 'Operator-assisted smoke for authenticated or targeted live NSW workflows in a headed Chrome profile',
