@@ -117,14 +117,14 @@ Expected pass evidence:
 
 ## Machine-readable manual evidence
 
-`npm run smoke:live` writes `artifacts/live-smoke.json`; when both `ARGUS_DELTA_TOKEN` and `ABN_GUID`/`COURTLENS_ABN_GUID` are present and pass, `npm run audit:completion` can clear the credentialed provider gate from that local artifact. `npm run verify:live-smoke-artifact -- --run-id <run-id> --require-credentialed --require-workflow-dispatch` writes `artifacts/standalone-live-smoke-artifact.json` and can also clear that gate after a credentialed CI rerun. `npm run smoke:operator` writes `artifacts/operator-live-smoke.json` after a successful headed operator session; `npm run verify:operator-smoke-evidence` writes `artifacts/operator-smoke-verification.json` after validating it for the current HEAD. `npm run verify:ci-artifact-parity -- --run-id <run-id>` writes `artifacts/ci-artifact-parity.json` when parity passes; add `--require-workflow-dispatch` for credentialed/manual release reruns. `npm run audit:completion` reads those files plus optional machine-readable evidence from `artifacts/manual-verification.json`, but manual evidence only counts after `npm run verify:manual-verification -- --require-all` writes current-head `artifacts/manual-verification-audit.json`. Create manual evidence only after running the relevant commands; do not include secret values.
+`npm run smoke:live` writes `artifacts/live-smoke.json`; when both `ARGUS_DELTA_TOKEN` and `ABN_GUID`/`COURTLENS_ABN_GUID` are present and pass, `npm run audit:completion` can clear the credentialed provider gate from that local artifact. `npm run verify:live-smoke-artifact -- --run-id <run-id> --require-credentialed --require-workflow-dispatch` writes `artifacts/standalone-live-smoke-artifact.json` and can also clear that gate after a credentialed CI rerun. `npm run smoke:operator` writes `artifacts/operator-live-smoke.json` after a successful headed operator session; `npm run verify:operator-smoke-evidence` writes `artifacts/operator-smoke-verification.json` after validating it for the current HEAD. `npm run verify:ci-artifact-parity -- --run-id <run-id>` writes `artifacts/ci-artifact-parity.json` when parity passes; add `--require-workflow-dispatch` for credentialed/manual release reruns. `npm run audit:completion` reads those files plus optional machine-readable evidence from `artifacts/manual-verification.json`, but manual evidence only counts after `npm run verify:manual-verification -- --require-all` writes current-head, release-ZIP-matched `artifacts/manual-verification-audit.json`. Create manual evidence only after running the relevant commands; do not include secret values.
 
 Example shape:
 
 ```json
 {
   "headSha": "<current git HEAD>",
-  "releaseZipSha256": "<artifacts/argus-delta-courtlens.zip sha256>",
+  "releaseZipSha256": "<artifacts/argus-delta-courtlens.zip sha256; required by verify:manual-verification>",
   "ciArtifactParity": {
     "status": "pass",
     "command": "npm run verify:ci-artifact-parity -- --run-id 123456789",
@@ -146,4 +146,4 @@ Example shape:
 
 ## Completion rule
 
-Only clear the external/manual gates when the evidence summary is filled out with concrete command output or CI run URLs, `npm run verify:manual-verification -- --require-all` passes, and no unresolved credential/operator items remain. `npm run audit:completion` should pass before the thread goal is marked complete.
+Only clear the external/manual gates when the evidence summary is filled out with concrete command output or CI run URLs, includes the current release ZIP SHA-256, `npm run verify:manual-verification -- --require-all` passes, and no unresolved credential/operator items remain. `npm run audit:completion` should pass before the thread goal is marked complete.

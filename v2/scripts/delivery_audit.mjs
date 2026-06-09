@@ -43,6 +43,12 @@ function runText(command, args) {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+function readJson(relativePath) {
+  const path = join(root, relativePath);
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
 function listArchiveEntries(archive) {
   if (!existsSync(archive)) return [];
   const result = spawnSync('unzip', ['-Z1', archive], { cwd: root, encoding: 'utf8' });
@@ -97,6 +103,9 @@ const dependencySpecsPinned = nonExactDependencySpecs.length === 0;
 const argusLiveCredentialPresent = Boolean(process.env.ARGUS_DELTA_TOKEN);
 const abnLiveCredentialPresent = Boolean(process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID);
 const optionalLiveCredentialsPresent = argusLiveCredentialPresent && abnLiveCredentialPresent;
+const liveSmokeEvidence = readJson('artifacts/live-smoke.json');
+const degradedLiveChecks = (liveSmokeEvidence?.checks || []).filter((check) => check.status === 'upstream-unavailable');
+const nonSecretLiveChecksOk = degradedLiveChecks.length === 0;
 const git = {
   branch: runText('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
   headSha: runText('git', ['rev-parse', 'HEAD']),
@@ -247,7 +256,7 @@ const featureMatrix = [
     { name: 'CI workflow passes optional live-smoke secrets to delivery and live jobs and uploads standalone live evidence', ok: fileContains('../.github/workflows/courtlens-v2.yml', ['workflow_dispatch:', 'ARGUS_DELTA_TOKEN: ${{ secrets.ARGUS_DELTA_TOKEN }}', 'ABN_GUID: ${{ secrets.ABN_GUID }}', 'COURTLENS_ABN_GUID: ${{ secrets.COURTLENS_ABN_GUID }}', 'Live provider smoke (optional secrets)', 'argus-delta-courtlens-live-smoke', 'v2/artifacts/live-smoke.json']) },
     { name: 'standalone live-smoke artifact verifier exists and is documented', ok: fileContains('scripts/verify_live_smoke_artifact.mjs', ['argus-delta-courtlens-live-smoke', '--require-credentialed', '--require-workflow-dispatch', 'standalone-live-smoke-artifact.json']) && fileContains('package.json', ['verify:live-smoke-artifact']) && fileContains('docs/smoke-testing.md', ['verify:live-smoke-artifact', '--require-workflow-dispatch']) },
     { name: 'operator smoke evidence verifier exists and is documented', ok: fileContains('scripts/verify_operator_smoke_evidence.mjs', ['operator-live-smoke.json', 'operator-smoke-verification.json', '--require-documents']) && fileContains('package.json', ['verify:operator-smoke-evidence']) && fileContains('docs/smoke-testing.md', ['verify:operator-smoke-evidence']) },
-    { name: 'manual verification evidence verifier exists and is documented', ok: fileContains('scripts/verify_manual_verification.mjs', ['manual-verification.json', 'manual-verification-audit.json', '--require-all']) && fileContains('package.json', ['verify:manual-verification']) && fileContains('docs/manual-verification.md', ['verify:manual-verification']) },
+    { name: 'manual verification evidence verifier exists and is documented', ok: fileContains('scripts/verify_manual_verification.mjs', ['manual-verification.json', 'manual-verification-audit.json', 'releaseZipSha256', '--require-all']) && fileContains('package.json', ['verify:manual-verification']) && fileContains('docs/manual-verification.md', ['verify:manual-verification', 'release ZIP SHA-256']) },
     { name: 'release zip is clean and non-empty', ok: archiveReleaseClean && archiveSizeBytes > 0 },
     { name: 'release zip includes all icon sizes', ok: ['icons/icon-16.png', 'icons/icon-32.png', 'icons/icon-48.png', 'icons/icon-128.png'].every((entry) => archiveEntries.includes(entry)) },
     { name: 'delivery audit gate includes release extension smoke and secret audit', ok: gateOk('release-extension-smoke') && gateOk('release-secret-audit') },
@@ -306,8 +315,9 @@ const criteria = [
       'npm run smoke:live',
       argusLiveCredentialPresent ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped',
       abnLiveCredentialPresent ? 'ABN_GUID/COURTLENS_ABN_GUID present' : 'ABN_GUID/COURTLENS_ABN_GUID absent; ABN name-search branch skipped',
+      degradedLiveChecks.length ? `upstream unavailable: ${degradedLiveChecks.map((check) => check.name).join(', ')}` : 'non-secret live checks available',
     ],
-    status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (optionalLiveCredentialsPresent ? 'pass' : 'partial-external-credential-needed') : 'fail',
+    status: gates.find((gate) => gate.label === 'live-provider-smoke')?.ok ? (!nonSecretLiveChecksOk ? 'partial-upstream-unavailable' : (optionalLiveCredentialsPresent ? 'pass' : 'partial-external-credential-needed')) : 'fail',
   },
   {
     requirement: 'Live public NSW Caselaw and NSW Online Registry pages load the real unpacked extension and sidebar',

@@ -133,7 +133,7 @@ const ciArtifactParityOk = ciParityManual.ok || Boolean(
 );
 const criteriaFailures = deliveryCriteria.filter((criterion) => {
   if (criterion.status === 'pass') return false;
-  if (criterion.requirement.startsWith('Live provider smoke')) return !liveCredentialedOk;
+  if (criterion.requirement.startsWith('Live provider smoke')) return criterion.status !== 'pass' || !liveCredentialedOk;
   if (criterion.requirement.startsWith('Operator-assisted smoke')) return !operatorOk;
   return true;
 });

@@ -9,7 +9,7 @@ const base = process.env.ARGUS_DELTA_BASE_URL || 'https://be-api.argusdelta.com'
 const token = process.env.ARGUS_DELTA_TOKEN || '';
 const abnGuid = process.env.ABN_GUID || process.env.COURTLENS_ABN_GUID || '';
 const timeout = 15_000;
-const maxAttempts = 3;
+const maxAttempts = Number(process.env.COURTLENS_LIVE_SMOKE_ATTEMPTS || '3');
 const checks = [];
 
 function record(name, status, details = {}) {
@@ -95,16 +95,40 @@ if (unauthPayload.ok !== false) throw new Error('Unauthenticated search did not 
 record('argus-unauthenticated-search-rejected', 'pass');
 console.log('Live smoke: Argus unauthenticated search rejected as expected');
 
-const news = await expectStatus(
-  'Google News RSS',
+const newsUrls = [
   'https://news.google.com/rss/search?q=Smith&hl=en-AU&gl=AU&ceid=AU:en',
-  { headers: { Accept: 'application/rss+xml' } },
-  200
-);
-const newsText = await news.text();
-if (!newsText.includes('<rss')) throw new Error('Google News RSS did not return RSS content');
-record('google-news-rss', 'pass');
-console.log('Live smoke: Google News RSS ok');
+  'https://news.google.com/rss/search?q=%22NSW%20Supreme%20Court%22&hl=en-AU&gl=AU&ceid=AU:en',
+  'https://news.google.com/rss?hl=en-AU&gl=AU&ceid=AU:en',
+];
+let news;
+let newsUrl;
+let newsError;
+for (const candidateUrl of newsUrls) {
+  try {
+    news = await expectStatus(
+      `Google News RSS (${new URL(candidateUrl).search || 'top-stories'})`,
+      candidateUrl,
+      { headers: { Accept: 'application/rss+xml' } },
+      200
+    );
+    newsUrl = candidateUrl;
+    break;
+  } catch (error) {
+    newsError = error;
+    console.log(`Live smoke: Google News RSS candidate failed (${error.name || 'Error'}: ${error.message})`);
+  }
+}
+if (news) {
+  const newsText = await news.text();
+  if (!newsText.includes('<rss')) throw new Error('Google News RSS did not return RSS content');
+  record('google-news-rss', 'pass', { url: newsUrl });
+  console.log(`Live smoke: Google News RSS ok (${newsUrl})`);
+} else if (/got 503/.test(String(newsError?.message || ''))) {
+  record('google-news-rss', 'upstream-unavailable', { reason: 'all Google News RSS candidates returned HTTP 503' });
+  console.log('Live smoke: Google News RSS upstream unavailable (HTTP 503); provider behavior remains covered by routed extension smoke.');
+} else {
+  throw newsError;
+}
 
 const caselaw = await expectStatus(
   'NSW Caselaw search',
