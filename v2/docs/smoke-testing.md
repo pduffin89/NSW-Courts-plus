@@ -37,6 +37,23 @@ python3 scripts/extension_load_smoke.py
 
 Fixtures live in `fixtures/`. `browser_smoke.py` serves files through a local ephemeral HTTP server. `extension_load_smoke.py` launches Chromium with `--load-extension=dist` and uses Playwright route fulfillment for NSW URLs.
 
+## Live provider smoke
+
+```bash
+npm run smoke:live
+ARGUS_DELTA_TOKEN='...' npm run smoke:live
+```
+
+Without a token, live smoke verifies:
+
+- `GET /health` returns `200` and `ok=true`.
+- unauthenticated court-list search returns `401` and `ok=false`.
+
+With `ARGUS_DELTA_TOKEN`, it additionally verifies:
+
+- authenticated search returns `200` without printing the token.
+- short-query validation returns `400`.
+
 ## Manual Chrome smoke
 
 After `npm run verify`:

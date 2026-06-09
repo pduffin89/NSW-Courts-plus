@@ -9,6 +9,7 @@
     "test:watch": "vitest",
     "build": "tsc --noEmit && node scripts/build.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:live": "node scripts/live_smoke.mjs",
     "verify": "npm test && npm run build && npm run smoke"
   },
   "dependencies": {
