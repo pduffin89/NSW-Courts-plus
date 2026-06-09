@@ -48,6 +48,9 @@ Without a token, live smoke verifies:
 
 - `GET /health` returns `200` and `ok=true`.
 - unauthenticated court-list search returns `401` and `ok=false`.
+- Google News RSS returns RSS content.
+- NSW Caselaw search returns HTML content.
+- Federal Court search endpoint is reachable; this environment currently returns `403`, which is accepted and reported because the remote service blocks some automated clients.
 
 With `ARGUS_DELTA_TOKEN`, it additionally verifies:
 

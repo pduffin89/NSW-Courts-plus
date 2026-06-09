@@ -1,8 +1,9 @@
 const base = process.env.ARGUS_DELTA_BASE_URL || 'https://be-api.argusdelta.com';
 const token = process.env.ARGUS_DELTA_TOKEN || '';
+const timeout = 15_000;
 
 async function expectStatus(label, url, init, expected) {
-  const response = await fetch(url, init);
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeout), ...init });
   if (response.status !== expected) {
     throw new Error(`${label} expected HTTP ${expected}, got ${response.status}`);
   }
@@ -28,6 +29,33 @@ const unauth = await expectStatus(
 const unauthPayload = await unauth.json();
 if (unauthPayload.ok !== false) throw new Error('Unauthenticated search did not return ok=false');
 console.log('Live smoke: Argus unauthenticated search rejected as expected');
+
+const news = await expectStatus(
+  'Google News RSS',
+  'https://news.google.com/rss/search?q=Smith&hl=en-AU&gl=AU&ceid=AU:en',
+  { headers: { Accept: 'application/rss+xml' } },
+  200
+);
+const newsText = await news.text();
+if (!newsText.includes('<rss')) throw new Error('Google News RSS did not return RSS content');
+console.log('Live smoke: Google News RSS ok');
+
+const caselaw = await expectStatus(
+  'NSW Caselaw search',
+  'https://www.caselaw.nsw.gov.au/search?query=Smith&page=1',
+  { headers: { Accept: 'text/html' } },
+  200
+);
+const caselawText = await caselaw.text();
+if (!caselawText.toLowerCase().includes('html')) throw new Error('NSW Caselaw did not return HTML content');
+console.log('Live smoke: NSW Caselaw search ok');
+
+const federal = await fetch('https://search.judgments.fedcourt.gov.au/s/search.html?query_sand=Smith&start_rank=1', {
+  signal: AbortSignal.timeout(timeout),
+  headers: { Accept: 'text/html' }
+});
+if (![200, 403].includes(federal.status)) throw new Error(`Federal Court live smoke expected 200 or environment 403, got ${federal.status}`);
+console.log(`Live smoke: Federal Court endpoint reachable (${federal.status})`);
 
 if (!token) {
   console.log('Live smoke: ARGUS_DELTA_TOKEN not set; authenticated Argus search skipped.');
