@@ -281,7 +281,7 @@ const criteria = [
     status: gates.find((gate) => gate.label === 'browser-and-extension-smoke')?.ok ? 'pass' : 'fail',
   },
   {
-    requirement: 'Live provider smoke for non-secret endpoints and optional authenticated Argus search',
+    requirement: 'Live provider smoke for non-secret endpoints plus optional authenticated Argus and ABN name-search checks',
     evidence: [
       'npm run smoke:live',
       process.env.ARGUS_DELTA_TOKEN ? 'ARGUS_DELTA_TOKEN present' : 'ARGUS_DELTA_TOKEN absent; authenticated Argus branch skipped',

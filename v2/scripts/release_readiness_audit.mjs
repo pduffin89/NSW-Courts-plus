@@ -20,7 +20,7 @@ const expectedHostPermissions = [
 ];
 const expectedCsp = { extension_pages: "script-src 'self'; object-src 'none'" };
 const allowedNonPassStatuses = new Map([
-  ['Live provider smoke for non-secret endpoints and optional authenticated Argus search', 'partial-external-credential-needed'],
+  ['Live provider smoke for non-secret endpoints plus optional authenticated Argus and ABN name-search checks', 'partial-external-credential-needed'],
   ['Operator-assisted smoke for authenticated or targeted live NSW workflows in a headed Chrome profile', 'manual-operator-required'],
 ]);
 

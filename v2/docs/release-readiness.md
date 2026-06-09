@@ -71,8 +71,8 @@ A store-facing privacy policy should include:
 1. Run `npm run package:extension` from `v2/`.
 2. Confirm every automated gate in `artifacts/delivery-audit.json` is passing.
 3. Confirm only expected external/manual gates remain:
-   - authenticated Argus live search if `ARGUS_DELTA_TOKEN` was not provided;
-   - authenticated ABN name-search live smoke if `ABN_GUID` / `COURTLENS_ABN_GUID` was not provided;
+   - optional authenticated Argus live search if `ARGUS_DELTA_TOKEN` was not provided;
+   - optional authenticated ABN name-search live smoke if `ABN_GUID` / `COURTLENS_ABN_GUID` was not provided;
    - operator-assisted authenticated/targeted NSW workflow if a login-specific target was requested.
 4. Confirm latest GitHub Actions `Courtlens v2 CI` is green for the same `git.headSha`.
 5. Confirm local and CI artifact SHA-256 values match.
