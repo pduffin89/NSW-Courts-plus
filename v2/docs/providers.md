@@ -35,7 +35,7 @@ Courtlens providers normalize results to `ProviderResultPage`.
 ## Local NER / GLiNER-compatible endpoint
 
 - Optional endpoint configured in Settings as `localNerEndpoint`.
-- Endpoint is intentionally loopback-only: `http://127.0.0.1/...` or `http://localhost/...`.
+- Endpoint is intentionally local/private only: `http://127.0.0.1/...`, `http://localhost/...`, or the pinned Tailscale Mac mini endpoint `http://100.89.36.94:8766/extract`.
 - Background route: `COURTLENS_EXTRACT_ENTITIES`.
 - Request shape: `POST { "text": "...judgment body..." }`.
 - Expected response shape: `{ "entities": [{ "text": "Jane Citizen", "label": "PERSON", "score": 0.96 }] }`.

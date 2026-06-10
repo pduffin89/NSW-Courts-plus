@@ -53,7 +53,7 @@ ABN_HISTORY_HTML = """
 """
 FEDERAL_HTML = '<html><body><a href="/judgment/1">Courtlens Smoke Federal Result</a></body></html>'
 NSW_CASELAW_HTML = '<html><body><a href="/decision/smoke">Courtlens Smoke NSW Caselaw Result</a></body></html>'
-LOCAL_NER_JSON = '{"entities":[{"text":"Jane Citizen","label":"PERSON","score":0.96},{"text":"Courtlens Local NER Pty Ltd","label":"ORG","score":0.91}]}'
+LOCAL_NER_JSON = '{"entities":[{"text":"Jane Citizen","label":"PERSON","score":0.96},{"text":"Courtlens Local Legal","label":"LAW_FIRM","score":0.91},{"text":"Courtlens Local NER Pty Ltd","label":"ORG","score":0.89},{"text":"Harrison J","label":"JUDGE","score":0.93}]}'
 GMAIL_HTML = '<html><body><h1>Routed Gmail compose smoke</h1></body></html>'
 
 
@@ -263,7 +263,9 @@ def run_extension_load_smoke(extension_dir: Path, label: str):
                 assert "Byron Shire Council" in case_text
                 shadow_click(case_page, "Enhance entities")
                 shadow_wait_text(case_page, "Jane Citizen")
-                shadow_wait_text(case_page, "Courtlens Local NER Pty Ltd")
+                shadow_wait_text(case_page, "Courtlens Local Legal")
+                shadow_wait_text(case_page, "Harrison J")
+                assert "Courtlens Local NER Pty Ltd" not in shadow_text(case_page)
             finally:
                 context.close()
     print(f"Extension load smoke passed: {label} ran content scripts, Settings save/mask/persist, all routed Research providers, ABN history, local NER enhancement, document generation, and Gmail handoff on routed NSW URLs.")

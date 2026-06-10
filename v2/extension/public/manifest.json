@@ -13,7 +13,8 @@
     "https://search.judgments.fedcourt.gov.au/*",
     "https://be-api.argusdelta.com/*",
     "http://127.0.0.1/*",
-    "http://localhost/*"
+    "http://localhost/*",
+    "http://100.89.36.94/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'"

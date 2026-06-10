@@ -6,6 +6,7 @@ export type EntityType =
   | 'government'
   | 'council'
   | 'legal_representative'
+  | 'law_firm'
   | 'judge'
   | 'party'
   | 'unknown';

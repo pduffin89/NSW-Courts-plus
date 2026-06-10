@@ -43,7 +43,7 @@ Open the Courtlens sidebar and use the Settings tab/workflow to store private va
 - `argusDeltaToken`
 - `argusDeltaProxyUrl`
 - `abnGuid`
-- `localNerEndpoint` for optional loopback-only local NER/GLiNER services (`http://127.0.0.1/...` or `http://localhost/...`)
+- `localNerEndpoint` for optional local NER/GLiNER services (`http://127.0.0.1/...`, `http://localhost/...`, or the pinned Tailscale Mac mini endpoint `http://100.89.36.94:8766/extract`)
 - applicant profile fields: name, organisation, email
 
 Never hardcode tokens or GUIDs. The build and smoke tests include a basic hardcoded-secret guard for the background bundle.

@@ -17,6 +17,7 @@ const forbiddenManifestKeys = [
 ];
 const expectedHostPermissions = [
   'http://127.0.0.1/*',
+  'http://100.89.36.94/*',
   'http://localhost/*',
   'https://abr.business.gov.au/*',
   'https://be-api.argusdelta.com/*',
@@ -114,7 +115,8 @@ const allUrlGrants = [
 for (const grant of allUrlGrants) {
   if (forbiddenUrlPatterns.includes(grant)) fail(`broad URL grant is forbidden: ${grant}`);
   const isLoopbackHttpGrant = grant === 'http://127.0.0.1/*' || grant === 'http://localhost/*';
-  if (grant.startsWith('http://') && !isLoopbackHttpGrant) fail(`insecure HTTP grant is forbidden outside loopback local NER: ${grant}`);
+  const isPinnedTailscaleNerGrant = grant === 'http://100.89.36.94/*';
+  if (grant.startsWith('http://') && !isLoopbackHttpGrant && !isPinnedTailscaleNerGrant) fail(`insecure HTTP grant is forbidden outside loopback or pinned Tailscale local NER: ${grant}`);
 }
 
 const contentScripts = manifest.content_scripts || [];

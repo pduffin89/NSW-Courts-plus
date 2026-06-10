@@ -28,7 +28,8 @@
     "capture:screenshots": "python3 scripts/capture_release_screenshots.py",
     "package:extension": "npm run audit:delivery && npm run audit:release-readiness && npm run write:checksums && npm run audit:evidence-manifest",
     "verify": "npm test && npm run build && npm run smoke",
-    "audit:delivery": "node scripts/delivery_audit.mjs"
+    "audit:delivery": "node scripts/delivery_audit.mjs",
+    "seed:check-profile": "python3 scripts/seed_check_profile.py"
   },
   "dependencies": {
     "@vitejs/plugin-react": "6.0.2",

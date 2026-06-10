@@ -31,8 +31,9 @@ Current host permissions:
 | `https://abr.business.gov.au/*` | User-triggered ABN name search plus ABN current/history detail expansion. |
 | `https://search.judgments.fedcourt.gov.au/*` | User-triggered Federal Court judgment search. |
 | `https://www.caselaw.nsw.gov.au/*` | User-triggered NSW Caselaw provider search from the background worker. |
-| `http://127.0.0.1/*` | Optional loopback-only local NER / GLiNER-compatible endpoint. |
-| `http://localhost/*` | Optional loopback-only local NER / GLiNER-compatible endpoint. |
+| `http://127.0.0.1/*` | Optional loopback local NER / GLiNER-compatible endpoint. |
+| `http://localhost/*` | Optional loopback local NER / GLiNER-compatible endpoint. |
+| `http://100.89.36.94/*` | Pinned Tailscale Mac mini GLiNER harness endpoint. |
 
 Static content-script matches are deliberately narrower than broad host access:
 
@@ -67,7 +68,7 @@ A store-facing privacy policy should include:
 - Argus Delta tokens and ABN GUIDs are user-provided and stored in `chrome.storage.local`.
 - Gmail handoff opens a prefilled compose URL; Courtlens does not read Gmail content or attach files inside Gmail.
 - Generated PDFs are produced locally from bundled templates and page/applicant metadata.
-- Optional local NER only permits loopback endpoints (`127.0.0.1` / `localhost`).
+- Optional local NER only permits loopback endpoints (`127.0.0.1` / `localhost`) or the pinned Tailscale Mac mini endpoint (`100.89.36.94`).
 
 ## Final upload checklist
 

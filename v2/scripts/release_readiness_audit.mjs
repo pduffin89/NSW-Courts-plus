@@ -18,6 +18,7 @@ const expectedPermissions = ['storage'];
 const expectedHostPermissions = [
   'http://127.0.0.1/*',
   'http://localhost/*',
+  'http://100.89.36.94/*',
   'https://abr.business.gov.au/*',
   'https://be-api.argusdelta.com/*',
   'https://news.google.com/*',

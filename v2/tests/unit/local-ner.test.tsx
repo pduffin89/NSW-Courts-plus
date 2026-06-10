@@ -17,25 +17,47 @@ const matter = {
 const nerPayload = {
   entities: [
     { text: 'Jane Citizen', label: 'PERSON', score: 0.96 },
-    { text: 'Acme Pty Ltd', label: 'ORG', score: 0.91 },
+    { text: 'Acme Legal', label: 'LAW_FIRM', score: 0.91 },
+    { text: 'Acme Pty Ltd', label: 'ORG', score: 0.89 },
+    { text: 'NSW Police', label: 'GOVERNMENT_AGENCY', score: 0.88 },
     { text: 'Harrison J', label: 'JUDGE', score: 0.93 }
   ]
 };
 
+const refinedHarnessPayload = {
+  predictions: [
+    { span: 'Jane Citizen', entity_type: 'person', probability: 0.96 },
+    { span: 'Example & Co Lawyers', entity_type: 'solicitor_firm', probability: 0.92 },
+    { span: 'Harrison J', entity_type: 'judicial officer', probability: 0.93 },
+    { span: 'State of New South Wales', entity_type: 'government', probability: 0.94 }
+  ]
+};
+
 describe('local NER / GLiNER-compatible seam', () => {
-  it('normalizes local NER labels into Courtlens entity candidates', () => {
+  it('normalizes and filters local NER labels to people, law firms, and judges only', () => {
     const entities = normalizeLocalNerResponse(nerPayload, { source: 'local-ner' });
     expect(entities.map((entity) => [entity.name, entity.type, entity.confidence])).toEqual([
       ['Jane Citizen', 'person', 0.96],
-      ['Acme Pty Ltd', 'company', 0.91],
+      ['Acme Legal', 'law_firm', 0.91],
       ['Harrison J', 'judge', 0.93]
     ]);
   });
 
-  it('rejects non-loopback local NER endpoints before fetch', async () => {
-    expect(() => assertLoopbackNerEndpoint('https://example.com/extract')).toThrow(/127\.0\.0\.1|localhost/);
-    expect(() => assertLoopbackNerEndpoint('http://192.168.1.10/extract')).toThrow(/127\.0\.0\.1|localhost/);
+  it('accepts refined harness prediction shape without surfacing disallowed tags', () => {
+    const entities = normalizeLocalNerResponse(refinedHarnessPayload, { source: 'local-ner' });
+    expect(entities.map((entity) => [entity.name, entity.type, entity.confidence])).toEqual([
+      ['Jane Citizen', 'person', 0.96],
+      ['Example & Co Lawyers', 'law_firm', 0.92],
+      ['Harrison J', 'judge', 0.93]
+    ]);
+  });
+
+  it('allows loopback and Tailscale NER endpoints but rejects public and ordinary LAN endpoints before fetch', async () => {
+    expect(() => assertLoopbackNerEndpoint('https://example.com/extract')).toThrow(/127\.0\.0\.1|localhost|Tailscale/);
+    expect(() => assertLoopbackNerEndpoint('http://192.168.1.10/extract')).toThrow(/127\.0\.0\.1|localhost|Tailscale/);
+    expect(() => assertLoopbackNerEndpoint('http://100.128.0.1/extract')).toThrow(/127\.0\.0\.1|localhost|Tailscale/);
     expect(assertLoopbackNerEndpoint('http://localhost:8766/extract')).toBe('http://localhost:8766/extract');
+    expect(assertLoopbackNerEndpoint('http://100.89.36.94:8766/extract')).toBe('http://100.89.36.94:8766/extract');
   });
 
   it('posts judgment text to the configured local NER endpoint', async () => {
@@ -73,6 +95,8 @@ describe('local NER / GLiNER-compatible seam', () => {
 
     await waitFor(() => expect(onExtractEntities).toHaveBeenCalledWith('Judgment body'));
     expect(await screen.findByText('Jane Citizen')).toBeInTheDocument();
-    expect(screen.getByText('Acme Pty Ltd')).toBeInTheDocument();
+    expect(screen.getByText('Acme Legal')).toBeInTheDocument();
+    expect(screen.queryByText('Acme Pty Ltd')).not.toBeInTheDocument();
+    expect(screen.queryByText('NSW Police')).not.toBeInTheDocument();
   });
 });

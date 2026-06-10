@@ -30,7 +30,7 @@ export function openCourtlensSidebar(matter: MatterContext, entities: EntityCand
     if (!response?.ok) throw new Error(response?.error || 'Settings load failed');
     return response.data;
   };
-  const onSaveSettings = async (settings: { argusDeltaToken?: string; argusDeltaProxyUrl?: string; abnGuid?: string; applicantName?: string; applicantOrganisation?: string; applicantEmail?: string }): Promise<void> => {
+  const onSaveSettings = async (settings: { argusDeltaToken?: string; argusDeltaProxyUrl?: string; abnGuid?: string; applicantName?: string; applicantOrganisation?: string; applicantEmail?: string; localNerEndpoint?: string }): Promise<void> => {
     const response = await chrome.runtime.sendMessage({ type: 'COURTLENS_SAVE_SETTINGS', settings });
     if (!response?.ok) throw new Error(response?.error || 'Settings save failed');
   };

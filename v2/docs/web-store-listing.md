@@ -42,7 +42,7 @@ Key features:
 | `https://abr.business.gov.au/*` | Fetches ABN Lookup search/current/history pages. |
 | `https://search.judgments.fedcourt.gov.au/*` | Fetches Federal Court search pages. |
 | `https://be-api.argusdelta.com/*` | Calls Argus Delta APIs when the user provides a token. |
-| `http://127.0.0.1/*`, `http://localhost/*` | Optional local NER/GLiNER-compatible endpoint; non-loopback endpoints are rejected. |
+| `http://127.0.0.1/*`, `http://localhost/*`, `http://100.89.36.94/*` | Optional local/private NER/GLiNER-compatible endpoint; public and ordinary LAN endpoints are rejected. |
 
 No Gmail host permission is requested because Gmail is opened only as a compose URL handoff. No Online Registry host permission is requested because Online Registry access is via statically declared content-script matches only.
 
